@@ -1,0 +1,31 @@
+{
+  "id": "ADR-05",
+  "title": "ADR-05 Versioned state, taint, write-write conflict rule, deduped re-run (FIRST PRIORITY)",
+  "sprint": 2,
+  "track": "eng",
+  "owner": "vikram",
+  "reviewer": "maya",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Own row-versioned SQLite (obj=table:pk, get→(value, ver, author), history), conservative forward/backward taint, recovery plan C5 with dry-run diff; due 23 Nov so build starts day 1",
+  "acceptance": [
+    "ADR file ≤900 words with sections Context, Decision, Consequences, Interface touched (which of C1–C6), Tests that prove it",
+    "Write-write rule: restore only if current ver == culprit's after-version, else re-run or flag; recovery appends compensating records, never edits history",
+    "Re-runs of deterministic steps go through the outbox deduped by idempotency key (re-emitted effects = 0); LLM steps become a replan item for console approval; coarse/aggregate reads over-taint",
+    "Tests listed cover the F2+ triage conflict row, a re-run that would re-fire payment/email, and backward taint naming root candidates"
+  ],
+  "depends": [
+    "CON-01"
+  ],
+  "deliverable": "org/adr/ADR-05-state-taint-recovery.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

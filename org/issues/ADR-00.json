@@ -1,0 +1,31 @@
+{
+  "id": "ADR-00",
+  "title": "ADR-00 Topology, tick barrier and determinism",
+  "sprint": 2,
+  "track": "eng",
+  "owner": "maya",
+  "reviewer": "panel",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Process topology (gateway, witness, one subprocess per agent, signer handles, sockets) and the gateway-as-scheduler tick barrier that makes seeded runs reproducible; due 24 Nov",
+  "acceptance": [
+    "ADR file ≤900 words with sections Context, Decision, Consequences, Interface touched (which of C1–C6), Tests that prove it",
+    "Decision specifies the tick barrier: one envelope or no-op per agent per tick, executed in agent_id order, gateway assigns seq/ts/record_id",
+    "Names the determinism tests: same seed twice → byte-identical records; faulty run == S* before t0",
+    "States the key-isolation claim verbatim: enforced in production (uid/container), detected here by reconciliation"
+  ],
+  "depends": [
+    "CON-01"
+  ],
+  "deliverable": "org/adr/ADR-00-topology-determinism.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "id": "ABS-03",
+  "title": "How-it-works diagram: one-page phone-viewable HTML/SVG",
+  "sprint": 2,
+  "track": "pitch",
+  "owner": "ishaan",
+  "reviewer": "vikram",
+  "model": "sonnet",
+  "created_by": "zoya",
+  "status": "todo",
+  "outcome": "A single visual of the mechanism (agents -> gateway -> recorder/graph -> identify/contain/recover queries, with the witness outside the blast radius) that Aarav can study on his phone",
+  "acceptance": [
+    "One self-contained file (inline SVG/CSS, no external fonts, scripts or network calls); readable without zoom at 390px width and on desktop",
+    "Shows: agents as separate processes, the single mediated path, signed envelope, recorded read/write sets, the three queries (identify, contain, recover), the outbox hold for irreversible effects, the separate witness process and verify",
+    "Uses only labels from abstract/TERMS.md; no claims beyond abstract/GUARDRAILS.md; vikram confirms it matches the ADR/contract design"
+  ],
+  "depends": [
+    "ABS-04",
+    "ABS-02"
+  ],
+  "deliverable": "abstract/how-it-works.html",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "zoya",
+      "msg": "opened"
+    }
+  ]
+}

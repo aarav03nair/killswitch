@@ -1,0 +1,30 @@
+{
+  "id": "SKEL-01",
+  "title": "Walking skeleton: 2 agents → gateway stub → recorder → verify + determinism test",
+  "sprint": 2,
+  "track": "eng",
+  "owner": "maya",
+  "reviewer": "panel",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Thinnest end-to-end path on the frozen contracts before 25 Nov: two agent subprocesses send signed envelopes over Unix sockets, gateway stub runs the tick barrier, recorder writes C2, ks verify passes",
+  "acceptance": [
+    "2 agent subprocesses (no keys in-process, signer handle) → gateway stub → hash-chained record; ks verify exits 0 on the clean record and non-zero with first bad index after a one-line edit",
+    "Determinism test in pytest: same seed run twice gives byte-identical record files",
+    "Uses only src/ks/contracts/ types and the canonical serializer (no ad-hoc JSON); runs in CI-style one command"
+  ],
+  "depends": [
+    "CON-01"
+  ],
+  "deliverable": "src/ks/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

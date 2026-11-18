@@ -1,0 +1,31 @@
+{
+  "id": "ADR-04",
+  "title": "ADR-04 Monitor detectors, graded containment and lineage hold",
+  "sprint": 2,
+  "track": "eng",
+  "owner": "nisha",
+  "reviewer": "maya",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Data-invariant detectors (IBAN checksum, price delta vs frozen baseline, ledger balance, beneficiary-changed-then-paid), attribution by write_set lookup, suspend→revoke/release, per-action lineage hold from recorded read sets; due 24 Nov (tara consults on detectors)",
+  "acceptance": [
+    "ADR file ≤900 words with sections Context, Decision, Consequences, Interface touched (which of C1–C6), Tests that prove it",
+    "Detect and attribute are separate steps emitting C4 Alert{detector, evidence_seqs, suspect, root_candidates, hard}; auto-suspend only on hard evidence (scope breach, I-class invariant breach, class U); tamper alert freezes recovery, suspends nobody",
+    "Lineage hold is per action using recorded read sets only (agent-declared lineage never trusted); release = un-hold + restore epoch; hold window is one config value",
+    "Tests listed map to RT9 (laundering: A in top-3), RT10 (0 irreversible tainted released), RT11 (framing DoS), RT12 (persistence)"
+  ],
+  "depends": [
+    "CON-01"
+  ],
+  "deliverable": "org/adr/ADR-04-monitor-containment-hold.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

@@ -1,0 +1,35 @@
+{
+  "id": "SEC-02",
+  "title": "Red-team spec RT1-RT12 as executable test plan",
+  "sprint": 2,
+  "track": "security",
+  "owner": "kabir",
+  "reviewer": "maya",
+  "model": "opus",
+  "created_by": "kabir",
+  "status": "in_progress",
+  "outcome": "Sprint 4 test spec: each of RT1-RT12 written so an engineer can turn it into a pytest or live demo script without asking",
+  "acceptance": [
+    "Each RT has: setup (seed, agents, preconditions), script outline (steps the rogue code runs), observable signal, binary pass criterion, owner module",
+    "Pass criteria are machine-checkable (exit code, record field, count == 0), not prose",
+    "Marks which run live at finale (F5/F6, ks inject, DB bypass, line edit, full rewrite) vs pytest-only (F3), per D11",
+    "RT11 scores false-positive cost; RT3 asserts the claimed agent is NOT suspended (D7 anti-framing)",
+    "Owner modules exist in Maya's C1-C6 / ADR names; maya confirms each is buildable"
+  ],
+  "depends": [],
+  "deliverable": "tests/redteam/SPEC.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "kabir",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "kabir",
+      "msg": "→ in_progress"
+    }
+  ]
+}

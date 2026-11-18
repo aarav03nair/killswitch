@@ -1,0 +1,31 @@
+{
+  "id": "SEC-03",
+  "title": "Security review of contracts C1-C6 against the 11 day-one rules",
+  "sprint": 2,
+  "track": "security",
+  "owner": "kabir",
+  "reviewer": "maya",
+  "model": "opus",
+  "created_by": "kabir",
+  "status": "todo",
+  "outcome": "Rule-by-contract verdict table so C1-C6 freeze with no security gaps",
+  "acceptance": [
+    "11x6 matrix: each day-one rule (CALL-01/kabir.md s4) vs each contract C1-C6 marked pass / gap / n.a. with a one-line reason",
+    "Every gap has a concrete proposed contract change (field, check or invariant) and severity (blocker / fix-before-S4 / note)",
+    "Explicitly checks: one canonical serializer (rule 4), epoch+deny-list inside write txn and hold re-check at dispatch (rule 5), fail-closed U (rule 6), denials recorded (rule 11)",
+    "Blockers resolved or accepted by maya before contracts freeze"
+  ],
+  "depends": [
+    "CON-01"
+  ],
+  "deliverable": "org/reports/SEC-03.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "kabir",
+      "msg": "opened"
+    }
+  ]
+}

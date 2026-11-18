@@ -1,0 +1,31 @@
+{
+  "id": "ADR-03",
+  "title": "ADR-03 Gateway, action classes R/C/I1/I2/U, policy and epoch fencing",
+  "sprint": 2,
+  "track": "eng",
+  "owner": "nisha",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "The single mediated path: per-instance classification R/C/I1/I2/U (U denied, fail-closed), policy incl. early hold on sensitive-tagged fields, outbox for I-class, epoch + deny-list checked inside the write txn; due 24 Nov",
+  "acceptance": [
+    "ADR file ≤900 words with sections Context, Decision, Consequences, Interface touched (which of C1–C6), Tests that prove it",
+    "Classification is per action instance, unknown → U → deny; every denial is a recorded action",
+    "Epoch and deny-list checked inside the execution transaction, holds re-checked at outbox dispatch; early hold is a generic rule on sensitive-tagged fields, not IBAN code",
+    "Tests listed map to RT1 (DB bypass → reconcile U-alert), RT5 (TOCTOU: 0 culprit writes after quarantine seq)"
+  ],
+  "depends": [
+    "CON-01"
+  ],
+  "deliverable": "org/adr/ADR-03-gateway-classes-fencing.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

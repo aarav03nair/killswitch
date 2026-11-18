@@ -1,0 +1,32 @@
+{
+  "id": "ABS-06",
+  "title": "Abstract skeleton: headings, word budget, what each section must establish",
+  "sprint": 2,
+  "track": "pitch",
+  "owner": "zoya",
+  "reviewer": "panel",
+  "model": "opus",
+  "created_by": "zoya",
+  "status": "todo",
+  "outcome": "A skeleton Aarav fills in himself: problem -> fix -> why it matters, with a word budget and the points each section must land",
+  "acceptance": [
+    "Section headings in the organisers' order (problem -> fix -> why it matters, plus limits) with a word budget per section totalling 850-950, under the 1,000 cap",
+    "Under each heading: bullet notes (fragments, max ~12 words each) of what must be established, each tagged to a fact-card row, guardrail or term; zero full sentences of abstract prose (Charter)",
+    "Reflects D1 layered headline, D2 METR wording, D3 one credited Airlock clause, D12 hero scenario, D13 numbers-as-targets"
+  ],
+  "depends": [
+    "ABS-01",
+    "ABS-02",
+    "ABS-04"
+  ],
+  "deliverable": "abstract/SKELETON.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "zoya",
+      "msg": "opened"
+    }
+  ]
+}

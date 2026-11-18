@@ -1,0 +1,31 @@
+{
+  "id": "ADR-06",
+  "title": "ADR-06 World (10 agents), fault catalogue F1–F7 + F2+, oracle and metrics",
+  "sprint": 2,
+  "track": "eng",
+  "owner": "tara",
+  "reviewer": "anaya",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Deterministic 10-agent demo world, fault injectors F1–F7 plus hero F2+ (IBAN swap, price ×10, triage conflict), oracle S* and the scorer reading only the C6 run dir; due 24 Nov (sameer consults on metrics)",
+  "acceptance": [
+    "ADR file ≤900 words with sections Context, Decision, Consequences, Interface touched (which of C1–C6), Tests that prove it",
+    "Oracle defined per SYNTHESIS §6: t0, S*, B, G on the effect ledger + invariants, never on our taint graph; metrics TTI-detect, TTI-attribute, TTC (Panel) + post-alert tainted effects + irreversible tainted released, R, C, re-plan cost",
+    "Fault catalogue says per fault whether it runs live or as pytest (F5/F6 live, F3 pytest) and the F2+ dependency graph (billing/payments/comms consume; inventory/docs independent)",
+    "Protocol: ≥20 seeded runs, median/p95/max, baselines snapshot / revert-culprit-only / no-op, hold 0 vs >0"
+  ],
+  "depends": [
+    "CON-01"
+  ],
+  "deliverable": "org/adr/ADR-06-world-faults-oracle.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

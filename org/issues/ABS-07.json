@@ -1,0 +1,33 @@
+{
+  "id": "ABS-07",
+  "title": "Review Aarav's abstract draft: comments only, two rounds",
+  "sprint": 2,
+  "track": "pitch",
+  "owner": "zoya",
+  "reviewer": "anaya",
+  "model": "opus",
+  "created_by": "zoya",
+  "status": "todo",
+  "outcome": "Two comment-only review passes on Aarav's own draft (round 1 and round 2), each returned within 4 h, so he can submit by 22 Nov",
+  "acceptance": [
+    "Starts only when Aarav submits a draft; each round's comments are located (section/line) and tagged: fact (vs FACT-CARD), claim (vs GUARDRAILS), term (vs TERMS), structure/word count (vs SKELETON)",
+    "Comments only: no rewritten or suggested replacement sentences anywhere (Charter); anaya checks every fact comment",
+    "Round 2 records which round-1 comments Aarav resolved, which remain, and the final word count"
+  ],
+  "depends": [
+    "ABS-01",
+    "ABS-02",
+    "ABS-04",
+    "ABS-06"
+  ],
+  "deliverable": "abstract/REVIEW-R1.md (round 2: abstract/REVIEW-R2.md)",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "zoya",
+      "msg": "opened"
+    }
+  ]
+}

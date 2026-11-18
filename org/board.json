@@ -626,6 +626,136 @@
       "t": "19 Nov 00:53",
       "who": "pmo",
       "msg": "moved ORG-03 to done"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "kabir",
+      "msg": "opened SEC-01 — Threat model document published for the jury"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "kabir",
+      "msg": "opened SEC-02 — Red-team spec RT1-RT12 as executable test plan"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "kabir",
+      "msg": "opened SEC-03 — Security review of contracts C1-C6 against the 11 day-one rules"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "zoya",
+      "msg": "opened ABS-01 — Fact card: every external number Aarav may quote, one page"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "zoya",
+      "msg": "opened ABS-02 — Claim guardrails: safe claims, do-not-claim, overclaim words"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "zoya",
+      "msg": "opened ABS-04 — Term lock: one name per concept across abstract, demo and code"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "zoya",
+      "msg": "opened ABS-03 — How-it-works diagram: one-page phone-viewable HTML/SVG"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "zoya",
+      "msg": "opened ABS-05 — Jury hostile-question pointers (evidence only)"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "zoya",
+      "msg": "opened ABS-06 — Abstract skeleton: headings, word budget, what each section must establish"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "zoya",
+      "msg": "opened ABS-07 — Review Aarav's abstract draft: comments only, two rounds"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "kabir",
+      "msg": "moved SEC-01 to in_progress"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "kabir",
+      "msg": "moved SEC-02 to in_progress"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened CON-01 — Freeze contracts C1–C6 as Python modules + JSON Schema"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened ADR-00 — ADR-00 Topology, tick barrier and determinism"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened ADR-01 — ADR-01 Identity and envelope signing"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened ADR-02 — ADR-02 Recorder, witness, verify and PII side store"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened ADR-03 — ADR-03 Gateway, action classes R/C/I1/I2/U, policy and epoch fencing"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened ADR-04 — ADR-04 Monitor detectors, graded containment and lineage hold"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened ADR-05 — ADR-05 Versioned state, taint, write-write conflict rule, deduped re-run (FIRST PRIORITY)"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened ADR-06 — ADR-06 World (10 agents), fault catalogue F1–F7 + F2+, oracle and metrics"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened ADR-07 — ADR-07 CLI and incident console/timeline"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened SKEL-01 — Walking skeleton: 2 agents → gateway stub → recorder → verify + determinism test"
+    },
+    {
+      "t": "19 Nov 00:55",
+      "who": "zoya",
+      "msg": "moved ABS-02 to in_progress"
+    },
+    {
+      "t": "19 Nov 00:55",
+      "who": "zoya",
+      "msg": "moved ABS-04 to in_progress"
+    },
+    {
+      "t": "19 Nov 00:55",
+      "who": "anaya",
+      "msg": "moved ABS-01 to in_progress"
+    },
+    {
+      "t": "19 Nov 00:55",
+      "who": "maya",
+      "msg": "moved CON-01 to in_progress"
     }
   ]
 }

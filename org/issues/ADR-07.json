@@ -1,0 +1,30 @@
+{
+  "id": "ADR-07",
+  "title": "ADR-07 CLI and incident console/timeline",
+  "sprint": 2,
+  "track": "eng",
+  "owner": "ishaan",
+  "reviewer": "zoya",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "ks CLI surface (run, inject, verify, suspend/release/revoke, recover --dry-run, score) and the console/timeline the demo and jury use; due 24 Nov",
+  "acceptance": [
+    "ADR file ≤900 words with sections Context, Decision, Consequences, Interface touched (which of C1–C6), Tests that prove it",
+    "Lists every command with args and exit codes; control commands emit signed, recorded C4 Controls; console reads only the record/run dir",
+    "Timeline shows alert → suspend → held items → recovery dry-run diff → approval (incl. replan queue) for the F2+ hero path in banking-legible terms"
+  ],
+  "depends": [
+    "CON-01"
+  ],
+  "deliverable": "org/adr/ADR-07-cli-console.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

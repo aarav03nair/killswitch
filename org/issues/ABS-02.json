@@ -1,0 +1,33 @@
+{
+  "id": "ABS-02",
+  "title": "Claim guardrails: safe claims, do-not-claim, overclaim words",
+  "sprint": 2,
+  "track": "pitch",
+  "owner": "zoya",
+  "reviewer": "panel",
+  "model": "opus",
+  "created_by": "zoya",
+  "status": "in_progress",
+  "outcome": "A checklist Aarav can run his draft against, separating claims we can defend from claims a jury will punish",
+  "acceptance": [
+    "Three lists: safe claims (from RES-11 §5 and CALL-01 D1-D13, each with the decision or source that backs it), do-not-claim (SYNTHESIS §3 plus D2/D6/D7 wording limits), overclaim words with a safer alternative (first, novel, tamper-proof, compliant, guarantees, eliminates, prevents, real-time)",
+    "Our own numbers are listed only as definitions plus labelled targets (R=0, C=0, post-alert tainted effects=0), never as results (D13)",
+    "Each item is a phrase or rule, not a ready-to-paste abstract sentence; every do-not-claim item cites its reason (source or decision id)"
+  ],
+  "depends": [],
+  "deliverable": "abstract/GUARDRAILS.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "zoya",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:55",
+      "who": "zoya",
+      "msg": "→ in_progress"
+    }
+  ]
+}

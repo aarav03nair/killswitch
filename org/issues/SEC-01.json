@@ -1,0 +1,35 @@
+{
+  "id": "SEC-01",
+  "title": "Threat model document published for the jury",
+  "sprint": 2,
+  "track": "security",
+  "owner": "kabir",
+  "reviewer": "panel",
+  "model": "opus",
+  "created_by": "kabir",
+  "status": "in_progress",
+  "outcome": "One-page threat model the jury reads before D11 live attacks: assets, trust boundaries, in/out of scope, claims we make and refuse",
+  "acceptance": [
+    "Lists assets (state, outbox, record+witness heads, 4 key classes, containment state, PII side store) and the 4 trust boundaries",
+    "In scope: buggy, rogue (arbitrary Python in its subprocess), colluding (root candidates only), insider log tamper without keys; out of scope listed with production mitigation (HSM, WORM, uid/container)",
+    "Claims match CALL-01 wording exactly: 'tamper-evident up to the last witnessed head'; key isolation 'enforced in production, detected here by reconciliation'; no prevention claim for collusion",
+    "Maps every in-scope adversary to the RT# attacks that exercise it and the control that answers it (D6/D7/D8, rules 1-11)",
+    "Fits on 2 pages, no unmeasured numbers (D13); panel signs off"
+  ],
+  "depends": [],
+  "deliverable": "org/adr/THREAT-MODEL.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "kabir",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "kabir",
+      "msg": "→ in_progress"
+    }
+  ]
+}

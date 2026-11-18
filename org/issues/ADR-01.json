@@ -1,0 +1,31 @@
+{
+  "id": "ADR-01",
+  "title": "ADR-01 Identity and envelope signing",
+  "sprint": 2,
+  "track": "eng",
+  "owner": "arjun",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "How agents sign C1 envelopes without holding keys (signer handle), what the gateway verifies (sig, nonce, expiry, epoch, act chain), and what happens on failure; due 24 Nov",
+  "acceptance": [
+    "ADR file ≤900 words with sections Context, Decision, Consequences, Interface touched (which of C1–C6), Tests that prove it",
+    "Decision: keys never enter the agent process; agent signs via a signer handle; agent + gateway signatures over the shared canonical serializer",
+    "Decision: a bad signature suspends the submitting connection, never the claimed agent_id; replayed/expired envelopes are denied and recorded",
+    "Tests listed map to RT2 (key theft), RT3 (forgery), RT4 (replay), RT6 (clock games)"
+  ],
+  "depends": [
+    "CON-01"
+  ],
+  "deliverable": "org/adr/ADR-01-identity-envelope.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

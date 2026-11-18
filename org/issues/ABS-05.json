@@ -1,0 +1,30 @@
+{
+  "id": "ABS-05",
+  "title": "Jury hostile-question pointers (evidence only)",
+  "sprint": 2,
+  "track": "pitch",
+  "owner": "anaya",
+  "reviewer": "kabir",
+  "model": "opus",
+  "created_by": "zoya",
+  "status": "todo",
+  "outcome": "A list of the hardest jury questions with pointers to the evidence that answers each, so Aarav can pre-empt them in his own words",
+  "acceptance": [
+    "At least 7 questions, including: 'isn't this Airlock?', 'Wang already did agent undo', 'isn't this just logging?', 'LLMs can't be replayed', 'can an agent cheat the hold / forge the log?', 'what about irreversible effects?', 'would this have stopped the METR case?'",
+    "Each answer is pointers only: fact-card row, SYNTHESIS/RES section, CALL-01 decision or threat-model item; no scripted answer prose",
+    "Kabir confirms every security answer stays inside the adopted threat model (in/out of scope as in CALL-01)"
+  ],
+  "depends": [
+    "ABS-01"
+  ],
+  "deliverable": "abstract/JURY-QA.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "zoya",
+      "msg": "opened"
+    }
+  ]
+}

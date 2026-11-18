@@ -1,0 +1,34 @@
+{
+  "id": "ABS-01",
+  "title": "Fact card: every external number Aarav may quote, one page",
+  "sprint": 2,
+  "track": "pitch",
+  "owner": "anaya",
+  "reviewer": "zoya",
+  "model": "opus",
+  "created_by": "zoya",
+  "status": "in_progress",
+  "outcome": "A one-page card of verified external facts, each with its wording rule and URL, so every outside number in the abstract traces to one checked source (D13)",
+  "acceptance": [
+    "Covers SYNTHESIS §2 facts 1-15 plus the RBI FREE-AI spare; each row = fact, exact wording rule, URL, verification status (A-verified or secondary)",
+    "Every row is re-checked against its URL (or marked secondary / unverified); no number appears that is not in a cited source",
+    "Includes a short 'never quote' list drawn from SYNTHESIS §3 (e.g. exact HF dates, '11 days to detect', 'legitimately held credentials', IBM 241/247, RBI 18%)",
+    "Fits one printed page; facts in table/bullet form only, no abstract sentences"
+  ],
+  "depends": [],
+  "deliverable": "abstract/FACT-CARD.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "zoya",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:55",
+      "who": "anaya",
+      "msg": "→ in_progress"
+    }
+  ]
+}

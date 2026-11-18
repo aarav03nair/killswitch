@@ -1,0 +1,33 @@
+{
+  "id": "ABS-04",
+  "title": "Term lock: one name per concept across abstract, demo and code",
+  "sprint": 2,
+  "track": "pitch",
+  "owner": "zoya",
+  "reviewer": "maya",
+  "model": "opus",
+  "created_by": "zoya",
+  "status": "in_progress",
+  "outcome": "A glossary that fixes one public name per concept so the abstract, diagram, demo and contracts never use two words for one thing",
+  "acceptance": [
+    "Covers at least: envelope, read/write set, gateway, recorder, witness, verify, lineage hold, graded containment (suspend/revoke/release), taint-scoped revert, re-run vs replan, root candidates, oracle S*, R and C, TTI-detect/attribute, TTC",
+    "Each entry: locked term, one-line plain-English gloss a banking reader understands, banned synonyms, and matching code/contract identifier where one exists",
+    "Maya confirms every code identifier matches contracts C1-C6 (or flags the mismatch)"
+  ],
+  "depends": [],
+  "deliverable": "abstract/TERMS.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "zoya",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:55",
+      "who": "zoya",
+      "msg": "→ in_progress"
+    }
+  ]
+}

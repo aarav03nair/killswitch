@@ -1,0 +1,44 @@
+{
+  "id": "CON-01",
+  "title": "Freeze contracts C1–C6 as Python modules + JSON Schema",
+  "sprint": 2,
+  "track": "eng",
+  "owner": "maya",
+  "reviewer": "kabir",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "in_progress",
+  "outcome": "C1 Envelope, C2 Record, C3 State, C4 Alert/Control, C5 RecoveryPlan, C6 Run dir frozen by 22 Nov as typed modules + JSON Schema, one canonical serializer, JSON-lines-over-Unix-socket transport; every ADR builds on these",
+  "acceptance": [
+    "src/ks/contracts/ has one module + one JSON Schema per C1–C6 with the fields in CALL-01/maya.md §3 (C1 incl. nonce, expiry, epoch, full act chain; C2 incl. read_set, write_set before/after ver+hash, prev_hash, gw_sig; C2 values as hashes only)",
+    "pytest round-trip: for each contract, obj → canonical bytes → obj is identity, and the canonical bytes are stable across two runs (byte-equal) and validate against the schema",
+    "a single canonical serializer (sorted keys, fixed encoding) is the only one exported and is the one signer, gateway and verify must import",
+    "kabir signs off that the contracts satisfy all 11 day-one rules (CALL-01/kabir.md §4), checklist in the review note"
+  ],
+  "depends": [],
+  "deliverable": "src/ks/contracts/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "Kabir sign-off criterion is satisfied by SEC-03 (security review of C1-C6 vs 11 day-one rules); ADR-05 is the first ADR to start once C3/C5 are drafted"
+    },
+    {
+      "t": "19 Nov 00:55",
+      "who": "pmo",
+      "msg": "PMO: accepted — SEC-03 satisfies CON-01's security sign-off; faulty-run≡S* test stays in ADR-00"
+    },
+    {
+      "t": "19 Nov 00:55",
+      "who": "maya",
+      "msg": "→ in_progress"
+    }
+  ]
+}

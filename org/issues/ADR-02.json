@@ -1,0 +1,31 @@
+{
+  "id": "ADR-02",
+  "title": "ADR-02 Recorder, witness, verify and PII side store",
+  "sprint": 2,
+  "track": "eng",
+  "owner": "arjun",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Hash-chained C2 record written only by the gateway, a separate witness process taking a signed (seq, head, tick) every tick, ks verify, and a redactable side store for values; due 24 Nov",
+  "acceptance": [
+    "ADR file ≤900 words with sections Context, Decision, Consequences, Interface touched (which of C1–C6), Tests that prove it",
+    "verify checks chain, agent+gateway signatures, witness heads, seq gaps and reconciliation (state = fold(log)), prints first bad index, exits non-zero",
+    "Log holds hashes only, values live in the side store; witness-head stall raises an alert; claim limited to 'tamper-evident up to the last witnessed head' (no Merkle)",
+    "Tests listed map to RT7 (line edit), RT8 (full rewrite) and a tail-truncation case"
+  ],
+  "depends": [
+    "CON-01"
+  ],
+  "deliverable": "org/adr/ADR-02-recorder-witness-verify.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:54",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}
