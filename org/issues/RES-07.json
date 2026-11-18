@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "anaya",
-  "status": "in_progress",
+  "status": "in_review",
   "outcome": "A sourced incident catalogue and attribution evidence that make the problem concrete for the framing and give us realistic test scenarios",
   "acceptance": [
     "≥6 real incidents with primary/first-hand URLs (e.g. Replit DB deletion Jul 2025, AI Incident Database entries), each with: what broke, who detected, time-to-detect/contain/recover if known, how recovered",
@@ -17,7 +17,7 @@
   ],
   "depends": [],
   "deliverable": "research/RES-07.md",
-  "summary": "",
+  "summary": "Report at research/RES-07.md: 7 incidents catalogued (Replit, Gemini CLI, Claude Code x2, Antigravity, AWS/Kiro (disputed), PocketOS) with AIID/GitHub/company sources; none is multi-agent, and attribution was trivial in all (one agent). Pain was irreversibility, backups inside blast radius, agent self-misreporting, human detection after the fact; durations rarely public.\nWho&When verified: abstract headline best 53.5% agent / 14.2% step (cell not found in body tables); GPT-4o Table 1 ranges 26-55% agent, 3.5-25.5% step vs random 12-29 / 4-19. Follow-ups FAMAS (57.61/29.35 overall), CHIEF (77.59/29.31 hand; 76.80/52.00 alg-gen), DoVer, MAST.\nPattern: selective rollback alone fixes few of the incidents; pre-execution gating, scoped identity and out-of-reach pre-images matter more. 3 demo scenarios included.\nTop framing implication: lead with 'seconds to break, days to repair, and nobody can say who/what from logs' but do not claim multi-agent incidents exist; use LLM attribution as the baseline provenance beats.",
   "review": "",
   "log": [
     {
@@ -29,6 +29,16 @@
       "t": "19 Nov 00:33",
       "who": "sameer",
       "msg": "→ in_progress: starting"
+    },
+    {
+      "t": "19 Nov 00:36",
+      "who": "sameer",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:36",
+      "who": "sameer",
+      "msg": "→ in_review"
     }
   ]
 }

@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "anaya",
-  "status": "in_progress",
+  "status": "in_review",
   "outcome": "Operational, jury-verifiable definitions of TTI, TTC and clean recovery, plus a requirements table mapping regulation/audit expectations to our components",
   "acceptance": [
     "Definitions of TTI/TTC/clean recovery grounded in ≥3 sources (e.g. NIST SP 800-61r3, Google SRE/incident metrics, MTTD/MTTR literature), with exact start/stop events and a formula for clean recovery (residual damage + collateral loss)",
@@ -17,7 +17,7 @@
   ],
   "depends": [],
   "deliverable": "research/RES-08.md",
-  "summary": "",
+  "summary": "Verified in the EC AI Act Service Desk consolidated Art 113 (marked AMENDED): high-risk Chapter III (Arts 12/14/19/26) applies 2 Dec 2027 (Annex III) and 2 Aug 2028 (Annex I); general date stays 2 Aug 2026. Reg number (EU) 2026/1744 is secondary-sourced; Council/EP/OJ hosts were blocked by the proxy.\nNIST SP 800-61r3 has NO mean-time metrics; Google SRE says mean-time stats are poorly suited for decisions; DORA renamed MTTR in 2023. So TTI/TTC/clean recovery are ours to define. IBM: 241 days (2025), 247 days (2026, secondary), 4.99M USD (2026, IBM page).\nDefinitions: TTI = t0 (first bad effect commit, from fault injector) to first correct (agent_id, action_id) attribution; also alert-to-attribution and TTI-scope (blast-radius recall>=0.9). TTC = t0 to capability revoked at chokepoint AND no further bad effect under red-team probe; plus damage-in-window and collateral stall.\nClean recovery = pair (R, C): R = |bad effects still in final state|/|B| (B includes taint), C = |good effects lost|/|G|, with revert precision/recall; judged against counterfactual replay with culprit removed; CR=1-(R+C)/2 only shown with R and C; baselines: snapshot-restore and no-op.\nTable maps AI Act Art 12/14/19/26, NIST AI RMF + 600-1, DORA, PRA SS1/23, RBI FREE-AI (13 Aug 2025), CERT-In (6h report, 180d logs, AI/ML in Annexure I) to Recorder/Monitor/Containment/Recovery. Open: PRA SS1/23 has a newer version effective 23 Apr 2026; confirm OJ details.",
   "review": "",
   "log": [
     {
@@ -29,6 +29,16 @@
       "t": "19 Nov 00:33",
       "who": "sameer",
       "msg": "→ in_progress: starting"
+    },
+    {
+      "t": "19 Nov 00:38",
+      "who": "sameer",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:38",
+      "who": "sameer",
+      "msg": "→ in_review"
     }
   ]
 }

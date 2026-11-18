@@ -1,0 +1,34 @@
+{
+  "id": "RES-09",
+  "title": "Lacuna sweep: 2025-26 ML papers on multi-agent accountability, attribution, rollback",
+  "sprint": 1,
+  "track": "research",
+  "owner": "meera",
+  "reviewer": "anaya",
+  "model": "sonnet",
+  "created_by": "anaya",
+  "status": "in_progress",
+  "outcome": "Find the most relevant recent papers, research directions and open hypotheses in Lacuna that our Sprint 1 web research missed",
+  "acceptance": [
+    "uses Lacuna search_lacuna (paper, cluster, hypothesis, resource) with Lacuna URLs cited",
+    "≥8 relevant papers 2025-2026 with 1-line relevance each, ranked",
+    "names the closest competitor work to per-agent selective undo, with how we differ",
+    "linked code/datasets/benchmarks we could reuse for the 10-agent eval"
+  ],
+  "depends": [],
+  "deliverable": "research/RES-09.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:37",
+      "who": "anaya",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:37",
+      "who": "meera",
+      "msg": "→ in_progress: starting Lacuna sweep"
+    }
+  ]
+}

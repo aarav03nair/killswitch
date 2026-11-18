@@ -1,0 +1,33 @@
+{
+  "id": "RES-10",
+  "title": "Citation audit: verify the key papers and numbers we plan to quote",
+  "sprint": 1,
+  "track": "research",
+  "owner": "rohan",
+  "reviewer": "anaya",
+  "model": "sonnet",
+  "created_by": "anaya",
+  "status": "in_progress",
+  "outcome": "Every paper/number likely to reach the abstract is verified against the paper itself (via Lacuna get_paper fulltext or arXiv)",
+  "acceptance": [
+    "checks Who&When 53.5%/14.2% and CHIEF/FAMAS figures in the paper text",
+    "confirms existence, authors, venue/year of Retro, Warp, Aire, Taser, GoEx, Atomix, Cordon, State Footprints, DeltaBox, MAST",
+    "table: claim, source, verified yes/no/partial, exact location, safe wording"
+  ],
+  "depends": [],
+  "deliverable": "research/RES-10.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:37",
+      "who": "anaya",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:37",
+      "who": "rohan",
+      "msg": "→ in_progress: auditing"
+    }
+  ]
+}

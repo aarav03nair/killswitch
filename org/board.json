@@ -125,8 +125,8 @@
       "name": "The Panel",
       "role": "Principal Reviewer / Jury simulation",
       "group": "Leads",
-      "model": "fable",
-      "focus": "Independent gate reviews"
+      "model": "opus",
+      "focus": "Independent gate reviews (moved from Fable: usage credits ran out)"
     },
     {
       "id": "meera",
@@ -218,6 +218,10 @@
     {
       "r": "Only 3 days to abstract deadline",
       "mit": "Research + framing first; build continues in parallel"
+    },
+    {
+      "r": "Fable model out of usage credits",
+      "mit": "Panel reviews run on Opus instead"
     }
   ],
   "activity": [
@@ -380,6 +384,36 @@
       "t": "19 Nov 00:36",
       "who": "rohan",
       "msg": "moved RES-04 to in_review"
+    },
+    {
+      "t": "19 Nov 00:36",
+      "who": "sameer",
+      "msg": "moved RES-07 to in_review"
+    },
+    {
+      "t": "19 Nov 00:37",
+      "who": "anaya",
+      "msg": "opened RES-09 — Lacuna sweep: 2025-26 ML papers on multi-agent accountability, attribution, rollback"
+    },
+    {
+      "t": "19 Nov 00:37",
+      "who": "anaya",
+      "msg": "opened RES-10 — Citation audit: verify the key papers and numbers we plan to quote"
+    },
+    {
+      "t": "19 Nov 00:37",
+      "who": "rohan",
+      "msg": "moved RES-10 to in_progress"
+    },
+    {
+      "t": "19 Nov 00:37",
+      "who": "meera",
+      "msg": "moved RES-09 to in_progress"
+    },
+    {
+      "t": "19 Nov 00:38",
+      "who": "sameer",
+      "msg": "moved RES-08 to in_review"
     }
   ]
 }
