@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "anaya",
-  "status": "in_progress",
+  "status": "in_review",
   "outcome": "Find the most relevant recent papers, research directions and open hypotheses in Lacuna that our Sprint 1 web research missed",
   "acceptance": [
     "uses Lacuna search_lacuna (paper, cluster, hypothesis, resource) with Lacuna URLs cited",
@@ -17,7 +17,7 @@
   ],
   "depends": [],
   "deliverable": "research/RES-09.md",
-  "summary": "",
+  "summary": "Closest competitor is Airlock (arXiv 2611.06727, Nov 2026): provenance DAG + min-cut containment that keeps healthy work (+68 to +96 pp), but it contains, it does not undo landed effects. Our niche: containment + selective undo + tamper-evident audit.\nSecond closest: From Spark to Fire (2603.04474), lineage-graph rollback of messages only.\n12 ranked 2025-26 papers; Who&When best step-level attribution 14.2% vs structured graph reading 55.2% (different splits), so a deterministic recorder beats LLM judges.\nLacuna has no hypothesis on per-agent selective undo; survey 2606.04990 names recovery-oriented evaluation as open.\nNo ready 10-agent fault-injection benchmark found: build our own, reuse Airlock/ARIA/Who&When metrics.\nCaveat: papers read as Lacuna summaries; Airlock's July 2026 OpenAI-HF incident claim is unverified (RES-07).",
   "review": "",
   "log": [
     {
@@ -29,6 +29,16 @@
       "t": "19 Nov 00:37",
       "who": "meera",
       "msg": "→ in_progress: starting Lacuna sweep"
+    },
+    {
+      "t": "19 Nov 00:38",
+      "who": "meera",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:38",
+      "who": "meera",
+      "msg": "→ in_review"
     }
   ]
 }

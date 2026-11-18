@@ -1,0 +1,29 @@
+{
+  "id": "RES-11",
+  "title": "Deep read: Airlock (2611.06727) — closest competitor, exact differentiation",
+  "sprint": 1,
+  "track": "research",
+  "owner": "meera",
+  "reviewer": "anaya",
+  "model": "opus",
+  "created_by": "anaya",
+  "status": "todo",
+  "outcome": "A verified, full-text account of what Airlock does and does not do, so our novelty claim is precise and defensible in front of a jury",
+  "acceptance": [
+    "read full text via Lacuna get_paper fulltext (or arXiv)",
+    "table: capability x (Airlock, Spark-to-Fire, us) for attribution, containment granularity, backward undo, dependant handling, external effects, tamper evidence, metrics",
+    "verbatim (short) limitation statements with section refs",
+    "3 safe novelty sentences + 3 claims we must NOT make"
+  ],
+  "depends": [],
+  "deliverable": "research/RES-11.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:39",
+      "who": "anaya",
+      "msg": "opened"
+    }
+  ]
+}
