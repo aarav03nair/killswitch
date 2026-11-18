@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "anaya",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "A reversible/compensable/irreversible taxonomy of agent actions with the recovery strategy and pre-execution gate each class needs",
   "acceptance": [
     "≥5 primary sources with URLs (e.g. Sagas 1987 paper, GoEx arXiv 2404.06921, event-sourcing/compensating-transaction docs)",
@@ -17,13 +17,28 @@
   ],
   "depends": [],
   "deliverable": "research/RES-02.md",
-  "summary": "",
+  "summary": "Reversibility taxonomy (R / C / I1 containable / I2 uncontainable / U unmediated) with recovery strategy and pre-action logging per class; 10 sources (Sagas 1987, GoEx, MS saga/compensation/event-sourcing docs, Temporal, Atomix, Cordon, State Footprints). Sagas paper itself says compensation does not notify transactions that already read partial results: that is our 'B consumed A's write' case, and no source solves it. Worked example gives 6 options for B's dependent work. Surprise: 2026 preprints (Atomix, Cordon) already do effect classes and outbox gating, but per task, not per agent. Top implication: Recorder must capture class, compensator, and read/write sets at action time; Containment must gate unclassified/irreversible calls in an outbox before execution.",
   "review": "",
   "log": [
     {
       "t": "19 Nov 00:32",
       "who": "anaya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:33",
+      "who": "meera",
+      "msg": "→ in_progress: starting"
+    },
+    {
+      "t": "19 Nov 00:35",
+      "who": "meera",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:35",
+      "who": "meera",
+      "msg": "→ in_review"
     }
   ]
 }

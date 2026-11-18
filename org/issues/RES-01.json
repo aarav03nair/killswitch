@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "anaya",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "Know which selective-undo mechanisms (action history graph, dependency tracking, selective re-execution) transfer to an LLM agent network and where they break",
   "acceptance": [
     "≥5 primary sources with URLs, including Retro (OSDI'10) and Warp (SOSP'11) papers",
@@ -17,13 +17,28 @@
   ],
   "depends": [],
   "deliverable": "research/RES-01.md",
-  "summary": "",
+  "summary": "Retro (OSDI'10), Warp (SOSP'11), Aire (SOSP'13, not OSDI'14) and Taser (SOSP'05) all undo one actor's damage while keeping later legitimate work, via a recorded dependency graph + taint + selective rollback/re-execution. Hypothesis H1 half holds: graph and selective rollback transfer; replay-based re-execution does not, since LLM agents are non-deterministic (Warp/Aire rely on recording non-determinism; Taser/Retro sidestep it).\nAll systems hit external effects and pause for a human or send a compensating message (link to RES-02). Aire's authorized-repair model is the relevant precedent for who may trigger undo. Taser's separate log backend is the precedent for logs agents cannot edit.\nTop design implication: Recorder must store per action: agent_id + delegation/authority, write set with before/after hashes, READ SET WITH VERSIONS READ (incl. other agents' outputs), message IDs on both sides, effect class. Recovery = taint forward, revert tainted versions, hand work back to agents to re-plan with approval; do not replay LLMs.\nCaveats: GoEx read at abstract level only; Retro venue not shown in fetched PDF; numbers extracted via fetch tool, spot-check.",
   "review": "",
   "log": [
     {
       "t": "19 Nov 00:32",
       "who": "anaya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:33",
+      "who": "meera",
+      "msg": "→ in_progress: starting"
+    },
+    {
+      "t": "19 Nov 00:35",
+      "who": "meera",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:35",
+      "who": "meera",
+      "msg": "→ in_review"
     }
   ]
 }

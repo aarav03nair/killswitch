@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "anaya",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "Know whether any existing substrate can revert one author's changes while keeping others' later dependent work, and pick our storage substrate",
   "acceptance": [
     "≥5 tools surveyed with repo/docs URLs (e.g. LangGraph checkpointer/time-travel, Dolt, lakeFS, Git, Temporal, FS/VM snapshots)",
@@ -17,13 +17,28 @@
   ],
   "depends": [],
   "deliverable": "research/RES-06.md",
-  "summary": "",
+  "summary": "Surveyed 7 substrates (LangGraph, Temporal, Replit snapshots, DeltaBox, Git, Dolt, lakeFS); H6 holds: checkpoint/time-travel tools restore whole state and drop others' work.\nCorrection: commit-graph stores (Dolt, Git, lakeFS) have 'revert one commit, keep later commits'; per-author undo = revert all commits by author X.\nLocal Git run: independent non-adjacent edit reverts cleanly; dependent edit conflicts. Git conflicts on adjacent lines, Dolt on same cell.\nSurprise: lakeFS is BSL 1.1 and object-level; none record reads, so dependency tracking must be our own layer.\nVerdict: Dolt (row-level revert, SQL, Apache-2.0) for shared state, Git fallback, plus own provenance graph. Dolt not run locally (binary not executed); verified from tests/docs only.",
   "review": "",
   "log": [
     {
       "t": "19 Nov 00:32",
       "who": "anaya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:33",
+      "who": "leela",
+      "msg": "→ in_progress: starting"
+    },
+    {
+      "t": "19 Nov 00:35",
+      "who": "leela",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:35",
+      "who": "leela",
+      "msg": "→ in_review"
     }
   ]
 }

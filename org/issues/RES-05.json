@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "anaya",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "A reuse/build decision for Monitor and Containment based on what OSS tools actually do (read from code/READMEs)",
   "acceptance": [
     "≥6 tools surveyed with repo URLs, licence and activity (e.g. Langfuse, Arize Phoenix, OpenLLMetry, NeMo Guardrails, LlamaFirewall, OPA or Cedar)",
@@ -17,13 +17,28 @@
   ],
   "depends": [],
   "deliverable": "research/RES-05.md",
-  "summary": "",
+  "summary": "Surveyed 11 OSS tools (Langfuse, Phoenix, OpenLLMetry, AgentOps, NeMo, Guardrails AI, Invariant, LlamaFirewall, OPA, Cedar, agentgateway) by reading cloned code/READMEs; capability matrix marks V(erified)/C(laimed). No tool has agent-level quarantine; observability never blocks, guardrails judge one call. Correction to H5: agentgateway already is an identity-aware MCP gateway (JWT, CEL authz, OTLP, config hot-reload); the gap is quarantine state linked to provenance/rollback, not 'a gateway'. Licence traps: Phoenix ELv2, Langfuse ee/, LlamaFirewall needs HF+Together key. Stars/release dates unavailable (GitHub API blocked). VERDICT: BUILD a thin offline Python chokepoint + kill registry; REUSE OTel/gen_ai attrs and Cedar/OPA-style policy semantics; optional Langfuse/Phoenix viewer; AVOID LlamaFirewall/Guardrails AI/AgentOps as deps.",
   "review": "",
   "log": [
     {
       "t": "19 Nov 00:32",
       "who": "anaya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:33",
+      "who": "leela",
+      "msg": "→ in_progress: starting"
+    },
+    {
+      "t": "19 Nov 00:36",
+      "who": "leela",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:36",
+      "who": "leela",
+      "msg": "→ in_review"
     }
   ]
 }

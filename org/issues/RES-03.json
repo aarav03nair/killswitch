@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "anaya",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "A recommended scheme that binds every action to one agent identity, through delegation chains and shared tools, and can be revoked fast",
   "acceptance": [
     "≥5 primary sources with URLs (specs/RFCs/drafts with version: SPIFFE, RFC 8693, MCP authorization spec, draft-klrc-aiagent-auth, RFC 9421 or similar)",
@@ -17,13 +17,33 @@
   ],
   "depends": [],
   "deliverable": "research/RES-03.md",
-  "summary": "",
+  "summary": "Correction: 12 primary sources (not 13). Workload identity (SPIFFE/WIMSE) identifies a process, not an action; RFC 8693 treats prior actors in an act chain as informational only; MCP forbids token passthrough so upstream APIs see the MCP server, not the agent, which is where attribution collapses. SPIRE docs read show short TTLs (1h X.509, 5m JWT) and node ban but no SVID revocation. klrc-03 (Jul 2026) is the live IETF draft; txn-tokens-for-agents-05 and pedigree-00 are expired single-author drafts; none defines fast revocation alone. Top design implication: SPIFFE-format agent ID + RFC 8693-style act chain + per-agent Ed25519 signed action record, all via a tool gateway that writes the record and holds a deny-list (immediate containment), with short TTLs bounding the rest.",
   "review": "",
   "log": [
     {
       "t": "19 Nov 00:32",
       "who": "anaya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:34",
+      "who": "rohan",
+      "msg": "→ in_progress: starting"
+    },
+    {
+      "t": "19 Nov 00:35",
+      "who": "rohan",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:35",
+      "who": "rohan",
+      "msg": "→ in_review"
+    },
+    {
+      "t": "19 Nov 00:35",
+      "who": "rohan",
+      "msg": "posted result summary"
     }
   ]
 }

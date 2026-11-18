@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "anaya",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "A draft per-action record schema mapped to OTel GenAI attributes, with the gaps (state read/write sets) and a tamper-evidence mechanism chosen",
   "acceptance": [
     "≥5 primary sources with URLs, including the official OTel GenAI semconv spec (with version/stability status) and RFC 9162 or Sigstore Rekor/Trillian docs",
@@ -17,13 +17,28 @@
   ],
   "depends": [],
   "deliverable": "research/RES-04.md",
-  "summary": "",
+  "summary": "OTel GenAI conventions (agent/tool spans, gen_ai.agent.id, tool.call.*, conversation.id) cover who called what, but have NO state read/write, effect-class, delegation or causal-edge fields: those are our gap fields (ks.*). All gen_ai.* still Development; spec moved to semantic-conventions-genai repo in Jun 2026 (no release found); execute_tool span details unverified (repo docs not fetchable).\nTamper-evidence: chose per-agent hash chain inside an RFC 9162-style Merkle log with Ed25519 signed checkpoints published outside agents' reach; hash chain alone fails against full rewrite; Rekor/Trillian too heavy for prototype.\nReport has 19-field draft record, 3-option comparison, Recorder and Monitor implications.\nTop design implication: the gateway (not the agent) writes records including read_set/write_set/caused_by, since these enable selective rollback and blast-radius at detection time.",
   "review": "",
   "log": [
     {
       "t": "19 Nov 00:32",
       "who": "anaya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:34",
+      "who": "rohan",
+      "msg": "→ in_progress: starting"
+    },
+    {
+      "t": "19 Nov 00:36",
+      "who": "rohan",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:36",
+      "who": "rohan",
+      "msg": "→ in_review"
     }
   ]
 }

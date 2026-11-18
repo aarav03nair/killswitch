@@ -1,0 +1,43 @@
+{
+  "id": "ENG-00",
+  "title": "Strawman architecture for research to stress-test",
+  "sprint": 1,
+  "track": "eng",
+  "owner": "maya",
+  "reviewer": "panel",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "in_review",
+  "outcome": "A 1-page strawman of components + data flow + the 3 riskiest assumptions, to be confirmed or broken by Sprint 1 findings",
+  "acceptance": [
+    "component diagram (text/mermaid) covering identity, recorder, monitor, containment, recovery, eval harness",
+    "explicit list of riskiest assumptions with which RES issue tests each",
+    "a proposed demo world for 10 agents"
+  ],
+  "depends": [],
+  "deliverable": "org/adr/STRAWMAN.md",
+  "summary": "Strawman at org/adr/STRAWMAN.md (~1,200 words incl. diagram/tables).\nCore: every agent call is an Ed25519-signed envelope through one Action Gateway; gateway adapters (not agents) record read/write sets with before/after values into a hash-chained JSONL recorder.\nMonitor (rules + per-agent baselines) alerts with culprit-signed evidence; containment = revoke credential, quarantine at gateway, cancel in-flight, hold undispatched outbox; others keep running.\nRecovery = taint graph (networkx) from recording: revert culprit writes, re-run tainted honest actions, compensate external effects, report irreversible ones.\nDemo: 'Acme Mini-Co', 10 deterministic agents with deliberate crm->billing->reporter/comms dependencies; fault catalogue F1-F7; TTI/TTC/precision/recall/collateral/residual vs. a no-fault ground-truth run and two baselines.\n5 riskiest assumptions mapped to RES-01..08; enterprise mapping to OTel spans, OPA/Cedar, SPIFFE/token exchange, WORM audit; 7 open questions for Call #1.",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:34",
+      "who": "maya",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:34",
+      "who": "maya",
+      "msg": "→ in_progress: drafting"
+    },
+    {
+      "t": "19 Nov 00:35",
+      "who": "maya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:35",
+      "who": "maya",
+      "msg": "→ in_review"
+    }
+  ]
+}

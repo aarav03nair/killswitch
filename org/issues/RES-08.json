@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "anaya",
-  "status": "todo",
+  "status": "in_progress",
   "outcome": "Operational, jury-verifiable definitions of TTI, TTC and clean recovery, plus a requirements table mapping regulation/audit expectations to our components",
   "acceptance": [
     "Definitions of TTI/TTC/clean recovery grounded in ≥3 sources (e.g. NIST SP 800-61r3, Google SRE/incident metrics, MTTD/MTTR literature), with exact start/stop events and a formula for clean recovery (residual damage + collateral loss)",
@@ -24,6 +24,11 @@
       "t": "19 Nov 00:32",
       "who": "anaya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:33",
+      "who": "sameer",
+      "msg": "→ in_progress: starting"
     }
   ]
 }
