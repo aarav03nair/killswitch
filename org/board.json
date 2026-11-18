@@ -14,19 +14,19 @@
     "owner": "Aarav (Product Owner)",
     "updated": ""
   },
-  "phase": "Sprint 0 · Kickoff",
+  "phase": "Sprint 1 · Research in progress",
   "sprints": [
     {
       "n": 0,
       "name": "Kickoff",
       "goal": "Charter, team, tracker, research plan",
-      "status": "active"
+      "status": "done"
     },
     {
       "n": 1,
       "name": "Research",
       "goal": "Literature, standards, open source, incidents → synthesis",
-      "status": "planned"
+      "status": "active"
     },
     {
       "n": 2,
@@ -202,7 +202,14 @@
     }
   ],
   "meetings": [],
-  "decisions": [],
+  "decisions": [
+    {
+      "id": "D-01",
+      "title": "Thesis: rollback is a dependency problem, not a snapshot problem",
+      "status": "to test",
+      "summary": "Sprint 1 tries to confirm or kill this. If it holds, we build a provenance graph of agent reads and writes and use it for selective undo."
+    }
+  ],
   "risks": [
     {
       "r": "Abstract must be Aarav's own writing — organisers check for AI-written text",
@@ -228,6 +235,66 @@
       "t": "19 Nov 00:29",
       "who": "pmo",
       "msg": "opened ORG-02 — Research plan: break Sprint 1 into small research issues"
+    },
+    {
+      "t": "19 Nov 00:30",
+      "who": "anaya",
+      "msg": "moved ORG-02 to in_progress"
+    },
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "opened RES-01 — Selective undo & intrusion recovery prior art (Retro, Warp, Aire, GoEx)"
+    },
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "opened RES-02 — Compensation, sagas & irreversible actions: a reversibility taxonomy for agent effects"
+    },
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "opened RES-03 — Per-agent identity & delegation on every action (SPIFFE, OAuth token exchange, MCP auth, IETF agent drafts)"
+    },
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "opened RES-04 — Action record schema: OpenTelemetry GenAI conventions + tamper-evident log"
+    },
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "opened RES-05 — OSS survey: agent observability, guardrails & policy engines — reuse vs. missing"
+    },
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "opened RES-06 — OSS survey: checkpointing, time-travel & versioned data stores for per-agent rollback"
+    },
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "opened RES-07 — Real incidents of agents causing damage + state of automated failure attribution"
+    },
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "opened RES-08 — Metrics for TTI/TTC/clean recovery + regulatory & bank-audit hooks"
+    },
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "opened RES-SYN — Synthesis: findings → problem framing + design principles"
+    },
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "moved ORG-02 to in_review"
+    },
+    {
+      "t": "19 Nov 00:33",
+      "who": "pmo",
+      "msg": "reviewed ORG-02: done"
     }
   ]
 }

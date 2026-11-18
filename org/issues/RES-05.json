@@ -1,0 +1,29 @@
+{
+  "id": "RES-05",
+  "title": "OSS survey: agent observability, guardrails & policy engines — reuse vs. missing",
+  "sprint": 1,
+  "track": "research",
+  "owner": "leela",
+  "reviewer": "anaya",
+  "model": "sonnet",
+  "created_by": "anaya",
+  "status": "todo",
+  "outcome": "A reuse/build decision for Monitor and Containment based on what OSS tools actually do (read from code/READMEs)",
+  "acceptance": [
+    "≥6 tools surveyed with repo URLs, licence and activity (e.g. Langfuse, Arize Phoenix, OpenLLMetry, NeMo Guardrails, LlamaFirewall, OPA or Cedar)",
+    "Capability matrix: tool × per-agent attribution, OTel export, live alerting, block single call, quarantine whole agent, revoke credentials, offline/no-key use",
+    "Each capability marked 'verified in code/docs' vs 'claimed'",
+    "'Implications for our design' section with explicit reuse/build/avoid list"
+  ],
+  "depends": [],
+  "deliverable": "research/RES-05.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "opened"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "id": "RES-SYN",
+  "title": "Synthesis: findings → problem framing + design principles",
+  "sprint": 1,
+  "track": "research",
+  "owner": "anaya",
+  "reviewer": "anaya",
+  "model": "opus",
+  "created_by": "anaya",
+  "status": "todo",
+  "outcome": "Aarav gets 2–3 framing options, an abstract outline of points, a sourced fact sheet, and the team gets design principles for Sprint 2 ADRs",
+  "acceptance": [
+    "Working thesis (undo is a dependency problem) explicitly confirmed, modified or killed with evidence from RES-01..08",
+    "2–3 framing options with pros/cons, plus an outline (bullets only, no abstract prose) for Problem → Fix → Why it matters",
+    "Fact sheet of ≥10 numbers/facts each with source URL, traced to a RES report",
+    "≤10 design principles mapped to architecture components, each citing the RES report that motivates it"
+  ],
+  "depends": [
+    "RES-01",
+    "RES-02",
+    "RES-03",
+    "RES-04",
+    "RES-05",
+    "RES-06",
+    "RES-07",
+    "RES-08"
+  ],
+  "deliverable": "research/SYNTHESIS.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "opened"
+    }
+  ]
+}

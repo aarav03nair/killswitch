@@ -1,0 +1,29 @@
+{
+  "id": "RES-06",
+  "title": "OSS survey: checkpointing, time-travel & versioned data stores for per-agent rollback",
+  "sprint": 1,
+  "track": "research",
+  "owner": "leela",
+  "reviewer": "anaya",
+  "model": "sonnet",
+  "created_by": "anaya",
+  "status": "todo",
+  "outcome": "Know whether any existing substrate can revert one author's changes while keeping others' later dependent work, and pick our storage substrate",
+  "acceptance": [
+    "≥5 tools surveyed with repo/docs URLs (e.g. LangGraph checkpointer/time-travel, Dolt, lakeFS, Git, Temporal, FS/VM snapshots)",
+    "Table: tool × rollback granularity (whole state / branch / per-author / per-row) × keeps-others'-work? × conflict handling × Python/offline usable",
+    "A small tested-or-documented example (from docs or a local run) of reverting one author's commit in the best candidate",
+    "'Implications for our design' section recommending a substrate for the prototype's Recovery component"
+  ],
+  "depends": [],
+  "deliverable": "research/RES-06.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "opened"
+    }
+  ]
+}

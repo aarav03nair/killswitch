@@ -7,18 +7,38 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "done",
   "outcome": "5-8 precise research issues with owners, outcomes and acceptance",
   "acceptance": [],
   "depends": [],
   "deliverable": "research/PLAN.md",
-  "summary": "",
-  "review": "",
+  "summary": "research/PLAN.md written: working thesis (selective undo is a dependency/provenance problem, not a snapshot problem), 8 questions with hypotheses to confirm or kill, an issue→abstract/architecture map, sourced starting points from the planning searches, a schedule (reports 19–20 Nov, synthesis 21 Nov, ahead of the 22 Nov abstract), and a Brief for researchers (template, quality bar, 800–1800 words). Created 9 Sprint 1 issues: RES-01/02 meera (selective undo; reversibility/compensation), RES-03/04 rohan (agent identity; action record + OTel GenAI + tamper-evident log), RES-05/06 leela (OSS observability/guardrails; checkpoint/versioned stores), RES-07/08 sameer (incidents + failure attribution; metrics + regulatory hooks), RES-SYN anaya (depends on all 8). Planning-search claims still to verify: Who&When accuracy figures and the reported EU AI Act high-risk delay to Dec 2027.",
+  "review": "[pmo · done] Plan accepted: thesis-driven, falsifiable questions, issues small with testable acceptance. Fixed RES-01 title (GoEx belongs in RES-02).",
   "log": [
     {
       "t": "19 Nov 00:29",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:30",
+      "who": "anaya",
+      "msg": "→ in_progress: planning"
+    },
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "→ in_review: plan + 9 issues ready for review"
+    },
+    {
+      "t": "19 Nov 00:33",
+      "who": "pmo",
+      "msg": "review: done"
     }
   ]
 }

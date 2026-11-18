@@ -1,0 +1,29 @@
+{
+  "id": "RES-03",
+  "title": "Per-agent identity & delegation on every action (SPIFFE, OAuth token exchange, MCP auth, IETF agent drafts)",
+  "sprint": 1,
+  "track": "research",
+  "owner": "rohan",
+  "reviewer": "anaya",
+  "model": "sonnet",
+  "created_by": "anaya",
+  "status": "todo",
+  "outcome": "A recommended scheme that binds every action to one agent identity, through delegation chains and shared tools, and can be revoked fast",
+  "acceptance": [
+    "≥5 primary sources with URLs (specs/RFCs/drafts with version: SPIFFE, RFC 8693, MCP authorization spec, draft-klrc-aiagent-auth, RFC 9421 or similar)",
+    "Table comparing ≥4 approaches on: granularity (workload vs action), delegation chain support, non-repudiation, revocation latency, prototype effort",
+    "Explicit analysis of where attribution collapses (shared MCP server / service credentials) and how to keep it",
+    "'Implications for our design' section with a recommended identity + action-signing scheme for Identity and Containment"
+  ],
+  "depends": [],
+  "deliverable": "research/RES-03.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "opened"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "RES-04",
+  "title": "Action record schema: OpenTelemetry GenAI conventions + tamper-evident log",
+  "sprint": 1,
+  "track": "research",
+  "owner": "rohan",
+  "reviewer": "anaya",
+  "model": "sonnet",
+  "created_by": "anaya",
+  "status": "todo",
+  "outcome": "A draft per-action record schema mapped to OTel GenAI attributes, with the gaps (state read/write sets) and a tamper-evidence mechanism chosen",
+  "acceptance": [
+    "≥5 primary sources with URLs, including the official OTel GenAI semconv spec (with version/stability status) and RFC 9162 or Sigstore Rekor/Trillian docs",
+    "Field table: proposed action-record field × OTel attribute if one exists (or 'gap') × why TTI/TTC/recovery needs it",
+    "Comparison of ≥3 tamper-evidence options (hash chain, Merkle log, transparency log) on guarantees, verification cost, prototype effort",
+    "'Implications for our design' section for Recorder and Monitor"
+  ],
+  "depends": [],
+  "deliverable": "research/RES-04.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "opened"
+    }
+  ]
+}

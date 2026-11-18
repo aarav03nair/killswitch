@@ -1,0 +1,29 @@
+{
+  "id": "RES-08",
+  "title": "Metrics for TTI/TTC/clean recovery + regulatory & bank-audit hooks",
+  "sprint": 1,
+  "track": "research",
+  "owner": "sameer",
+  "reviewer": "anaya",
+  "model": "sonnet",
+  "created_by": "anaya",
+  "status": "todo",
+  "outcome": "Operational, jury-verifiable definitions of TTI, TTC and clean recovery, plus a requirements table mapping regulation/audit expectations to our components",
+  "acceptance": [
+    "Definitions of TTI/TTC/clean recovery grounded in ≥3 sources (e.g. NIST SP 800-61r3, Google SRE/incident metrics, MTTD/MTTR literature), with exact start/stop events and a formula for clean recovery (residual damage + collateral loss)",
+    "Requirements table: source clause (EU AI Act Art. 12/14/19/26 with current applicability dates, NIST AI RMF / AI 600-1, ≥1 banking source e.g. PRA SS1/23 or EU DORA) × requirement × our component",
+    "All regulatory citations link to official text, not vendor blogs",
+    "'Implications for our design' section specifying what the Evaluation harness must measure"
+  ],
+  "depends": [],
+  "deliverable": "research/RES-08.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "opened"
+    }
+  ]
+}

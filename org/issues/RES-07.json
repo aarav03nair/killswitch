@@ -1,0 +1,29 @@
+{
+  "id": "RES-07",
+  "title": "Real incidents of agents causing damage + state of automated failure attribution",
+  "sprint": 1,
+  "track": "research",
+  "owner": "sameer",
+  "reviewer": "anaya",
+  "model": "sonnet",
+  "created_by": "anaya",
+  "status": "todo",
+  "outcome": "A sourced incident catalogue and attribution evidence that make the problem concrete for the framing and give us realistic test scenarios",
+  "acceptance": [
+    "≥6 real incidents with primary/first-hand URLs (e.g. Replit DB deletion Jul 2025, AI Incident Database entries), each with: what broke, who detected, time-to-detect/contain/recover if known, how recovered",
+    "Summary of Who&When (arXiv 2505.00212) and ≥1 follow-up: exact reported attribution accuracies with dataset/setting",
+    "Pattern analysis: which incidents a per-agent selective rollback would have fixed vs. not",
+    "'Implications for framing' and 'Implications for our design' sections (incl. 3 candidate demo scenarios)"
+  ],
+  "depends": [],
+  "deliverable": "research/RES-07.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "opened"
+    }
+  ]
+}

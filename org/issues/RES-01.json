@@ -1,0 +1,29 @@
+{
+  "id": "RES-01",
+  "title": "Selective undo & intrusion recovery prior art (Retro, Warp, Aire)",
+  "sprint": 1,
+  "track": "research",
+  "owner": "meera",
+  "reviewer": "anaya",
+  "model": "sonnet",
+  "created_by": "anaya",
+  "status": "todo",
+  "outcome": "Know which selective-undo mechanisms (action history graph, dependency tracking, selective re-execution) transfer to an LLM agent network and where they break",
+  "acceptance": [
+    "≥5 primary sources with URLs, including Retro (OSDI'10) and Warp (SOSP'11) papers",
+    "Table comparing ≥4 systems on: what is recorded, how dependencies are tracked, how legitimate work is preserved, handling of non-determinism, overhead",
+    "Explicit analysis of what breaks when the 're-executed' actor is a non-deterministic LLM agent",
+    "'Implications for our design' section naming the minimal dependency data our Recorder must capture"
+  ],
+  "depends": [],
+  "deliverable": "research/RES-01.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "opened"
+    }
+  ]
+}

@@ -1,0 +1,29 @@
+{
+  "id": "RES-02",
+  "title": "Compensation, sagas & irreversible actions: a reversibility taxonomy for agent effects",
+  "sprint": 1,
+  "track": "research",
+  "owner": "meera",
+  "reviewer": "anaya",
+  "model": "sonnet",
+  "created_by": "anaya",
+  "status": "todo",
+  "outcome": "A reversible/compensable/irreversible taxonomy of agent actions with the recovery strategy and pre-execution gate each class needs",
+  "acceptance": [
+    "≥5 primary sources with URLs (e.g. Sagas 1987 paper, GoEx arXiv 2404.06921, event-sourcing/compensating-transaction docs)",
+    "Taxonomy table: action class × example agent actions × recovery strategy (restore/compensate/re-execute/quarantine/none) × what must be logged beforehand",
+    "Worked example: agent A's bad write consumed by agent B — options for B's dependent work and their trade-offs",
+    "'Implications for our design' section covering Recovery and pre-execution gating in Containment"
+  ],
+  "depends": [],
+  "deliverable": "research/RES-02.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:32",
+      "who": "anaya",
+      "msg": "opened"
+    }
+  ]
+}
