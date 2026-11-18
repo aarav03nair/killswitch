@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "anaya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "A reversible/compensable/irreversible taxonomy of agent actions with the recovery strategy and pre-execution gate each class needs",
   "acceptance": [
     "≥5 primary sources with URLs (e.g. Sagas 1987 paper, GoEx arXiv 2404.06921, event-sourcing/compensating-transaction docs)",
@@ -18,7 +18,7 @@
   "depends": [],
   "deliverable": "research/RES-02.md",
   "summary": "Reversibility taxonomy (R / C / I1 containable / I2 uncontainable / U unmediated) with recovery strategy and pre-action logging per class; 10 sources (Sagas 1987, GoEx, MS saga/compensation/event-sourcing docs, Temporal, Atomix, Cordon, State Footprints). Sagas paper itself says compensation does not notify transactions that already read partial results: that is our 'B consumed A's write' case, and no source solves it. Worked example gives 6 options for B's dependent work. Surprise: 2026 preprints (Atomix, Cordon) already do effect classes and outbox gating, but per task, not per agent. Top implication: Recorder must capture class, compensator, and read/write sets at action time; Containment must gate unclassified/irreversible calls in an outbox before execution.",
-  "review": "",
+  "review": "[anaya · done] DONE. All 4 criteria met (10 sources, R/C/I1/I2/U taxonomy with pre-logging column, 6-option worked example, Recovery + gating implications). Strongest finding: Sagas (1987) admit compensation makes no effort to notify transactions that already read partial results - exactly our 'B consumed A' case, unsolved in the literature. H2 CONFIRMED and REFINED (3 classes -> 5; class is per action instance, not per tool).\nCorrection for synthesis: TL;DR bullet 1 over-claims ('every undo mechanism classifies before it runs'): Retro/Warp/Taser/Aire (RES-01) discover external effects at repair time. Safe wording: transactional and agent-runtime designs (Sagas, Cordon, Atomix) classify up front, and we argue we must.\nCarry: Sagas venue is ACM SIGMOD 1987 (fill in); Atomix/Cordon/State Footprints are 2026 preprints read at abstract level, existence pending RES-10; Cordon 45/45 vs 14/45 is the authors' own benchmark. Worked-example option 3 ('re-execute B') conflicts with RES-01 'do not replay LLMs' - resolve at Call #1.",
   "log": [
     {
       "t": "19 Nov 00:32",
@@ -39,6 +39,11 @@
       "t": "19 Nov 00:35",
       "who": "meera",
       "msg": "→ in_review"
+    },
+    {
+      "t": "19 Nov 00:41",
+      "who": "anaya",
+      "msg": "review: done"
     }
   ]
 }

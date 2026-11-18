@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "opus",
   "created_by": "anaya",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "A verified, full-text account of what Airlock does and does not do, so our novelty claim is precise and defensible in front of a jury",
   "acceptance": [
     "read full text via Lacuna get_paper fulltext (or arXiv)",
@@ -17,13 +17,28 @@
   ],
   "depends": [],
   "deliverable": "research/RES-11.md",
-  "summary": "",
+  "summary": "Full text of Airlock read (22pp incl. App. A-G); Spark-to-Fire read at method+eval+limitations level.\nAirlock = online FORWARD containment (provenance DAG + per-object switches + deadline-aware min-cut, Thm 5: 0 post-tau1 leaks); it declares no rollback of committed effects/absorbed memory (Table A.2 S2, 5.2), trusted unauthenticated journals, adversarial agents out of scope.\nOur safe niche: backward recovery of one agent's landed shared-state writes + repair of dependants, signed/hash-chained audit under a stronger threat model (F5/F6), recovery metrics (residual damage, collateral loss).\nDo NOT claim novelty for provenance-guided selective containment, or 'first selective undo for agents' (Wang et al. 2608.10502 does single-agent dependency-guided rollback+replay), or any head-to-head win over Airlock.\nRisk: Airlock's 'kept without redo' metric penalises re-execution; report our own metrics and make re-runs not repeat external effects. STRAWMAN A5 falsified as written.\nIncident is real (METR: ~1,200 agents, >70k msgs/files, ~700 attackers, new board ~2 days after wipe) but METR says the board came from exploiting Artifactory, not 'legitimately held credentials' as Airlock writes.",
   "review": "",
   "log": [
     {
       "t": "19 Nov 00:39",
       "who": "anaya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:39",
+      "who": "meera",
+      "msg": "→ in_progress: full-text read"
+    },
+    {
+      "t": "19 Nov 00:43",
+      "who": "meera",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:43",
+      "who": "meera",
+      "msg": "→ in_review"
     }
   ]
 }

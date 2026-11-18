@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "anaya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "A reuse/build decision for Monitor and Containment based on what OSS tools actually do (read from code/READMEs)",
   "acceptance": [
     "≥6 tools surveyed with repo URLs, licence and activity (e.g. Langfuse, Arize Phoenix, OpenLLMetry, NeMo Guardrails, LlamaFirewall, OPA or Cedar)",
@@ -18,7 +18,7 @@
   "depends": [],
   "deliverable": "research/RES-05.md",
   "summary": "Surveyed 11 OSS tools (Langfuse, Phoenix, OpenLLMetry, AgentOps, NeMo, Guardrails AI, Invariant, LlamaFirewall, OPA, Cedar, agentgateway) by reading cloned code/READMEs; capability matrix marks V(erified)/C(laimed). No tool has agent-level quarantine; observability never blocks, guardrails judge one call. Correction to H5: agentgateway already is an identity-aware MCP gateway (JWT, CEL authz, OTLP, config hot-reload); the gap is quarantine state linked to provenance/rollback, not 'a gateway'. Licence traps: Phoenix ELv2, Langfuse ee/, LlamaFirewall needs HF+Together key. Stars/release dates unavailable (GitHub API blocked). VERDICT: BUILD a thin offline Python chokepoint + kill registry; REUSE OTel/gen_ai attrs and Cedar/OPA-style policy semantics; optional Langfuse/Phoenix viewer; AVOID LlamaFirewall/Guardrails AI/AgentOps as deps.",
-  "review": "",
+  "review": "[anaya · done] DONE. All 4 criteria met (11 tools from cloned code, licence + last-commit activity, 7-column matrix with V/C/N, reuse/build/avoid table). Stars unavailable is a sandbox limit, not a defect; spot-check adds agentgateway ~5.7k stars, Apache-2.0, Linux Foundation project, README lists JWT/API-key/OAuth auth and 'fine-grained RBAC with CEL'. Strongest finding: correction to H5 - an identity-aware MCP chokepoint already exists (agentgateway); H5 REFINED.\nSynthesis must carry: do NOT claim 'nobody has a gateway' or flatly 'no tool can quarantine an agent' - a CEL deny rule on a JWT claim plus hot reload is close to identity-level quarantine (unverified both ways). Defensible gap: quarantine that is provenance-aware (freeze the agent AND outbox/dependents derived from its writes) and linked to selective rollback. Survey is OSS-only and skipped invariant-gateway and other MCP gateways; say 'among the 11 tools we read'.",
   "log": [
     {
       "t": "19 Nov 00:32",
@@ -39,6 +39,11 @@
       "t": "19 Nov 00:36",
       "who": "leela",
       "msg": "→ in_review"
+    },
+    {
+      "t": "19 Nov 00:41",
+      "who": "anaya",
+      "msg": "review: done"
     }
   ]
 }

@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "anaya",
-  "status": "in_progress",
+  "status": "in_review",
   "outcome": "Every paper/number likely to reach the abstract is verified against the paper itself (via Lacuna get_paper fulltext or arXiv)",
   "acceptance": [
     "checks Who&When 53.5%/14.2% and CHIEF/FAMAS figures in the paper text",
@@ -16,7 +16,7 @@
   ],
   "depends": [],
   "deliverable": "research/RES-10.md",
-  "summary": "",
+  "summary": "Audited 27 claims; table + DROP list in research/RES-10.md. Who&When 53.5/14.2 is in the abstract and reproducible from Table 1 as a 4-cell mean, but from two different methods (all-at-once agent, step-by-step step), GPT-4o; never say one method gets both. FAMAS (57.61/29.35) and CHIEF tables match; CHIEF does not win every cell (FAMAS 41.38 step hand-crafted). Cordon 45/45 vs 14/45 verified but is the authors' own 45-case suite with self-derived baseline adapters; EuroSys'27 is only a header, drop. MAST 94% is few-shot o1 accuracy (kappa 0.77): quote kappa; NeurIPS unconfirmed. Venues confirmed: Retro OSDI'10, Warp SOSP'11, Aire SOSP'13, Taser SOSP'05, Sagas SIGMOD'87, Crosby-Wallach USENIX Sec'09, Who&When ICML'25. State Footprints is a vision paper (rollback unimplemented) and close prior art; DeltaBox is whole-sandbox, v2/title conflict with RES-06. Cordon/CHIEF/State Footprints/DeltaBox read via WebFetch (second-hand): Aarav should eyeball those numbers.",
   "review": "",
   "log": [
     {
@@ -28,6 +28,16 @@
       "t": "19 Nov 00:37",
       "who": "rohan",
       "msg": "→ in_progress: auditing"
+    },
+    {
+      "t": "19 Nov 00:40",
+      "who": "rohan",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:40",
+      "who": "rohan",
+      "msg": "→ in_review"
     }
   ]
 }

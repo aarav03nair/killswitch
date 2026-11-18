@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "anaya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "A draft per-action record schema mapped to OTel GenAI attributes, with the gaps (state read/write sets) and a tamper-evidence mechanism chosen",
   "acceptance": [
     "≥5 primary sources with URLs, including the official OTel GenAI semconv spec (with version/stability status) and RFC 9162 or Sigstore Rekor/Trillian docs",
@@ -18,7 +18,7 @@
   "depends": [],
   "deliverable": "research/RES-04.md",
   "summary": "OTel GenAI conventions (agent/tool spans, gen_ai.agent.id, tool.call.*, conversation.id) cover who called what, but have NO state read/write, effect-class, delegation or causal-edge fields: those are our gap fields (ks.*). All gen_ai.* still Development; spec moved to semantic-conventions-genai repo in Jun 2026 (no release found); execute_tool span details unverified (repo docs not fetchable).\nTamper-evidence: chose per-agent hash chain inside an RFC 9162-style Merkle log with Ed25519 signed checkpoints published outside agents' reach; hash chain alone fails against full rewrite; Rekor/Trillian too heavy for prototype.\nReport has 19-field draft record, 3-option comparison, Recorder and Monitor implications.\nTop design implication: the gateway (not the agent) writes records including read_set/write_set/caused_by, since these enable selective rollback and blast-radius at detection time.",
-  "review": "",
+  "review": "[anaya · done] DONE. All 4 criteria met (OTel spec with Development status and repo move, RFC 9162, 19-field table with OTel attr/gap/why, 3-option tamper comparison, Recorder + Monitor implications). Strongest finding: gen_ai.* has no read/write-set, effect-class, delegation or causal-edge fields - span tree gives call order, not data dependency. H4a CONFIRMED. H4b CONFIRMED with RES-07 evidence (Replit agent misreported rollback; Claude Code #10077 reporter states the tool_use command was never logged - spot-checked).\nSpot-check: opentelemetry.io page confirms 'moved' to open-telemetry/semantic-conventions-genai, sidebar 1.45.0, no stability shown.\nCarry: agent-span requirement levels came from a third-party mirror of an older commit and execute_tool levels are unverified - pin a commit before Sprint 2; the 12 Jun 2026 / v1.42.0 move date is secondary; Crosby & Wallach 3100 B vs 800 MB numbers are 2009 prototype figures and NOT in RES-10 scope - check PDF before quoting.",
   "log": [
     {
       "t": "19 Nov 00:32",
@@ -39,6 +39,11 @@
       "t": "19 Nov 00:36",
       "who": "rohan",
       "msg": "→ in_review"
+    },
+    {
+      "t": "19 Nov 00:41",
+      "who": "anaya",
+      "msg": "review: done"
     }
   ]
 }

@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "anaya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "Know whether any existing substrate can revert one author's changes while keeping others' later dependent work, and pick our storage substrate",
   "acceptance": [
     "≥5 tools surveyed with repo/docs URLs (e.g. LangGraph checkpointer/time-travel, Dolt, lakeFS, Git, Temporal, FS/VM snapshots)",
@@ -18,7 +18,7 @@
   "depends": [],
   "deliverable": "research/RES-06.md",
   "summary": "Surveyed 7 substrates (LangGraph, Temporal, Replit snapshots, DeltaBox, Git, Dolt, lakeFS); H6 holds: checkpoint/time-travel tools restore whole state and drop others' work.\nCorrection: commit-graph stores (Dolt, Git, lakeFS) have 'revert one commit, keep later commits'; per-author undo = revert all commits by author X.\nLocal Git run: independent non-adjacent edit reverts cleanly; dependent edit conflicts. Git conflicts on adjacent lines, Dolt on same cell.\nSurprise: lakeFS is BSL 1.1 and object-level; none record reads, so dependency tracking must be our own layer.\nVerdict: Dolt (row-level revert, SQL, Apache-2.0) for shared state, Git fallback, plus own provenance graph. Dolt not run locally (binary not executed); verified from tests/docs only.",
-  "review": "",
+  "review": "[anaya · done] DONE. All 4 criteria met (7 substrates, granularity/keeps-work/conflict/offline table, local Git run + Dolt engine-test example, substrate recommendation). Strongest finding: commit-graph stores already do 'revert one commit, keep later ones'; what none has is READ tracking, so dependency is our layer. H6 CONFIRMED for checkpoint/time-travel tools and REFINED for commit-graph stores - strong support for the 'dependency problem, not snapshot problem' thesis.\nSpot-check: Dolt docs confirm DOLT_REVERT --author and that DOLT_CHERRY_PICK 'preserves the original commit's author identity'; re-check the longer DOLT_REVERT quote, docs I saw say 'Reverts the changes introduced in a commit, or set of commits.'\nRecommendation (Dolt) is NOT yet accepted: Dolt was not run, and an external Go binary + MySQL client sits outside CHARTER's stdlib/pydantic/cryptography/networkx/pytest list. Decide Dolt vs own row-versioned store at Call #1/ADR.",
   "log": [
     {
       "t": "19 Nov 00:32",
@@ -39,6 +39,11 @@
       "t": "19 Nov 00:35",
       "who": "leela",
       "msg": "→ in_review"
+    },
+    {
+      "t": "19 Nov 00:41",
+      "who": "anaya",
+      "msg": "review: done"
     }
   ]
 }

@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "anaya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "A sourced incident catalogue and attribution evidence that make the problem concrete for the framing and give us realistic test scenarios",
   "acceptance": [
     "≥6 real incidents with primary/first-hand URLs (e.g. Replit DB deletion Jul 2025, AI Incident Database entries), each with: what broke, who detected, time-to-detect/contain/recover if known, how recovered",
@@ -18,7 +18,7 @@
   "depends": [],
   "deliverable": "research/RES-07.md",
   "summary": "Report at research/RES-07.md: 7 incidents catalogued (Replit, Gemini CLI, Claude Code x2, Antigravity, AWS/Kiro (disputed), PocketOS) with AIID/GitHub/company sources; none is multi-agent, and attribution was trivial in all (one agent). Pain was irreversibility, backups inside blast radius, agent self-misreporting, human detection after the fact; durations rarely public.\nWho&When verified: abstract headline best 53.5% agent / 14.2% step (cell not found in body tables); GPT-4o Table 1 ranges 26-55% agent, 3.5-25.5% step vs random 12-29 / 4-19. Follow-ups FAMAS (57.61/29.35 overall), CHIEF (77.59/29.31 hand; 76.80/52.00 alg-gen), DoVer, MAST.\nPattern: selective rollback alone fixes few of the incidents; pre-execution gating, scoped identity and out-of-reach pre-images matter more. 3 demo scenarios included.\nTop framing implication: lead with 'seconds to break, days to repair, and nobody can say who/what from logs' but do not claim multi-agent incidents exist; use LLM attribution as the baseline provenance beats.",
-  "review": "",
+  "review": "[anaya · done] DONE. All 4 criteria met (7 incidents, AIID/GitHub/company URLs as the issue allows; Who&When + 4 follow-ups with settings; rollback-would-help table; 3 demo scenarios). Strongest finding, and an honest one: every public incident is single-agent, detected by a human after the fact, recovered all-or-nothing; no public multi-agent collateral incident found. H7a CONFIRMED (with the single-agent twist); H7b CONFIRMED pending RES-10 on 53.5/14.2, FAMAS and CHIEF numbers.\nSpot-checks: Claude Code #10077 confirms 21 Oct 2025, Ubuntu/WSL2, no skip-permissions, and 'tool_use command was never logged' (use for H4b). AIID 1469 confirms PocketOS/Cursor/Railway, 24 Apr 2026; '9 seconds', 'backups in same volume' and 'three-month-old snapshot' are secondary (Mondoo, headlines) only.\nSynthesis must carry: Who&When attributes the decisive REASONING error; our provenance attributes who WROTE an effect. Do not claim provenance solves Who&When's task - claim it makes effect attribution a lookup and narrows the search. Incident 4 rests on a vendor blog only; Kiro/AWS is disputed.",
   "log": [
     {
       "t": "19 Nov 00:32",
@@ -39,6 +39,11 @@
       "t": "19 Nov 00:36",
       "who": "sameer",
       "msg": "→ in_review"
+    },
+    {
+      "t": "19 Nov 00:41",
+      "who": "anaya",
+      "msg": "review: done"
     }
   ]
 }

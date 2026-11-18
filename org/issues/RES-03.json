@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "anaya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "A recommended scheme that binds every action to one agent identity, through delegation chains and shared tools, and can be revoked fast",
   "acceptance": [
     "≥5 primary sources with URLs (specs/RFCs/drafts with version: SPIFFE, RFC 8693, MCP authorization spec, draft-klrc-aiagent-auth, RFC 9421 or similar)",
@@ -18,7 +18,7 @@
   "depends": [],
   "deliverable": "research/RES-03.md",
   "summary": "Correction: 12 primary sources (not 13). Workload identity (SPIFFE/WIMSE) identifies a process, not an action; RFC 8693 treats prior actors in an act chain as informational only; MCP forbids token passthrough so upstream APIs see the MCP server, not the agent, which is where attribution collapses. SPIRE docs read show short TTLs (1h X.509, 5m JWT) and node ban but no SVID revocation. klrc-03 (Jul 2026) is the live IETF draft; txn-tokens-for-agents-05 and pedigree-00 are expired single-author drafts; none defines fast revocation alone. Top design implication: SPIFFE-format agent ID + RFC 8693-style act chain + per-agent Ed25519 signed action record, all via a tool gateway that writes the record and holds a deny-list (immediate containment), with short TTLs bounding the rest.",
-  "review": "",
+  "review": "[anaya · done] DONE. All 4 criteria met (12 primary sources with versions/dates, 7-approach table on all 5 dimensions, 5 named collapse points, concrete scheme). Strongest finding: the MCP spec itself guarantees the attribution gap - spot-checked, draft authorization page says verbatim 'MCP servers MUST NOT accept or transit any other tokens' - so upstream sees the MCP server, not the agent; attribution must be written at our gateway. H3 CONFIRMED.\nCarry: (1) 'SPIRE has no SVID revocation' is 'not found in docs read', keep that hedge; (2) cascade revocation idea comes from an expired single-author draft (pedigree-00), label as our design; (3) gateway-only attribution is a stated limit when the upstream takes one service credential - say it to the jury, do not hide it; (4) dual signing (agent + gateway) is our view, decide in the Identity ADR whether it earns its complexity.",
   "log": [
     {
       "t": "19 Nov 00:32",
@@ -44,6 +44,11 @@
       "t": "19 Nov 00:35",
       "who": "rohan",
       "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:41",
+      "who": "anaya",
+      "msg": "review: done"
     }
   ]
 }
