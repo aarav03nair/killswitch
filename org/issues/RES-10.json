@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "anaya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "Every paper/number likely to reach the abstract is verified against the paper itself (via Lacuna get_paper fulltext or arXiv)",
   "acceptance": [
     "checks Who&When 53.5%/14.2% and CHIEF/FAMAS figures in the paper text",
@@ -17,7 +17,7 @@
   "depends": [],
   "deliverable": "research/RES-10.md",
   "summary": "Audited 27 claims; table + DROP list in research/RES-10.md. Who&When 53.5/14.2 is in the abstract and reproducible from Table 1 as a 4-cell mean, but from two different methods (all-at-once agent, step-by-step step), GPT-4o; never say one method gets both. FAMAS (57.61/29.35) and CHIEF tables match; CHIEF does not win every cell (FAMAS 41.38 step hand-crafted). Cordon 45/45 vs 14/45 verified but is the authors' own 45-case suite with self-derived baseline adapters; EuroSys'27 is only a header, drop. MAST 94% is few-shot o1 accuracy (kappa 0.77): quote kappa; NeurIPS unconfirmed. Venues confirmed: Retro OSDI'10, Warp SOSP'11, Aire SOSP'13, Taser SOSP'05, Sagas SIGMOD'87, Crosby-Wallach USENIX Sec'09, Who&When ICML'25. State Footprints is a vision paper (rollback unimplemented) and close prior art; DeltaBox is whole-sandbox, v2/title conflict with RES-06. Cordon/CHIEF/State Footprints/DeltaBox read via WebFetch (second-hand): Aarav should eyeball those numbers.",
-  "review": "",
+  "review": "[anaya · done] DONE. All 3 criteria met (Who&When/FAMAS/CHIEF checked in text with table locations; existence/authors/venue for all 10 named works; claim/source/verified/location/safe-wording table + DROP list). Best item: the 53.5/14.2 decomposition. My arithmetic check: mean(54.33,55.17,51.12,53.44)=53.52 and mean(25.51,7.02,15.31,8.77)=14.15, which matches. So the 'two different strategies' rule stands. Spot-checks on arxiv.org abs pages (20 Nov): (a) Atomix authors = Bardia Mohammadi, Nearchos Potamitis, Lars Klein, Akhil Arora, Laurent Bindschaedler; v1 16 Feb 2026, v2 29 May 2026, which closes items 32/33 ('Mohammadi et al.' is now safe). (b) DeltaBox: abs page lists only v1 (21 May 2026) and v2 (8 Jun 2026), title 'DeltaBox: Scaling Stateful AI Agents with Millisecond-Level Sandbox Checkpoint/Rollback'. RES-10 is right, and RES-06's 'v3, 13 Nov 2026' is wrong. Item 48 is closed. (c) FAMAS abs page: abstract has no numbers, and the 57.61/29.35 figures are from Table 1 only. Cite them as Table 1, not 'abstract'. Remaining backlog (owned elsewhere): IBM 247 days primary, RBI 18%, RES-01 overheads, Tier-B eyeballing by Aarav.",
   "log": [
     {
       "t": "19 Nov 00:37",
@@ -38,6 +38,11 @@
       "t": "19 Nov 00:40",
       "who": "rohan",
       "msg": "→ in_review"
+    },
+    {
+      "t": "19 Nov 00:46",
+      "who": "anaya",
+      "msg": "review: done"
     }
   ]
 }

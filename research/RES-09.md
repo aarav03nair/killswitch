@@ -1,13 +1,21 @@
 # RES-09: Lacuna sweep: 2025-26 ML papers on multi-agent accountability, attribution, rollback
 
+## Errata (v2, 20 Nov 2026)
+
+Changes after review by anaya (body otherwise unchanged):
+1. BICR corrected to "Benign Infection Control Rate" = 1 - ASR (RES-11), not "benign infection control".
+2. Removed the inference "14.2% vs 55.2%, so a deterministic recorder beats LLM judges". The numbers come from different methods and splits, and provenance answers "who wrote the effect", not "whose reasoning failed". Kept only: structure helps attribution.
+3. OpenAI-Hugging Face July 2026 incident is now marked verified (RES-11, METR 26 Aug 2026); "unverified" removed.
+4. Added Wang et al. 2608.10502 and State Footprints 2610.03140 as closest selective-undo prior art (section 4, sources 20-21). Wang is read from the Lacuna summary only.
+
 Owner: meera. Reviewer: anaya. Run 19 Nov 2026 with the Lacuna Research connector (search_lacuna: paper, cluster, hypothesis, resource; then get_paper / get_direction / get_hypothesis / get_resource). Method note: "[Lacuna summary]" means I read Lacuna's generated summary of the paper, not the PDF. Numbers below are quoted from those summaries and must be checked against the papers before a jury sees them. Lacuna covers ML/AI only, so systems work (Retro, Warp, OTel, SPIFFE) is not in it; see RES-01..RES-08.
 
 ## 1. TL;DR
 
 - **Closest competitor: Airlock (arXiv 2611.06727, 4 Nov 2026) [5].** Same problem as ours ("bound the blast radius without killing healthy concurrent work"): append-only provenance DAG, forward taint trace on alert, min-cut containment, per-object switches such as credential revoke. Reports +68 to +96 pp more healthy work retained than native controls. It is **containment, not rollback**: its own limitations say it does not un-taint internal memory and needs "orthogonal rollback mechanisms". [Fact, Lacuna summary]
 - Our differentiator therefore survives but narrows. "Provenance graph keyed by agent identity" is no longer novel. What Airlock does not do, per its summary, is **undo already-landed writes of one agent and re-plan its dependants**. Frame ours as "containment (Airlock-style) + selective undo + audit", not as a first.
-- Second closest: **From Spark to Fire (arXiv 2603.04474) [9]**: lineage graph of atomic facts, message-level interception, automated rollback-and-rewrite to the upstream agent. Its ablation says removing rollback collapses containment (benign infection control 3.1%). It rolls back *messages*, not external state effects. [Fact, Lacuna summary]
-- Automated attribution is weak without structure. Who&When (ICML 2025) best agent-level 53.5%, step-level 14.2% [1]; structured dependency-graph reading lifts exact step accuracy to 55.20% on the algorithm-generated split [2]. A deterministic recorder gives attribution for free, which is our argument against LLM judges. Counterpoint: MP-Bench (2603.25001) says single-oracle labels are themselves contested (only 16.2% of failure steps had 100% annotator consensus) [10].
+- Second closest: **From Spark to Fire (arXiv 2603.04474) [9]**: lineage graph of atomic facts, message-level interception, automated rollback-and-rewrite to the upstream agent. Its ablation says removing rollback collapses containment (BICR 3.1%; BICR = Benign Infection Control Rate = 1 - ASR, attack success rate). It rolls back *messages*, not external state effects. [Fact, Lacuna summary]
+- Automated attribution is weak without structure. Who&When (ICML 2025) best agent-level 53.5%, step-level 14.2% [1]; structured dependency-graph reading lifts exact step accuracy to 55.20% on the algorithm-generated split [2]. The two numbers use different methods and splits, so they do not show that any approach beats another; they only suggest that structure helps attribution. Separately, a recorder answers "who wrote the effect" (provenance), not "whose reasoning failed" (what Who&When measures). Counterpoint: MP-Bench (2603.25001) says single-oracle labels are themselves contested (only 16.2% of failure steps had 100% annotator consensus) [10].
 - Reusable for our 10-agent eval: Who&When for the attribution baseline, ARIA dataset, Agent-ZTA's `normal/restricted/jail` model, Airlock's metrics (healthy work retained, post-alert leaks). No ready-made "10 agents + injected faults + selective rollback" benchmark was found in Lacuna. That is a gap we can claim [Our view].
 
 ## 2. Ranked papers (2025-2026), relevance in one line
@@ -54,6 +62,10 @@ Also seen by title only (not read; chase in Sprint 2 if needed): AgenTracer (ICL
 
 [Fact] for Airlock and Spark to Fire columns (Lacuna summaries); the Ours column is [Our view] and is the plan, not a result.
 
+**Closest selective-undo prior art (added in v2).** Airlock is the closest containment work; the closest selective-undo work is:
+- **Wang et al., From Faulty Memories to Corrected Actions: Dependency-Guided Rollback Repair for Memory-Augmented Agents**, arXiv 2608.10502, 11 Aug 2026 [20]. Single agent. Builds a memory-to-action dependency graph from runtime provenance, traces forward from a faulty memory, keeps nodes with independent clean support, then selectively replays only the answer-relevant affected steps. Reports 85.3% recovery vs 77.3% for LLM-judge repair on its own 150-case benchmark (68.0% vs 54.0% on an adapted LongMemEval-V2 subset). Limits per its summary: needs an instrumented runtime, cannot undo irreversible external side effects. [Fact, Lacuna summary] We differ: multi-agent, per-agent identity, external-effect classes, tamper-evident audit.
+- **State Footprints (Mraz et al.), arXiv 2610.03140, Oct 2026** [21]. Vision paper: nested transaction IDs, abort one task's writes plus the tasks that read them. Rollback is not implemented or measured (RES-10). We differ by building and measuring it with identity and containment. Cite as framing prior art, not as evidence that rollback works.
+
 **How we differ (honest version):** (1) Airlock stops the bleeding forward in time; we also repair backward in time. (2) Airlock's taint is data-exposure and conservative; it says endorsements may be needed to declassify. Our design should use read-set vs write-set plus a human/agent re-approval step for dependants, so the repair set is explicit and auditable. (3) Airlock targets distributed physical/service workflows; we target an auditable log a jury can attack. (4) We must NOT claim novelty for "provenance DAG + containment". Claim the combination with undo and the audit evidence, and cite Airlock as related work. Also reconcile with RES-05's gap statement (it said no tool does agent-level quarantine tied to provenance): Airlock is a research prototype doing exactly that; RES-05's conclusion holds for OSS tools only.
 
 ## 5. Reusable code, datasets, benchmarks for the 10-agent eval
@@ -69,7 +81,7 @@ Also seen by title only (not read; chase in Sprint 2 if needed): AgenTracer (ICL
 
 ## 6. Open questions
 
-- Airlock cites a "July 2026 OpenAI-Hugging Face incident" as motivation [5]. Not verified; **RES-07** should check before anyone quotes it.
+- Airlock cites a "July 2026 OpenAI-Hugging Face incident" as motivation [5]. **Verified** in RES-11 (METR investigation, 26 Aug 2026, plus press coverage); safe to cite with METR as the source.
 - Does Airlock release code or data? Fetch the arXiv PDF (2611.06727) and check how it handles agent-written state; **anaya/RES-SYN**. Lacuna summary only; a full read could change the competitor assessment.
 - Several arXiv IDs and dates here are as listed by Lacuna; confirm on arxiv.org before citing in the abstract.
 - Which of Aegis / AgenTracer / Agent-Diff offer reusable fault-injection or state-diff scoring: Sprint 2 eval harness task.
@@ -95,3 +107,5 @@ Also seen by title only (not read; chase in Sprint 2 if needed): AgenTracer (ICL
 17. Hypothesis 9f292f39602d7760. https://lacuna.tiptreesystems.com/hypothesis/calibrated-rollback-using-step-level-confidence-to-decide-where-and-how-an-agent-9f292f39602d7760
 18. Resource, JHU-CLSP/hell-or-high-water. https://lacuna.tiptreesystems.com/resource/jhu-clsp-hell-or-high-water/art_87dcf3f8af124c8a8eeff8230e0e4dae ; https://github.com/jhu-clsp/hell-or-high-water
 19. Resource, yhzhu99/MedAgentAudit. https://lacuna.tiptreesystems.com/resource/yhzhu99-medagentaudit/art_2589f03d7df84af394f6b9591855bd8f ; https://github.com/yhzhu99/MedAgentAudit
+20. Yu et al., From Faulty Memories to Corrected Actions, arXiv 2608.10502 (Lacuna summary only). https://lacuna.tiptreesystems.com/work/from-faulty-memories-to-corrected-actions-dependency-guided ; https://arxiv.org/abs/2608.10502v1
+21. Mraz et al., Tracking State Footprints, arXiv 2610.03140 (not in Lacuna; checked in RES-10, Tier B). https://arxiv.org/abs/2610.03140

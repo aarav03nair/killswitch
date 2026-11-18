@@ -14,7 +14,7 @@
     "owner": "Aarav (Product Owner)",
     "updated": ""
   },
-  "phase": "Sprint 1 · Research in progress",
+  "phase": "Sprint 2 · Frame & Design",
   "sprints": [
     {
       "n": 0,
@@ -26,13 +26,13 @@
       "n": 1,
       "name": "Research",
       "goal": "Literature, standards, open source, incidents → synthesis",
-      "status": "active"
+      "status": "done"
     },
     {
       "n": 2,
       "name": "Frame & Design",
       "goal": "Abstract kit, architecture, ADRs, threat model",
-      "status": "planned"
+      "status": "active"
     },
     {
       "n": 3,
@@ -201,13 +201,92 @@
       "focus": "Incident console"
     }
   ],
-  "meetings": [],
+  "meetings": [
+    {
+      "id": "CALL-01",
+      "title": "Call #1 — Research readout and decisions",
+      "date": "19 Nov 2026",
+      "attendees": [
+        "pmo",
+        "maya",
+        "anaya",
+        "kabir",
+        "zoya",
+        "panel"
+      ],
+      "summary": "Research confirms that undo is a dependency problem. Airlock already does forward containment; our niche is the backward half (revert one agent's landed writes, repair their readers), an authenticated record, and oracle-scored recovery. All 13 open questions resolved; Sprint 2 opened.",
+      "decisions": [
+        "Headline layered: problem = undo breaks once others read the bad write; fix = provenance; payoff = selective undo; why = testimony vs evidence (Aarav to confirm)",
+        "Own row-versioned SQLite store; Dolt only as the production twin",
+        "Re-run deterministic steps through the outbox with idempotency keys; LLM steps become approval-gated re-plan items",
+        "Tamper-evident up to the last witnessed head: hash chain + two signatures + separate witness + verify",
+        "A bad signature suspends the connection, never the claimed agent",
+        "Hold per action, using only recorded read sets",
+        "Gateway is the scheduler (tick barrier) so runs are deterministic and recovery scores reproduce",
+        "Hero scenario F2+: supplier IBAN swap → billing/payments/comms; triage conflict; inventory/docs independent"
+      ],
+      "next": [
+        "Abstract Kit for Aarav (fact card, guardrails, diagram, term lock, jury Q&A)",
+        "Contracts C1–C6, then ADR-00…07",
+        "Threat model + red-team spec",
+        "Walking skeleton with the determinism test"
+      ]
+    }
+  ],
   "decisions": [
     {
       "id": "D-01",
-      "title": "Thesis: rollback is a dependency problem, not a snapshot problem",
-      "status": "to test",
-      "summary": "Sprint 1 tries to confirm or kill this. If it holds, we build a provenance graph of agent reads and writes and use it for selective undo."
+      "title": "Rollback is a dependency problem, not a snapshot problem",
+      "status": "confirmed",
+      "summary": "Confirmed by RES-01/02/04/06. Two claims killed: 'nobody has provenance containment' and 'nobody has agent undo'."
+    },
+    {
+      "id": "D-02",
+      "title": "Layered headline: dependency gap → provenance → selective undo",
+      "status": "awaiting Aarav",
+      "summary": "Problem first (organisers' order); provenance as the fix; selective undo as the demo payoff; testimony vs evidence as why it matters."
+    },
+    {
+      "id": "D-03",
+      "title": "Own row-versioned SQLite store",
+      "status": "accepted",
+      "summary": "Dolt never run and outside our dependency list; shown as the production twin."
+    },
+    {
+      "id": "D-04",
+      "title": "Re-run deterministic, re-plan LLM with approval",
+      "status": "accepted",
+      "summary": "LLM replay does not transfer (RES-01). Re-runs go through the outbox, deduplicated by idempotency key."
+    },
+    {
+      "id": "D-05",
+      "title": "Tamper-evident to last witnessed head",
+      "status": "accepted",
+      "summary": "Hash chain, agent and gateway signatures, separate witness process, verify CLI. Never 'tamper-proof'."
+    },
+    {
+      "id": "D-06",
+      "title": "Bad signature suspends the connection, not the claimed agent",
+      "status": "accepted",
+      "summary": "Stops forgers from framing honest agents (Kabir)."
+    },
+    {
+      "id": "D-07",
+      "title": "Per-action lineage hold from recorded read sets",
+      "status": "accepted",
+      "summary": "Independent work keeps running; agent-declared lineage is never trusted."
+    },
+    {
+      "id": "D-08",
+      "title": "Gateway is the scheduler (tick barrier)",
+      "status": "accepted",
+      "summary": "Same seed → byte-identical records, so oracle scores reproduce for the jury."
+    },
+    {
+      "id": "D-09",
+      "title": "Honest-claims rules for the abstract",
+      "status": "accepted",
+      "summary": "No 'first', no Airlock comparison, no 'tamper-proof'/'compliant', Who&When quoted with its setting, our numbers labelled targets."
     }
   ],
   "risks": [
@@ -222,6 +301,14 @@
     {
       "r": "Fable model out of usage credits",
       "mit": "Panel reviews run on Opus instead"
+    },
+    {
+      "r": "Process-per-agent can break determinism, so recovery scores won't reproduce",
+      "mit": "Gateway tick barrier; day-1 identical-seed test"
+    },
+    {
+      "r": "Airlock is close prior art",
+      "mit": "Credit it; claim only the backward half + authenticated record + oracle scoring"
     }
   ],
   "activity": [
@@ -484,6 +571,61 @@
       "t": "19 Nov 00:43",
       "who": "meera",
       "msg": "moved RES-11 to in_review"
+    },
+    {
+      "t": "19 Nov 00:46",
+      "who": "anaya",
+      "msg": "reviewed RES-09: changes"
+    },
+    {
+      "t": "19 Nov 00:46",
+      "who": "anaya",
+      "msg": "reviewed RES-10: done"
+    },
+    {
+      "t": "19 Nov 00:46",
+      "who": "anaya",
+      "msg": "reviewed RES-11: done"
+    },
+    {
+      "t": "19 Nov 00:46",
+      "who": "anaya",
+      "msg": "moved RES-SYN to in_progress"
+    },
+    {
+      "t": "19 Nov 00:49",
+      "who": "anaya",
+      "msg": "moved RES-SYN to in_review"
+    },
+    {
+      "t": "19 Nov 00:50",
+      "who": "pmo",
+      "msg": "opened ORG-03 — Call #1: research readout → decisions → Sprint 2 plan"
+    },
+    {
+      "t": "19 Nov 00:50",
+      "who": "pmo",
+      "msg": "moved ORG-03 to in_progress"
+    },
+    {
+      "t": "19 Nov 00:50",
+      "who": "meera",
+      "msg": "moved RES-09 to in_review"
+    },
+    {
+      "t": "19 Nov 00:50",
+      "who": "pmo",
+      "msg": "reviewed RES-09: done"
+    },
+    {
+      "t": "19 Nov 00:50",
+      "who": "panel",
+      "msg": "reviewed RES-SYN: done"
+    },
+    {
+      "t": "19 Nov 00:53",
+      "who": "pmo",
+      "msg": "moved ORG-03 to done"
     }
   ]
 }

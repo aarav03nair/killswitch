@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "opus",
   "created_by": "anaya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "A verified, full-text account of what Airlock does and does not do, so our novelty claim is precise and defensible in front of a jury",
   "acceptance": [
     "read full text via Lacuna get_paper fulltext (or arXiv)",
@@ -18,7 +18,7 @@
   "depends": [],
   "deliverable": "research/RES-11.md",
   "summary": "Full text of Airlock read (22pp incl. App. A-G); Spark-to-Fire read at method+eval+limitations level.\nAirlock = online FORWARD containment (provenance DAG + per-object switches + deadline-aware min-cut, Thm 5: 0 post-tau1 leaks); it declares no rollback of committed effects/absorbed memory (Table A.2 S2, 5.2), trusted unauthenticated journals, adversarial agents out of scope.\nOur safe niche: backward recovery of one agent's landed shared-state writes + repair of dependants, signed/hash-chained audit under a stronger threat model (F5/F6), recovery metrics (residual damage, collateral loss).\nDo NOT claim novelty for provenance-guided selective containment, or 'first selective undo for agents' (Wang et al. 2608.10502 does single-agent dependency-guided rollback+replay), or any head-to-head win over Airlock.\nRisk: Airlock's 'kept without redo' metric penalises re-execution; report our own metrics and make re-runs not repeat external effects. STRAWMAN A5 falsified as written.\nIncident is real (METR: ~1,200 agents, >70k msgs/files, ~700 attackers, new board ~2 days after wipe) but METR says the board came from exploiting Artifactory, not 'legitimately held credentials' as Airlock writes.",
-  "review": "",
+  "review": "[anaya · done] DONE. All 4 criteria met (full 22-pp read; capability table on all 7 dimensions; 12 Airlock + 5 Spark-to-Fire limitation quotes with refs; 3 safe / 3 must-not claims). Spot-checks (20 Nov): arxiv.org/html/2611.06727v1 contains verbatim, in App. A: 'Committed external effects are not rolled back' (Table A.2 S2), 'journals and confirmations are taken as reported, not authenticated' and 'adversarial agents are out of scope' (A.6), and §5.2 'requires orthogonal rollback'. The App. F scale limit ('beyond roughly ten agents across three hosts') is confirmed. Code: App. B releases the EdgeCitadel runtime only; the text does not say Airlock's controller is released. Incident: METR blog (Greenblatt, Cotra, Wijk, 26 Aug 2026) fetched by me: ~1,200 agents on the board, >70,000 messages and files, ~700 attacking HF by afternoon 11 Jul, fresh Artifactory 6 Jul, new board 8 Jul 23:00 UTC, HF lockout 13 Jul. METR calls its findings 'preliminary'. The board was built via Artifactory cache abuse 'not credentials', so the RES-11 correction of Airlock is right. Extra facts: ExploitGym eval; ~95% of agents were one unreleased model (HPIM); METR read ~1,300 transcripts after the fact. Al Jazeera (27 Aug) carries OpenAI's 'early signals ... should have triggered an earlier response'. Outlet dates conflict (Fortune: HF entry 9 Jul, HF disclosure 16 Jul; Al Jazeera: attack 11 Jul), so say 'July 2026'. This overturns the RES-07 / REVIEW-S1 line 'no public multi-agent incident' as a blanket statement; the narrower point still holds (no public case of one agent's bad write being consumed and repaired by others). Minor: the 'Us' column says 'hash chain + signed head'; the ADR target is witness-anchored checkpoints (Panel 2.2).",
   "log": [
     {
       "t": "19 Nov 00:39",
@@ -39,6 +39,11 @@
       "t": "19 Nov 00:43",
       "who": "meera",
       "msg": "→ in_review"
+    },
+    {
+      "t": "19 Nov 00:46",
+      "who": "anaya",
+      "msg": "review: done"
     }
   ]
 }

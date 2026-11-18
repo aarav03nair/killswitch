@@ -1,0 +1,43 @@
+{
+  "id": "ORG-03",
+  "title": "Call #1: research readout → decisions → Sprint 2 plan",
+  "sprint": 1,
+  "track": "ops",
+  "owner": "pmo",
+  "reviewer": "panel",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "done",
+  "outcome": "Signed-off decisions on the 13 open questions and a Sprint 2 issue set",
+  "acceptance": [
+    "each lead posts a written position",
+    "minutes with decisions, dissent and owners",
+    "Sprint 2 issues opened by leads"
+  ],
+  "depends": [],
+  "deliverable": "org/meetings/CALL-01.md",
+  "summary": "All 13 decisions resolved (see org/meetings/CALL-01.md). D1 headline awaits Aarav's confirmation. Sprint 2 tracks: Pitch (Abstract Kit), Eng (contracts → ADRs → skeleton), Security (threat model + red-team spec).",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:50",
+      "who": "pmo",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:50",
+      "who": "pmo",
+      "msg": "→ in_progress: positions requested"
+    },
+    {
+      "t": "19 Nov 00:53",
+      "who": "pmo",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:53",
+      "who": "pmo",
+      "msg": "→ done: minutes published"
+    }
+  ]
+}

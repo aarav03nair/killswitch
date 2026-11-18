@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "anaya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "Find the most relevant recent papers, research directions and open hypotheses in Lacuna that our Sprint 1 web research missed",
   "acceptance": [
     "uses Lacuna search_lacuna (paper, cluster, hypothesis, resource) with Lacuna URLs cited",
@@ -17,8 +17,8 @@
   ],
   "depends": [],
   "deliverable": "research/RES-09.md",
-  "summary": "Closest competitor is Airlock (arXiv 2611.06727, Nov 2026): provenance DAG + min-cut containment that keeps healthy work (+68 to +96 pp), but it contains, it does not undo landed effects. Our niche: containment + selective undo + tamper-evident audit.\nSecond closest: From Spark to Fire (2603.04474), lineage-graph rollback of messages only.\n12 ranked 2025-26 papers; Who&When best step-level attribution 14.2% vs structured graph reading 55.2% (different splits), so a deterministic recorder beats LLM judges.\nLacuna has no hypothesis on per-agent selective undo; survey 2606.04990 names recovery-oriented evaluation as open.\nNo ready 10-agent fault-injection benchmark found: build our own, reuse Airlock/ARIA/Who&When metrics.\nCaveat: papers read as Lacuna summaries; Airlock's July 2026 OpenAI-HF incident claim is unverified (RES-07).",
-  "review": "",
+  "summary": "Closest containment competitor: Airlock (2611.06727): provenance DAG + min-cut containment, keeps healthy work (+68 to +96 pp), but does not undo landed effects.\nClosest selective-undo prior art: Wang et al. 2608.10502 (single-agent dependency-guided rollback + selective replay) and State Footprints 2610.03140 (vision: abort one task's writes + its readers). Ours: multi-agent, per-agent identity, containment + undo + tamper-evident audit.\n12 ranked 2025-26 papers; structure helps attribution (Who&When 14.2% step vs 55.2% graph reading, different methods/splits; no further inference). BICR = Benign Infection Control Rate = 1 - ASR.\nNo ready 10-agent fault-injection benchmark: build our own, reuse Airlock/ARIA/Who&When metrics.\nOpenAI-HF July 2026 incident verified (RES-11, METR). Papers read as Lacuna summaries. See Errata (v2).",
+  "review": "[anaya · changes] CHANGES (small, errata only; ~20 min). Criteria 1, 2, 4 met (Lacuna paper/cluster/hypothesis/resource used with URLs; 12 ranked 2025-26 papers; reuse list). Criterion 3 only partly met: Airlock is the right closest *containment* competitor (+68 to +96 pp confirmed verbatim on arxiv.org/abs/2611.06727), but the closest *selective-undo* prior art was missed: Wang et al. 2608.10502 (single-agent dependency-guided rollback + selective replay) and State Footprints 2610.03140 (vision paper: abort one task's writes + its readers). Both surfaced in RES-10/RES-11. Errors to fix in an 'Errata (20 Nov)' block at the top of RES-09: (1) BICR = 'Benign Infection Control Rate' = 1 - ASR (RES-11), not 'benign infection control'; (2) the summary's '14.2% vs 55.2% ... so a deterministic recorder beats LLM judges' is a non sequitur: AIG is itself an attribution method on a different split, not a recorder. Drop the inference; keep AIG only as 'structure helps attribution'; (3) the OpenAI-HF incident is now VERIFIED (METR 26 Aug 2026; see RES-11 and SYNTHESIS fact sheet), so remove 'unverified'; (4) add Wang 2608.10502 and State Footprints to section 4 as selective-undo prior art. Do not rewrite the body. SYNTHESIS.md already carries the corrected versions, so this does not block RES-SYN.\n\n[pmo · done] Errata v2 verified by PMO against REVIEW: BICR fixed, unsupported inference removed, HF incident marked verified, Wang + State Footprints added.",
   "log": [
     {
       "t": "19 Nov 00:37",
@@ -39,6 +39,26 @@
       "t": "19 Nov 00:38",
       "who": "meera",
       "msg": "→ in_review"
+    },
+    {
+      "t": "19 Nov 00:46",
+      "who": "anaya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 00:50",
+      "who": "meera",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:50",
+      "who": "meera",
+      "msg": "→ in_review: errata fixed"
+    },
+    {
+      "t": "19 Nov 00:50",
+      "who": "pmo",
+      "msg": "review: done"
     }
   ]
 }

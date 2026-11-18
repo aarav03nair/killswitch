@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "opus",
   "created_by": "anaya",
-  "status": "todo",
+  "status": "done",
   "outcome": "Aarav gets 2–3 framing options, an abstract outline of points, a sourced fact sheet, and the team gets design principles for Sprint 2 ADRs",
   "acceptance": [
     "Working thesis (undo is a dependency problem) explicitly confirmed, modified or killed with evidence from RES-01..08",
@@ -26,13 +26,33 @@
     "RES-08"
   ],
   "deliverable": "research/SYNTHESIS.md",
-  "summary": "",
-  "review": "",
+  "summary": "research/SYNTHESIS.md (~1,840 words, bullets and tables only, no abstract prose).\nThesis MODIFIED: 'undo is a dependency problem' is confirmed (RES-02/04/06). Killed: 'nobody has provenance containment' (Airlock) and 'nobody has agent undo' (Wang 2608.10502, State Footprints). 'No multi-agent incident' is overturned: OpenAI/HF is real (METR ~1,200 agents / ~700 attackers), but there is still no public case of B consuming A's bad write and being repaired.\nRecommended frame: PROVENANCE-FIRST (Panel 5.2), with backward recovery as the demo payoff and 'testimony vs evidence' as why it matters. Niche vs Airlock: the backward half, an authenticated record, and recovery scored as (R, C).\nAlso in the file: 15-row fact sheet with wording rules, URLs and verification status (5 rows re-verified by me today); consolidated do-not-claim list; 10 principles mapped to components; Panel must-fix list mapped to ADR owners (vikram/nisha/arjun/tara); positioning vs 8 systems; merged metric set (TTI-detect/attribute, Panel TTC + post-alert tainted effects, oracle-defined B/G, R/C, re-plan cost); 13 Call #1 decisions with recommended answers.\nCorrections: DeltaBox has no v3 (RES-06 wrong). Atomix authors confirmed.",
+  "review": "[panel · done] Synthesis accepted as the Call #1 working document: clear thesis status, verified fact sheet with wording rules, do-not-claim list, principles traced to evidence, oracle-based metrics.",
   "log": [
     {
       "t": "19 Nov 00:32",
       "who": "anaya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:46",
+      "who": "anaya",
+      "msg": "→ in_progress: writing SYNTHESIS.md (incl. RES-09..11 + Panel)"
+    },
+    {
+      "t": "19 Nov 00:49",
+      "who": "anaya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:49",
+      "who": "anaya",
+      "msg": "→ in_review: SYNTHESIS.md ready for Call #1"
+    },
+    {
+      "t": "19 Nov 00:50",
+      "who": "panel",
+      "msg": "review: done"
     }
   ]
 }
