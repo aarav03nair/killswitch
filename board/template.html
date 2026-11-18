@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kill Switch board</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a calm engineering-org war room; facts first, status at a glance.
+   IDEA: an incident flight recorder — a red tab, a strip chart of progress, cards like log entries.
+   PICTURE: the kanban itself under a progress strip of sprints with counts.
+   COLOUR and TYPE: white, ink #121212, kill-switch red #e3120b, slate #2e6f8e, pale panels #e3ecf0; Source Serif 4 + Inter.
+   LAYOUT: red tab, headline, figures row, sprint strip, board, then team, calls, decisions, activity. */
+:root{color-scheme:light dark;--bg:light-dark(#fff,#10191e);--ink:light-dark(#121212,#e9eef1);--mut:light-dark(#5b6670,#9fb0bb);--red:#e3120b;--sl:light-dark(#2e6f8e,#6fb3d3);--pan:light-dark(#e3ecf0,#18252c);--pan2:light-dark(#f2f6f8,#142027);--rule:light-dark(#cfd9de,#2a3a43);--ok:light-dark(#1f7a4d,#5cc38c);--warn:light-dark(#a35b00,#f0a640)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.55 Inter,system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(20px,3.4vw,48px) max(5vw,16px)}.wrap{max-width:1240px;margin:0 auto}
+h1,h2{font-family:"Source Serif 4",Georgia,serif;font-weight:600;line-height:1.05;text-wrap:balance;margin:0}
+h1{font-size:clamp(32px,5vw,50px)}h2{font-size:clamp(24px,3vw,32px);margin-bottom:14px}
+.tab{display:inline-block;background:var(--red);color:#fff;font-weight:600;font-size:13px;padding:5px 10px;margin-bottom:14px}
+.lede{font-size:17px;max-width:70ch;color:var(--ink);margin:12px 0 0}.mut{color:var(--mut)}.small{font-size:13px}
+.figs{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1px;background:var(--rule);border:1px solid var(--rule);margin-top:22px}
+.fig1{background:var(--bg);padding:12px 14px}.fig1 b{display:block;font:600 clamp(26px,4vw,36px)/1.1 "Source Serif 4",serif}.fig1 span{font-size:13px;color:var(--mut)}
+.strip{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-top:22px}
+.sp{background:var(--pan2);padding:12px;border-top:4px solid var(--rule)}.sp.active{border-top-color:var(--red);background:var(--pan)}.sp.done{border-top-color:var(--ok)}
+.sp h3{margin:0;font-size:15px}.sp p{margin:4px 0 8px;font-size:13px;color:var(--mut)}
+.meter{height:8px;background:var(--rule)}.meter i{display:block;height:100%;background:var(--sl)}.sp.done .meter i{background:var(--ok)}
+.ctrl{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:18px 0 12px}
+input,select{font:16px Inter,sans-serif;min-height:44px;padding:8px 10px;border:1px solid var(--rule);background:var(--bg);color:var(--ink)}
+input{flex:1 1 220px}button{font:500 14px Inter,sans-serif;min-height:44px;padding:8px 14px;border:1px solid var(--rule);background:var(--pan2);color:var(--ink);cursor:pointer}
+button[aria-pressed=true]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+:focus-visible{outline:3px solid var(--sl);outline-offset:2px}
+.kb{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px;align-items:start}
+.col{background:var(--pan2);padding:10px;min-height:120px}.col h3{margin:0 0 8px;font-size:14px;display:flex;justify-content:space-between}
+.card{background:var(--bg);border:1px solid var(--rule);padding:10px;margin-bottom:8px;cursor:pointer;display:block;width:100%;text-align:left;font:inherit;color:inherit;min-height:auto}
+.card:hover{border-color:var(--sl)}.card .id{font-size:12px;color:var(--mut);font-weight:600}.card .t{font-weight:500;font-size:14px;line-height:1.35;margin:3px 0 6px}
+.chips{display:flex;flex-wrap:wrap;gap:4px}.chip{font-size:12px;padding:1px 6px;background:var(--pan);white-space:nowrap}
+.m-opus{color:var(--sl);font-weight:600}.m-fable{color:var(--red);font-weight:600}.m-sonnet{color:var(--ok);font-weight:600}.m-haiku{color:var(--warn);font-weight:600}
+.st-changes,.st-blocked{border-left:4px solid var(--warn)}
+.grid2{display:grid;grid-template-columns:minmax(0,1.2fr) minmax(0,1fr);gap:28px}
+table{width:100%;border-collapse:collapse;font-size:14px}th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--rule);vertical-align:top}th{font-weight:600;color:var(--mut);font-size:13px}
+.meet{border-top:1px solid var(--rule);padding:12px 0}.meet summary{cursor:pointer;font-weight:600;min-height:32px}.meet ul{margin:6px 0;padding-left:20px}
+.feed{list-style:none;margin:0;padding:0}.feed li{padding:7px 0;border-bottom:1px solid var(--rule);font-size:14px}.feed time{color:var(--mut);font-size:12px;white-space:nowrap;margin-right:8px}
+dialog{max-width:720px;width:calc(100% - 24px);border:0;padding:0;background:var(--bg);color:var(--ink);box-shadow:0 10px 40px #0006}
+dialog .in{padding:20px;max-height:80vh;overflow:auto}dialog::backdrop{background:#0008}
+pre{white-space:pre-wrap;font-size:13px;background:var(--pan2);padding:10px;overflow-x:auto}
+.dates{list-style:none;padding:0;margin:0}.dates li{display:flex;gap:12px;padding:6px 0;border-bottom:1px solid var(--rule);font-size:14px}.dates b{white-space:nowrap;width:6.5em;flex:none}.hard b{color:var(--red)}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:13px;color:var(--mut)}.live i{width:9px;height:9px;border-radius:50%;background:var(--red);animation:p 1.6s infinite}
+@keyframes p{50%{opacity:.25}}@media(prefers-reduced-motion:reduce){.live i{animation:none}}
+.scroll{overflow-x:auto}
+@media(max-width:1000px){.kb{grid-template-columns:repeat(2,minmax(0,1fr))}.grid2{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){.kb{grid-template-columns:minmax(0,1fr)}table{font-size:13px}.stack thead{display:none}.stack tr{display:grid;padding-block:10px}.stack td{display:flow-root;border:0;padding:3px 0;padding-inline-start:7em;text-align:start}.stack td::before{content:attr(data-l);float:inline-start;width:6.5em;margin-inline-start:-7em;color:var(--mut)}.stack td:empty{display:none}}
+</style>
+<script>new MutationObserver(()=>{for(const c of document.querySelectorAll('.stack td:not([data-l])')){let i=0,p=c;while(p=p.previousElementSibling)i+=p.colSpan;c.dataset.l=c.closest('table').rows[0].cells[i]?.textContent||''}}).observe(document,{childList:true,subtree:true})</script>
+</head>
+<body>
+<header class="band"><div class="wrap">
+  <span class="tab">Sub-theme 03 · Agent Safety</span>
+  <h1 id="title">Kill Switch project board</h1>
+  <p class="lede" id="tag"></p>
+  <p class="small mut"><span class="live"><i></i><span id="phase"></span></span> · updated <span id="upd"></span></p>
+  <div class="figs" id="figs"></div>
+  <div class="strip" id="strip"></div>
+</div></header>
+<main>
+<section class="band" style="padding-top:0"><div class="wrap">
+  <h2>Issues</h2>
+  <div class="ctrl">
+    <input id="q" type="search" placeholder="Search issues, owners, outcomes" aria-label="Search issues">
+    <select id="fs" aria-label="Sprint"></select>
+    <select id="fo" aria-label="Owner"></select>
+  </div>
+  <div class="kb" id="kb"></div>
+</div></section>
+<section class="band" style="background:var(--pan)"><div class="wrap grid2">
+  <div><h2>Calls</h2><div id="meet"></div></div>
+  <div><h2>Key dates</h2><ul class="dates" id="dates"></ul>
+  <h2 style="margin-top:28px">Decisions</h2><div id="dec"></div></div>
+</div></section>
+<section class="band"><div class="wrap grid2">
+  <div><h2>Team</h2><table class="stack"><thead><tr><th>Name</th><th>Role</th><th>Model</th><th>Now</th></tr></thead><tbody id="team"></tbody></table></div>
+  <div><h2>Activity</h2><ul class="feed" id="feed"></ul>
+  <h2 style="margin-top:28px">Risks</h2><table class="stack"><thead><tr><th>Risk</th><th>Mitigation</th></tr></thead><tbody id="risk"></tbody></table></div>
+</div></section>
+</main>
+<dialog id="dlg"><div class="in" id="dlgin"></div></dialog>
+<script id="data" type="application/json">/*DATA*/</script>
+<script>{
+const D=JSON.parse(document.getElementById('data').textContent);
+const P=D.project,I=D.issues||[],T=D.team||[];
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const COLS=[['todo','To do'],['in_progress','In progress'],['in_review','In review'],['changes','Changes asked'],['done','Done']];
+const norm=s=>s==='backlog'?'todo':s==='blocked'?'changes':s;
+const who=id=>T.find(t=>t.id===id)||{name:id||'—',model:''};
+document.getElementById('title').textContent=P.name+' project board';
+document.getElementById('tag').textContent=P.tagline;
+document.getElementById('phase').textContent=D.phase;
+document.getElementById('upd').textContent=P.updated;
+const cnt=s=>I.filter(i=>norm(i.status)===s).length,done=cnt('done');
+const figs=[[I.length,'issues opened'],[done,'done'],[cnt('in_progress')+cnt('in_review'),'in flight'],[(D.meetings||[]).length,'team calls'],[(D.decisions||[]).length,'decisions logged'],[D.daysToAbstract,'days to abstract']];
+document.getElementById('figs').innerHTML=figs.map(([n,l])=>`<div class="fig1"><b>${esc(n)}</b><span>${l}</span></div>`).join('');
+document.getElementById('strip').innerHTML=D.sprints.map(s=>{const si=I.filter(i=>i.sprint===s.n),d=si.filter(i=>norm(i.status)==='done').length,pc=si.length?Math.round(100*d/si.length):(s.status==='done'?100:0);return `<div class="sp ${s.status}"><h3>Sprint ${s.n} · ${esc(s.name)}</h3><p>${esc(s.goal)}</p><div class="meter" role="img" aria-label="${pc}% done"><i style="width:${pc}%"></i></div><p class="small" style="margin:6px 0 0">${d}/${si.length} issues · ${esc(s.status)}</p></div>`}).join('');
+const fs=document.getElementById('fs'),fo=document.getElementById('fo'),q=document.getElementById('q');
+fs.innerHTML='<option value="">All sprints</option>'+D.sprints.map(s=>`<option value="${s.n}">Sprint ${s.n}</option>`).join('');
+const owners=[...new Set(I.map(i=>i.owner))];
+fo.innerHTML='<option value="">Everyone</option>'+owners.map(o=>`<option value="${esc(o)}">${esc(who(o).name)}</option>`).join('');
+try{const v=JSON.parse(localStorage.getItem('ksf')||'{}');fs.value=v.s||'';fo.value=v.o||''}catch(e){}
+const card=i=>{const o=who(i.owner);return `<button class="card st-${esc(i.status)}" data-id="${esc(i.id)}"><div class="id">${esc(i.id)} · S${i.sprint}</div><div class="t">${esc(i.title)}</div><div class="chips"><span class="chip">${esc(o.name)}</span><span class="chip m-${esc(i.model)}">${esc(i.model)}</span>${i.reviewer?`<span class="chip">review: ${esc(who(i.reviewer).name)}</span>`:''}</div></button>`};
+function draw(){const s=fs.value,o=fo.value,t=q.value.toLowerCase();try{localStorage.setItem('ksf',JSON.stringify({s,o}))}catch(e){}
+const L=I.filter(i=>(!s||String(i.sprint)===s)&&(!o||i.owner===o)&&(!t||JSON.stringify(i).toLowerCase().includes(t)));
+document.getElementById('kb').innerHTML=COLS.map(([k,n])=>{const c=L.filter(i=>norm(i.status)===k);return `<div class="col"><h3><span>${n}</span><span class="mut">${c.length}</span></h3>${c.map(card).join('')||'<p class="small mut">Nothing here</p>'}</div>`}).join('')}
+[fs,fo].forEach(e=>e.addEventListener('change',draw));q.addEventListener('input',draw);draw();
+const dlg=document.getElementById('dlg');
+document.getElementById('kb').addEventListener('click',e=>{const b=e.target.closest('.card');if(!b)return;const i=I.find(x=>x.id===b.dataset.id),o=who(i.owner);
+document.getElementById('dlgin').innerHTML=`<p class="small mut">${esc(i.id)} · Sprint ${i.sprint} · ${esc(i.track||'')} · opened by ${esc(who(i.created_by).name)}</p><h2>${esc(i.title)}</h2>
+<table><tr><th>Owner</th><td>${esc(o.name)} (<span class="m-${esc(i.model)}">${esc(i.model)}</span>)</td></tr><tr><th>Reviewer</th><td>${esc(who(i.reviewer).name)}</td></tr><tr><th>Status</th><td>${esc(i.status)}</td></tr><tr><th>Outcome</th><td>${esc(i.outcome)}</td></tr><tr><th>Deliverable</th><td><code>${esc(i.deliverable||'')}</code></td></tr></table>
+${(i.acceptance||[]).length?`<h3>Acceptance</h3><ul>${i.acceptance.map(a=>`<li>${esc(a)}</li>`).join('')}</ul>`:''}
+${i.summary?`<h3>Result</h3><pre>${esc(i.summary)}</pre>`:''}
+${i.review?`<h3>Review</h3><pre>${esc(i.review)}</pre>`:''}
+${(i.log||[]).length?`<h3>Log</h3><ul class="feed">${i.log.map(l=>`<li><time>${esc(l.t)}</time><b>${esc(who(l.who).name)}</b> ${esc(l.msg)}</li>`).join('')}</ul>`:''}
+<p><button id="cl">Close</button></p>`;dlg.showModal();document.getElementById('cl').onclick=()=>dlg.close()});
+dlg.addEventListener('click',e=>{if(e.target===dlg)dlg.close()});
+document.getElementById('meet').innerHTML=(D.meetings||[]).slice().reverse().map((m,k)=>`<details class="meet" ${k?'':'open'}><summary>${esc(m.title)} <span class="small mut">· ${esc(m.date)}</span></summary><p>${esc(m.summary)}</p>${(m.decisions||[]).length?`<b class="small">Decided</b><ul>${m.decisions.map(d=>`<li>${esc(d)}</li>`).join('')}</ul>`:''}${(m.next||[]).length?`<b class="small">Next</b><ul>${m.next.map(d=>`<li>${esc(d)}</li>`).join('')}</ul>`:''}<p class="small mut">Attendees: ${esc((m.attendees||[]).map(a=>who(a).name).join(', '))}</p></details>`).join('')||'<p class="mut">First call happens when Sprint 1 research lands.</p>';
+document.getElementById('dates').innerHTML=D.dates.map(d=>`<li class="${d.hard?'hard':''}"><b>${esc(new Date(d.d+'T00:00').toLocaleDateString('en-IN',{day:'numeric',month:'short'}))}</b><span>${esc(d.what)}</span></li>`).join('');
+document.getElementById('dec').innerHTML=(D.decisions||[]).length?`<table class="stack"><thead><tr><th>ID</th><th>Decision</th><th>Status</th></tr></thead><tbody>${D.decisions.map(d=>`<tr><td>${esc(d.id)}</td><td><b>${esc(d.title)}</b><br><span class="small mut">${esc(d.summary)}</span></td><td>${esc(d.status)}</td></tr>`).join('')}</tbody></table>`:'<p class="mut">No decisions yet.</p>';
+document.getElementById('team').innerHTML=T.map(t=>{const a=I.find(i=>i.owner===t.id&&['in_progress','in_review','changes'].includes(i.status));return `<tr><td><b>${esc(t.name)}</b></td><td>${esc(t.role)}</td><td class="m-${esc(t.model)}">${esc(t.model)}</td><td>${a?esc(a.id+' '+a.title):'<span class="mut">'+esc(t.focus)+'</span>'}</td></tr>`}).join('');
+document.getElementById('feed').innerHTML=(D.activity||[]).slice(-14).reverse().map(a=>`<li><time>${esc(a.t)}</time><b>${esc(who(a.who).name)}</b> ${esc(a.msg)}</li>`).join('');
+document.getElementById('risk').innerHTML=(D.risks||[]).map(r=>`<tr><td>${esc(r.r)}</td><td>${esc(r.mit)}</td></tr>`).join('');
+}</script>
+</body>
+</html>

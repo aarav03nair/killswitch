@@ -1,0 +1,32 @@
+{
+  "id": "ORG-01",
+  "title": "Stand up org: charter, roster, tracker CLI, live board",
+  "sprint": 0,
+  "track": "ops",
+  "owner": "pmo",
+  "reviewer": "maya",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "done",
+  "outcome": "Team can open/track issues and Aarav can watch a live board",
+  "acceptance": [
+    "issue CLI works",
+    "board renders and is published"
+  ],
+  "depends": [],
+  "deliverable": "org/CHARTER.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 00:29",
+      "who": "pmo",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:29",
+      "who": "pmo",
+      "msg": "→ done: charter, roster, CLI and board live"
+    }
+  ]
+}

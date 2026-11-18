@@ -1,0 +1,233 @@
+{
+  "project": {
+    "name": "Kill Switch",
+    "codename": "BLACKBOX",
+    "tagline": "An accountability layer for teams of autonomous agents: who did what, stop them fast, undo only their damage.",
+    "event": "SEED Hackathon 2026 — The Age of Autonomy · Sub-theme 03: Agent Safety",
+    "brief": [
+      "Ten agents are working. One just broke something. What changed, who changed it, how fast can it be undone?",
+      "Build: per-agent identity on every action, live monitoring, containment.",
+      "Rollback that reverses one agent's damage without discarding the other agents' work.",
+      "Scored on time-to-identify, time-to-contain and clean recovery.",
+      "Jury rewards the best problem framing; agents must be auditable, not just demoable; juries will try to break it."
+    ],
+    "owner": "Aarav (Product Owner)",
+    "updated": ""
+  },
+  "phase": "Sprint 0 · Kickoff",
+  "sprints": [
+    {
+      "n": 0,
+      "name": "Kickoff",
+      "goal": "Charter, team, tracker, research plan",
+      "status": "active"
+    },
+    {
+      "n": 1,
+      "name": "Research",
+      "goal": "Literature, standards, open source, incidents → synthesis",
+      "status": "planned"
+    },
+    {
+      "n": 2,
+      "name": "Frame & Design",
+      "goal": "Abstract kit, architecture, ADRs, threat model",
+      "status": "planned"
+    },
+    {
+      "n": 3,
+      "name": "Build core",
+      "goal": "Identity, black-box ledger, gateway, monitor, containment, rollback",
+      "status": "planned"
+    },
+    {
+      "n": 4,
+      "name": "Prove it",
+      "goal": "10-agent benchmark, red team, jury dry-run, demo",
+      "status": "planned"
+    }
+  ],
+  "dates": [
+    {
+      "d": "2026-11-22",
+      "what": "Abstract deadline (written by Aarav, under 1,000 words)",
+      "hard": true
+    },
+    {
+      "d": "2026-11-24",
+      "what": "Shortlist announced"
+    },
+    {
+      "d": "2026-11-25",
+      "what": "Prototyping phase starts (8 days)"
+    },
+    {
+      "d": "2026-12-03",
+      "what": "Mentorship phase"
+    },
+    {
+      "d": "2026-12-09",
+      "what": "Grand finale — jury tries to break it",
+      "hard": true
+    }
+  ],
+  "team": [
+    {
+      "id": "aarav",
+      "name": "Aarav",
+      "role": "Product Owner",
+      "group": "Owner",
+      "model": "human",
+      "focus": "Final calls, writes the abstract"
+    },
+    {
+      "id": "pmo",
+      "name": "Claude (PMO)",
+      "role": "Program manager · coordinator",
+      "group": "Leads",
+      "model": "opus",
+      "focus": "Runs sprints, calls and the board"
+    },
+    {
+      "id": "maya",
+      "name": "Maya Rao",
+      "role": "Engineering Lead & Architect",
+      "group": "Leads",
+      "model": "opus",
+      "focus": "Architecture, ADRs, code review"
+    },
+    {
+      "id": "anaya",
+      "name": "Dr. Anaya Iyer",
+      "role": "Research Lead",
+      "group": "Leads",
+      "model": "opus",
+      "focus": "Research plan, synthesis, review"
+    },
+    {
+      "id": "kabir",
+      "name": "Kabir Sen",
+      "role": "Security & Red-Team Lead",
+      "group": "Leads",
+      "model": "opus",
+      "focus": "Threat model, attacks, tamper tests"
+    },
+    {
+      "id": "zoya",
+      "name": "Zoya Mirza",
+      "role": "Product & Pitch Lead",
+      "group": "Leads",
+      "model": "opus",
+      "focus": "Problem framing, abstract kit, demo story"
+    },
+    {
+      "id": "panel",
+      "name": "The Panel",
+      "role": "Principal Reviewer / Jury simulation",
+      "group": "Leads",
+      "model": "fable",
+      "focus": "Independent gate reviews"
+    },
+    {
+      "id": "meera",
+      "name": "Meera",
+      "role": "Researcher · Recovery literature",
+      "group": "Research",
+      "model": "sonnet",
+      "focus": "Selective undo, intrusion recovery"
+    },
+    {
+      "id": "rohan",
+      "name": "Rohan",
+      "role": "Researcher · Identity & standards",
+      "group": "Research",
+      "model": "sonnet",
+      "focus": "Agent identity, OTel, MCP auth"
+    },
+    {
+      "id": "leela",
+      "name": "Leela",
+      "role": "Researcher · Open source",
+      "group": "Research",
+      "model": "sonnet",
+      "focus": "Existing tools and code"
+    },
+    {
+      "id": "sameer",
+      "name": "Sameer",
+      "role": "Researcher · Incidents & metrics",
+      "group": "Research",
+      "model": "sonnet",
+      "focus": "Real failures, MTTI/MTTC"
+    },
+    {
+      "id": "arjun",
+      "name": "Arjun",
+      "role": "Developer · Identity & Ledger",
+      "group": "Engineering",
+      "model": "sonnet",
+      "focus": "Signed actions, hash chain"
+    },
+    {
+      "id": "nisha",
+      "name": "Nisha",
+      "role": "Developer · Gateway & Monitor",
+      "group": "Engineering",
+      "model": "sonnet",
+      "focus": "Interception, detectors"
+    },
+    {
+      "id": "vikram",
+      "name": "Vikram",
+      "role": "Developer · Rollback Engine",
+      "group": "Engineering",
+      "model": "opus",
+      "focus": "Causal graph, selective undo"
+    },
+    {
+      "id": "tara",
+      "name": "Tara",
+      "role": "Developer · Simulation & Benchmark",
+      "group": "Engineering",
+      "model": "sonnet",
+      "focus": "10-agent world, fault injection"
+    },
+    {
+      "id": "ishaan",
+      "name": "Ishaan",
+      "role": "Developer · Console UI",
+      "group": "Engineering",
+      "model": "sonnet",
+      "focus": "Incident console"
+    }
+  ],
+  "meetings": [],
+  "decisions": [],
+  "risks": [
+    {
+      "r": "Abstract must be Aarav's own writing — organisers check for AI-written text",
+      "mit": "Team delivers an outline, facts and review; Aarav writes the prose"
+    },
+    {
+      "r": "Only 3 days to abstract deadline",
+      "mit": "Research + framing first; build continues in parallel"
+    }
+  ],
+  "activity": [
+    {
+      "t": "19 Nov 00:29",
+      "who": "pmo",
+      "msg": "opened ORG-01 — Stand up org: charter, roster, tracker CLI, live board"
+    },
+    {
+      "t": "19 Nov 00:29",
+      "who": "pmo",
+      "msg": "moved ORG-01 to done"
+    },
+    {
+      "t": "19 Nov 00:29",
+      "who": "pmo",
+      "msg": "opened ORG-02 — Research plan: break Sprint 1 into small research issues"
+    }
+  ]
+}
