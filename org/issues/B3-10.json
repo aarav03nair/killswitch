@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "Runtime runs the real world agents, fixes RunConfig.isolation before spawn and aborts on contradiction (findings 1, 4, 12)",
   "acceptance": [
     "ks run --agents 10 spawns the ADR-06 agents; cross-uid ptrace from agent i to agent j and to the witness is EPERM (dumpable set after exec)",
@@ -19,13 +19,38 @@
     "B3-05"
   ],
   "deliverable": "src/ks/runtime/",
-  "summary": "",
-  "review": "",
+  "summary": "ks.runtime.setup (new): scenario wiring (skeleton | world = 10 ADR-06 agents running ks.world.agents.step on TickFrame.view, WorldDispatcher, SENSITIVE_FIELDS, hero_tick drawn from ks.rng in [T/4,T/2]), default_run_id <scenario>-s<seed>, default_out /run/ks/<run_id> as Linux root else runs/<run_id>, refuse_existing (before any spawn), isolation_problems. run.py: scenario= param, readback check after spawn raises IsolationError before tick 0 (planned vs /proc uids, per_agent_uid needs distinct non-root uids apart from gateway and witness; degraded/macOS never aborts, banner says VOID), private _force_agent_uids test hook. agent_template: --hero-tick -> step(agent, seed, tick, view, Schedule). ks.runtime.isoprobe: ptrace attach probe. CLI: --scenario, --agents default per scenario. Edits to run.py are targeted on top of ishaan's B3-39 guards and arjun's concurrent B3-36 S2/M1 edits; gateway/stub.py untouched (except the B3-40 TODO repoint). Tests tests/runtime/test_world_runtime.py: 6 pass on macOS (world spawn degraded/VOID with 0 misses, scenario args, isolation_problems unit, default run_id/out, repro byte-identical, existing dir refuses with nothing spawned or written). UNEXECUTED (skipif not Linux root, run in Docker): test_cross_uid_ptrace_eperm_and_nondumpable_after_exec, test_forced_shared_uid_aborts_before_tick0. LIMIT: world runs are capped at 1 tick (WORLD_TICKS_UNTIL_STATE). The gateway passes txn=None, so tick 1 writes would hit its fail-stop. Lift the cap with B3-11/B3-41 (state txn + D-SEQ1 seed record at seq 1). Until then, record.jsonl is empty and there is no anchor, so the byte-identical check covers config, keys, record and witness of an idle tick only. Checked against B3-06 stricter API (view needs .store/.visible_to, _Ctx needs WorldTxn): compatible, no change. The runtime only constructs WorldDispatcher; the gateway passes state=None (view -> ()) and execute is never reached in the 1-tick idle cap. When B3-41 wires txn/snapshot, it must pass WorldTxn and a snapshot with .store/.visible_to.",
+  "review": "[kabir · done] DONE, with one item carried forward and two container obligations. (1) Repro clause of acceptance 3 is only partly met: with the 1-tick cap the record is empty and there is no anchor, so the test shows config, keys and the empty witness are identical, not that a recorded run reproduces. Carry forward by name: whoever lifts WORLD_TICKS_UNTIL_STATE (B3-41, with B3-11 seed record D-SEQ1) must extend test_world_repro_same_seed_byte_identical to ticks past hero_tick, with a non-empty record.jsonl and equal RunAnchors. Until then nobody may call repro 'shown' for the world. (2) The two Linux-root tests were read, not run: test_cross_uid_ptrace_eperm_and_nondumpable_after_exec and test_forced_shared_uid_aborts_before_tick0 must pass in the B3-39 container before the jury demo. Attacks tried: readback runs after Popen returns, so after exec and setuid; the pid is held unreaped so it cannot be reused; an unprivileged agent cannot change its uid, so there is no TOCTOU before tick 0. An agent can turn its own dumpable flag back on, but that only matters for the same uid, and per_agent_uid shuts that out; degraded already says VOID. Probe: 'attached' is a fail and the pids are checked with proc_uid first, so it cannot read the wrong pid. Non-blocking: EPERM alone does not prove the uid boundary (nondumpable or Yama also give EPERM), so the uid asserts carry that proof. Add a check of Uid lines (real, effective, saved, fs) not just the real one. macOS: separate needs linux and root, so per_agent_uid is unreachable there and the banner says VOID. Existing dir: refuse_existing runs before spawn and mkdir(exist_ok=False) closes the race. run_id: scenario is limited to argparse choices; --run-id '../../evil' is rejected by the RunConfig pattern with rc=64 before anything is written; '..' passes the pattern but hits the existing dir. Non-blocking: reject '.'/'..' as run_id. 6 passed 2 skipped; full suite 515 passed 8 skipped.",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 16:31",
+      "who": "maya",
+      "msg": "→ in_progress: started after B3-05 done"
+    },
+    {
+      "t": "19 Nov 16:31",
+      "who": "maya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 16:31",
+      "who": "maya",
+      "msg": "→ in_review: ready for kabir; 2 Linux-root tests unexecuted on Mac"
+    },
+    {
+      "t": "19 Nov 16:33",
+      "who": "maya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 16:33",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

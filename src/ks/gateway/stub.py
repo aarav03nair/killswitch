@@ -20,9 +20,9 @@ from ks.contracts import (SYSTEM_CONN, SYSTEM_PRINCIPALS, ActionClass, Canonical
                           Keyring, NoopFrame, Reason, Record, ReplyFrame, RunConfig, SideDomain, SubmitFrame,
                           TickFrame, decode_frame, expiry_ok, raw_hash, result_hash)
 from ks.identity import verify_hex
-from ks.recorder import Recorder
+from ks.recorder import GatewayHooks, Recorder
 
-from .dispatch import ToolDispatcher
+from .dispatch import Execution, StateTxn, ToolDispatcher, ViewProvider
 
 __all__ = ["Admission", "Gateway", "InFrame"]
 
@@ -48,12 +48,18 @@ class Gateway:
     """Admits frames and records every envelope it receives, denials included (rule 11)."""
 
     def __init__(self, config: RunConfig, keyring: Keyring, recorder: Recorder,
-                 epoch_of: Callable[[str], int | None], *, dispatcher: ToolDispatcher):
+                 epoch_of: Callable[[str], int | None], *, dispatcher: ToolDispatcher,
+                 views: ViewProvider | None = None, hooks: GatewayHooks | None = None):
         self.config = config.tcb_view()  # A3: the TCB never sees fault/culprit/fault_tick
         self.keyring = keyring
         self.recorder = recorder
+        self.hooks = hooks if hooks is not None else GatewayHooks()  # no-ops in production (RT8(g) seam)
         self._epoch_of = epoch_of
         self.dispatcher = dispatcher
+        # ks.world's view builder (B3-05); defaults to the dispatcher if it also implements ViewProvider
+        self.views = views if views is not None else (dispatcher if isinstance(dispatcher, ViewProvider) else None)
+        self.delivered: dict[str, tuple] = {}  # agent -> view sent this tick; joins its read_set (I1, TODO B3-41)
+        self._conn_agent: dict[str, str] = {}  # conn_id -> the agent bound to it by the barrier (D7: 1:1)
         self._nonces: set[tuple[str, str]] = set()
         self._actions: set[tuple[str, str]] = set()
         self._tick = 0
@@ -64,15 +70,20 @@ class Gateway:
 
     # --- barrier seam (B3-37) --------------------------------------------------------------------
     def open(self, tick: int, agents: Iterable[str]) -> dict[str, TickFrame]:
-        """Start ``tick`` and return the TickFrame owed to each agent (epoch from control, view later)."""
+        """Start ``tick`` and return the TickFrame owed to each agent (epoch from control, view from ViewProvider)."""
         self.begin_tick(tick)
-        return {a: TickFrame(tick=tick, epoch=self._epoch_of(a), view=()) for a in agents}
+        state = None  # read-only ks.state snapshot: not wired in the skeleton (TODO B3-41)
+        self.delivered = {a: (tuple(self.views.view(a, tick, state)) if self.views is not None else ())
+                          for a in agents}
+        return {a: TickFrame(tick=tick, epoch=self._epoch_of(a), view=self.delivered[a]) for a in agents}
 
     def tick(self, tick: int, frames: Sequence[InFrame]) -> list[tuple[str, ReplyFrame]]:
         """Admit this tick's frames in agent_id order (arrival order is discarded); replies as (conn_id, reply)."""
         if tick != self._tick:
             raise ValueError(f"tick {tick} was not opened (current {self._tick})")
         replies = []
+        for f in frames:
+            self._conn_agent[f.conn_id] = f.agent_id  # the barrier's 1:1 connection <-> agent binding (S3)
         for f in sorted(frames, key=lambda f: f.agent_id):
             adm = self.admit(f.conn_id, f.line)
             if adm.reply is not None:
@@ -119,17 +130,36 @@ class Gateway:
             return deny(Reason.OUT_OF_SCOPE)
         if cls == ActionClass.U:
             return deny(Reason.CLASS_U)
-        ex = self.dispatcher.execute(env, None)  # state txn: ks.state (vikram), not wired in the skeleton
+        self.hooks.between_check_and_txn(env)  # RT8 check-to-use window; no-op by default
+        txn = None  # state txn: ks.state (vikram), not wired in the skeleton (TODO B3-41)
+        ex = self.dispatcher.execute(env, txn)
+        read_set, write_set = self._sets(ex, txn)
+        if ex.outbox:  # TODO(B3-41): create OutboxItems (ids, payload hash, lineage = read_set) and fill outbox_ids
+            raise NotImplementedError("outbox requests need the outbox (B3-41)")
         rh = result_hash(ex.result)
         self.recorder.put_side(SideDomain.RESULT, rh, ex.result)
         return self._done(conn_id, header, env.content_hash(), True, Decision.EXEC, Reason.OK, cls,
-                          result=ex.result, result_hash=rh, read_set=ex.read_set, write_set=ex.write_set)
+                          result=ex.result, result_hash=rh, read_set=read_set, write_set=write_set)
+
+    @staticmethod
+    def _sets(ex: Execution, txn: StateTxn) -> tuple[tuple, tuple]:
+        """Record sets come from the txn, never self-reported (ks.gateway.dispatch). Without a txn a tool cannot
+        have touched state, so it may report no writes. TODO(B3-41): with a txn, take both sets from it and raise
+        if ``ex.read_set``/``ex.write_set`` disagree."""
+        if txn is None:
+            if ex.write_set:
+                raise ValueError("a tool wrote without a state txn (sets are the store's, not the tool's)")
+            return ex.read_set, ex.write_set
+        raise NotImplementedError("StateTxn cross-check lands with B3-41")
 
     def _sig_ok(self, conn_id: str, header: EnvelopeHeader) -> bool:
         if header.sig is None:
             return False
         if header.agent_id in SYSTEM_PRINCIPALS and conn_id != SYSTEM_CONN:
             return False  # a system agent_id is never verified on an agent connection (X7)
+        bound = self._conn_agent.get(conn_id)
+        if bound is not None and header.agent_id != bound:
+            return False  # S3: an envelope claims another agent than this connection's: bad_sig, even if signed
         pub = self.keyring.pub(header.agent_id)
         return pub is not None and verify_hex(pub, header.sig, header.signing_bytes())
 

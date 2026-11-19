@@ -1,7 +1,9 @@
 """Signer handle service (ADR-01 §3, E5). Runs inside the gateway; each agent reaches it over its own
 path-less socketpair and gets ``SignRequest{header}`` -> ``SignReply{sig}`` or, since contracts 1.2,
 ``SignRefusal{reason}`` (SKEL-01 finding 3), so a refused agent no-ops at once instead of waiting out the
-barrier deadline. A refusal is not a record; ``refusals`` keeps the count for the console.
+barrier deadline. A refusal is not a record; ``refusals`` keeps only counts for the console (B3-36 M2: never a
+list, a flooding handle must not grow gateway memory). Each handle has a per-tick line budget; past it
+``handle`` returns ``None`` and the barrier closes the connection.
 """
 
 from __future__ import annotations
@@ -16,7 +18,11 @@ from ks.contracts import (CanonicalError, SignRefusal, SignReply, SignRequest, d
 
 from .keys import sign_hex
 
-__all__ = ["SignerService"]
+__all__ = ["SignerService", "MAX_SIGNER_LINES_PER_TICK"]
+
+MAX_SIGNER_LINES_PER_TICK = 8
+"""Request lines one handle may send per tick (signed + refused). An honest agent sends at most
+``MAX_SIGN_PER_TICK`` (2); the rest is slack for refusals. Past this the connection is closed (SKEL-01 M2)."""
 
 
 class SignerService:
@@ -27,19 +33,28 @@ class SignerService:
         self._epoch_of = epoch_of
         self._tick = 0
         self._count: Counter[str] = Counter()
-        self.refusals: list[tuple[int, str, str]] = []
-        """(tick, principal, reason) of every refused request (for the console / tests)."""
+        self._lines: Counter[str] = Counter()
+        self.refusals: Counter[tuple[str, str]] = Counter()
+        """(principal, reason) -> how many requests were refused. Counted, never stored (M2)."""
+        self.flooded: Counter[str] = Counter()
+        """principal -> lines dropped over the per-tick budget."""
 
     def begin_tick(self, tick: int) -> None:
         self._tick = tick
         self._count.clear()
+        self._lines.clear()
 
     def _refuse(self, principal: str, why: str) -> bytes:
-        self.refusals.append((self._tick, principal, why))
+        self.refusals[(principal, why)] += 1
         return encode_frame(SignRefusal(reason=why))
 
-    def handle(self, principal: str, line: bytes) -> bytes:
-        """One request line from ``principal``'s handle -> one reply line: ``SignReply`` or ``SignRefusal``."""
+    def handle(self, principal: str, line: bytes) -> bytes | None:
+        """One request line from ``principal``'s handle -> one reply line: ``SignReply`` or ``SignRefusal``;
+        ``None`` once the handle is over its per-tick line budget (no reply, caller closes the connection)."""
+        self._lines[principal] += 1
+        if self._lines[principal] > MAX_SIGNER_LINES_PER_TICK:
+            self.flooded[principal] += 1
+            return None
         try:
             req = decode_frame(line)
         except CanonicalError:

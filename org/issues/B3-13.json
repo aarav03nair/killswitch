@@ -25,6 +25,11 @@
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 16:33",
+      "who": "pmo",
+      "msg": "→ todo: Non-blocking from kabir's B3-10 review: isolation readback should check all four uid fields (real/effective/saved/fs), not only the real uid; reject '.' and '..' as run_id."
     }
   ]
 }

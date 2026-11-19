@@ -1,5 +1,5 @@
-# Project Kill Switch runtime image. python:3.13-slim is multi-arch (arm64 + amd64).
-FROM python:3.13-slim
+# Project Kill Switch runtime image. python:3.13.1-slim-bookworm is multi-arch (arm64 + amd64).
+FROM python:3.13.1-slim-bookworm
 
 ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
@@ -16,7 +16,9 @@ RUN pip install ".[test]" \
  && chmod +x /usr/local/bin/ks
 
 # Deliberately root: the runtime assigns per-agent numeric uids (needs CAP_SETUID).
-# Isolation comes from the container boundary; run with --network none at runtime.
+# Isolation is per-agent numeric uids inside the container (60001+index; witness 60000), non-dumpable
+# processes, clean env, path-less socketpairs. If per-agent uids fail, per-agent attribution is void
+# for that run (THREAT-MODEL). The container is the deployment unit; run with --network none.
 USER root
 VOLUME ["/app/runs"]
 CMD ["ks", "--help"]

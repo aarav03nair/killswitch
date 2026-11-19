@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "Pure agent functions f(seed, tick, view) -> <=1 envelope for the 10 ADR-06 roles, plus the scenario seed data and TickFrame.view builder",
   "acceptance": [
     "10 agents in agent_id order, RNG = sha256(canonical([seed,name,tick])); same seed twice -> identical envelope sequence (test)",
@@ -18,13 +18,33 @@
     "B3-03"
   ],
   "deliverable": "src/ks/world/",
-  "summary": "",
-  "review": "",
+  "summary": "ks.world.registry (supplier master, valid IBANs, tick-0 prices), ks.world.agents (10 pure agents step(agent,seed,tick,view,Schedule), faults f1/f2/f2plus/_c/_x/f3/f4/f7 on culprit slot, QUIET_TICKS hero guard), ks.world.scenario (seed_state, SCOPES, build_view(store,agent,visible_to), open_world_store). Tests tests/world/test_world.py: determinism, test_triage_view_excludes_iban, test_view_respects_visibility, test_registry_nonvacuous, hero chain, test_hero_precondition_guard, F2+x. Note for vikram: seed writes need a seq>=1 and author ks.gateway; a seed at seq 1 collides with record seq 1 (one write per object per seq), so the gateway must start action seqs after the seed or seed at a reserved seq.",
+  "review": "[maya · done] All 3 acceptance items have tests that would fail if broken: determinism (same seed twice -> identical (tick,agent,tool,args) sequence over 60 ticks, different seed differs; RNG via ks.rng per (seed, world/<agent>, tick)), test_triage_view_excludes_iban (+ billing does see .iban, <=MAX_VIEW_ENTRIES, sorted), test_registry_nonvacuous (checksum-valid master IBANs, attacker IBAN valid and not in master, tick-0 prices, seeded IBAN as its own field object). Hero chain, F2+c guard and F2+x are good extras. ks.world imports no ks.runtime (AST test). Nits for later, not blocking: the t+1000/t+2000 tick offsets in draw_int reuse a consumer name at a shifted tick; use distinct names (world/crm/tier) per ADR-06-metrics M1. F5 is not an agent fault (injector side), so it is fine that it is missing from FAULTS. DECISION D-SEQ1 (also in src/ks/ARCHITECTURE.md): record seq 1 is the seed record, a gateway-authored ks.gateway record at tick 0 whose write_set is exactly seed_state(store, seq=1). Agent action seqs start at 2; the tick-1 view has visible_to=2. Seeding at seq 0 is rejected, because it needs a schema change and leaves seed versions without a record to verify against. ks.state is unchanged. nisha appends the seed record in B3-11. Until then the harnesses use the same numbering.",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 16:21",
+      "who": "tara",
+      "msg": "→ in_progress: started: registry, agents, scenario/view, tools"
+    },
+    {
+      "t": "19 Nov 16:24",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 16:24",
+      "who": "tara",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "19 Nov 16:25",
+      "who": "maya",
+      "msg": "review: done"
     }
   ]
 }

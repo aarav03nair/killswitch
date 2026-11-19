@@ -1,0 +1,46 @@
+{
+  "id": "B3-41",
+  "title": "Gateway is the authority on read/write sets and outbox (B3-40 TODO)",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "nisha",
+  "reviewer": "panel",
+  "model": "sonnet",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "Read/write sets come from the state txn, not tool self-reports; mismatches and refusals become recorded denials, never unrecorded raises",
+  "acceptance": [
+    "Gateway takes read_set/write_set from the StateTxn; an Execution whose sets disagree with the txn is a recorded deny (test with a lying adapter)",
+    "Write without txn and non-empty outbox before B3-23 become recorded denials, not raises after the tool ran (rule 11: every envelope recorded)",
+    "Outbox items are created by the gateway from Execution.outbox with derived idempotency_key and lineage (with B3-23)"
+  ],
+  "depends": [
+    "B3-40",
+    "B3-11"
+  ],
+  "deliverable": "src/ks/gateway/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 16:24",
+      "who": "pmo",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 16:30",
+      "who": "pmo",
+      "msg": "→ todo: From B3-09 review: once the gateway uses the recorder txn, rerun test_crash_commit_append through the gateway path."
+    },
+    {
+      "t": "19 Nov 16:33",
+      "who": "pmo",
+      "msg": "→ todo: From maya's B3-06 re-review: test spy still misses reads via a closure over a module Store, raw SQL on store.conn, and store.state_digest (no adapter does these today). Make the spy an allowlist and add an AST check on world adapters."
+    },
+    {
+      "t": "19 Nov 16:33",
+      "who": "pmo",
+      "msg": "→ todo: From kabir's B3-10 review: when the 1-tick cap is lifted, extend test_world_repro_same_seed_byte_identical past hero_tick with a non-empty record and equal RunAnchors (B3-10 repro item carried forward)."
+    }
+  ]
+}

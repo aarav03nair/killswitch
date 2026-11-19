@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "Every ADR-06 catalogue tool executes over ks.state inside the gateway txn and returns its read_set/write_set and class",
   "acceptance": [
     "All catalogue tools (R, C, I1, I2) implemented; test_catalogue_covers_world: every tool an agent can emit has an adapter and a class",
@@ -19,13 +19,53 @@
     "B3-04"
   ],
   "deliverable": "src/ks/world/tools.py",
-  "summary": "",
-  "review": "",
+  "summary": "Review fixes. tools.py: _Ctx accepts only WorldTxn (bare Store -> TypeError, no last_seq fallback); put_plain reuses the value already read (no store.get); WorldDispatcher.view requires .store and .visible_to (TypeError otherwise, None -> ()). Public names unchanged. Tests: spy now raises on store.get/heads/history/value_at/read_table; Maya's store.get mutation added as a must-fail regression; bare-Store rejection; view via WorldDispatcher hides a same-tick write; dead branch removed.",
+  "review": "[maya · changes] Catalogue, classes, I1/I2-as-OutboxRequest-with-no-writes and the write-set half of the property test are good (write_set vs head diff would catch a missed or extra write). Three changes: (1) BLOCKING, read-set half is tautological. _Spy only intercepts store.read, so an adapter that reads via c.store.get/heads/history/value_at gets an empty read_set and the test still passes. I checked this by mutation: billing.draft_invoice reading the supplier via c.store.get (lost taint edge to S-17.iban) -> all tests green. Fix: adapters may touch state only via _Ctx.read/put_row/put_plain. put_plain must reuse the value already read, not call store.get. The spy must raise on any other read API (get, heads, history, value_at, read_table) during execute. Add that mutation as a regression check (e.g. a deliberately bad adapter in the test must fail). (2) M2: WorldDispatcher.view silently uses visible_to=None (all heads) when given a bare Store. Require a snapshot with .store and .visible_to (TypeError otherwise; None state -> ()) and add a test through WorldDispatcher.view that a same-tick write is invisible. See ARCHITECTURE.md 'Views (M2)'. (3) Remove the bare-Store fallback in _Ctx (seq = last_seq+1). Seq is assigned by the gateway at BEGIN IMMEDIATE (G5), never by a tool. Accept only WorldTxn. Nits: the dead 'if tool == inventory.adjust: pass' in the property test. Records/hashes: OK (payloads are raw only in OutboxRequest, which the gateway hashes into the side store).\n\n[maya · done] Re-review: all three changes are in. (1) The spy raises on get/heads/history/value_at/read_table. I re-ran my mutation directly on tools.py (draft_invoice reading the supplier via c.store.get): test_sets_equal_touched_objects_property now FAILS, and test_bad_adapter_reading_via_store_get_fails pins it. put_plain reuses the value already read. (2) WorldDispatcher.view requires .store and .visible_to (TypeError otherwise, None -> ()); the same-tick write is invisible through the dispatcher (tested). (3) _Ctx takes only WorldTxn; bare Store gives TypeError (tested). 15 world tests, full suite 515 passed. Nit for B3-11 (nisha), not blocking: view accepts visible_to=None on a snapshot, which falls back to all heads. The gateway must pass the int first seq of the tick (D-SEQ1: tick 1 -> 2); tighten to require an int when B3-11 builds the snapshot. Runtime impact: none today, the gateway passes state=None and txn=None; B3-11 builds WorldTxn/snapshot inside the gateway.\n\n[maya · done] Re-review: all 3 findings fixed. (1) _Spy now raises on get/heads/history/value_at/read_table; I re-ran my store.get mutation plus heads/history/value_at/read_table variants on draft_invoice: all 5 caught. Regression test present. No adapter touches c.store directly (grep). (2) WorldDispatcher.view: TypeError without .store/.visible_to, None -> (), same-tick-write test passes. (3) _Ctx accepts only WorldTxn. Full suite 515 passed, 8 skipped. Follow-ups (non-blocking, fold into B3-41): the spy is a blocklist, so an adapter reading via store.conn (raw SQL) or store.state_digest still yields an empty read_set and passes. Switch _Spy to an allowlist (read, put, write_row only). A closure over a module-level Store bypasses any spy, so add an AST check that adapter functions reference state only via c.read/put_row/put_plain. Nit: WorldTxn annotates Store without importing it (works only because of the __future__ import). B3-10 compatibility: runtime never calls view/execute directly; the gateway passes state=None (-> ()) and the world is capped at 1 idle tick, so no change needed.",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 16:21",
+      "who": "tara",
+      "msg": "→ in_progress: started with B3-05"
+    },
+    {
+      "t": "19 Nov 16:24",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 16:24",
+      "who": "tara",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "19 Nov 16:26",
+      "who": "maya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 16:31",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 16:31",
+      "who": "tara",
+      "msg": "→ in_review: review fixes applied"
+    },
+    {
+      "t": "19 Nov 16:33",
+      "who": "maya",
+      "msg": "review: done"
+    },
+    {
+      "t": "19 Nov 16:33",
+      "who": "maya",
+      "msg": "review: done"
     }
   ]
 }

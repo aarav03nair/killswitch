@@ -26,6 +26,9 @@ class WitnessLink:
         self.proc = proc
         self.pub: str | None = None
         self._buf = bytearray()
+        self.newest: WitnessCheckpoint | None = None
+        """Newest checkpoint whose signature verified, from any ack, late ones included (SKEL-01 M1). The anchor
+        is taken from this after ``close``, so an honest run always verifies with ``--head``."""
 
     def _readline(self, timeout_s: float) -> bytes | None:
         """Next line, or ``None`` at the deadline. EOF raises WitnessError."""
@@ -59,10 +62,15 @@ class WitnessLink:
         return self.pub
 
     def attach(self, witness_fd: int, heads_dir_fd: int, timeout_s: float = 10.0) -> None:
-        """Pass the open ``witness.jsonl`` and ``witness-heads/`` descriptors (no path access needed)."""
+        """Pass the open ``witness.jsonl`` and ``witness-heads/`` descriptors (no path access needed) and
+        **close the gateway's copies** whatever happens: after attach the gateway holds no write fd (SKEL-01 #5)."""
         fds = [witness_fd, heads_dir_fd]
         assert len(fds) == WITNESS_FILES_FDS
-        socket.send_fds(self.sock, [encode_frame(WitnessFiles())], fds)
+        try:
+            socket.send_fds(self.sock, [encode_frame(WitnessFiles())], fds)
+        finally:
+            for fd in fds:
+                os.close(fd)
         line = self._readline(timeout_s)
         try:
             ok = line is not None and isinstance(decode_witness_frame(line), WitnessReady)
@@ -79,16 +87,28 @@ class WitnessLink:
             line = self._readline(max(0.0, end - time.monotonic()))
             if line is None:
                 return None
-            try:
-                cp = WitnessCheckpoint.from_canonical(line[:-1])
-            except CanonicalError:
+            cp = self._ingest(line)
+            if cp is None:
                 return None
             if cp.tick < tick:
-                continue  # late ack of an earlier, stalled tick
-            ok = cp.sig is not None and verify_hex(self.pub or "", cp.sig, cp.signing_bytes())
-            return cp if ok and (cp.seq, cp.head, cp.tick) == (seq, head, tick) else None
+                continue  # late ack of an earlier, stalled tick (still recorded in ``newest``)
+            return cp if (cp.seq, cp.head, cp.tick) == (seq, head, tick) else None
 
-    def close(self, timeout_s: float = 5.0) -> None:
+    def _ingest(self, line: bytes) -> WitnessCheckpoint | None:
+        """Parse and verify one ack line; keep it as ``newest`` if it is newer. ``None`` if bad."""
+        try:
+            cp = WitnessCheckpoint.from_canonical(line[:-1])
+        except CanonicalError:
+            return None
+        if cp.sig is None or not verify_hex(self.pub or "", cp.sig, cp.signing_bytes()):
+            return None
+        if self.newest is None or cp.count > self.newest.count:
+            self.newest = cp
+        return cp
+
+    def close(self, timeout_s: float = 5.0) -> WitnessCheckpoint | None:
+        """Send Close, wait for the witness to exit, then drain every ack still on the socket (a late final ack
+        is the newest checkpoint). Returns ``newest``."""
         try:
             self.sock.sendall(encode_frame(WitnessClose()))
         except OSError:
@@ -98,7 +118,16 @@ class WitnessLink:
         except subprocess.TimeoutExpired:
             self.proc.kill()
             self.proc.wait()
+        while True:  # the witness has exited: whatever it acked is already buffered on the socket
+            try:
+                line = self._readline(0.2)
+            except (WitnessError, OSError):
+                break
+            if line is None:
+                break
+            self._ingest(line)
         self.sock.close()
+        return self.newest
 
 
 def open_witness_fds(witness_path: os.PathLike[str] | str, heads_dir: os.PathLike[str] | str) -> tuple[int, int]:

@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "maya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "Reads record every object delivered (row + its field objects), digest for reconcile, savepoints for re-run simulation",
   "acceptance": [
     "test_row_read_includes_field_objects and test_row_read_lists_field_obj (R2 store side): whole-row reads and aggregates list the row plus every existing field object; a projection without the field lists the row only",
@@ -18,8 +18,8 @@
     "B3-03"
   ],
   "deliverable": "src/ks/state/",
-  "summary": "src/ks/state: FieldSchema.read_objs (read rule seam, contract field_obj_id/row_obj_id/split_obj_id); Store.read(obj, project=, visible_to=) and Store.read_table(table, ...) return ReadResult(value, read_set): whole-row/aggregate lists row + every existing field object (tombstones included), projection without the field lists row only, any returned sensitive value lists its field obj, direct field read lists only itself; no absence read (None). put already rejects row values with sensitive keys; write_row field-only edits do not bump the row. Store.state_digest(visible_to=) + ks.state.digest fold/fold_digest (chain-checked, FoldError). Store.savepoint() (kept unless raise) and Store.simulate() (always rolled back, nests, works inside/outside caller txn) for B3-24. tests/state/test_reads.py: 20 new tests (test_row_read_includes_field_objects, test_row_read_lists_field_obj, test_triage_edit_does_not_bump_iban, test_triage_view_excludes_iban, test_state_digest_fold_30_writes, test_digest_stability, test_dryrun_savepoint, ...). tests/state 36 passed; full suite 461 passed (441 baseline + 20); intermittent tests/skeleton failures are K2 uid contention from concurrent ks runs (reproduce with tests/state ignored), not ks.state. runtime/gateway/world/contracts untouched.",
-  "review": "",
+  "summary": "Review fixes (kabir). (1) savepoint()/simulate() now install a SQLite authorizer while open: BEGIN/COMMIT/ROLLBACK/SAVEPOINT/RELEASE issued on store.conn inside the block raise sqlite3.DatabaseError 'not authorized', so simulated code cannot persist its writes or drop the caller's. Backstop: if the txn/savepoint is gone on exit anyway, StateError (no silent return); txn() also raises StateError if the block ended the transaction. (2) Chose persist-and-refuse over required fields= (keeps tara's API; catches drift whatever the caller passes): sensitive_fields stored in meta on first open; reopen with a different FieldSchema -> StateError; fields=None adopts the persisted list; db with objects but no stored list -> StateError. (3) read() does tuple(project). Caller-visible changes: transaction-control SQL inside savepoint/simulate is refused; open_store/Store raise StateError on field-list mismatch; FieldSchema gains entries() and value equality. Signatures unchanged. Regressions: tests/state/test_b304_review.py (16 tests, probe cases incl.). tests/state+contracts 406 passed; full suite (excl. in-progress tests/world) 480 passed.",
+  "review": "[kabir · changes] All 3 acceptance criteria are met by tests that fail if the property breaks (test_row_read_includes_field_objects/_lists_field_obj incl. projection property loop, test_state_digest_fold_30_writes incl. visible_to prefixes, test_dryrun_savepoint). tests/state+contracts 389 passed. Two holes to fix, each with a regression test: (1) LEAK store.py:223-225 _rollback_savepoint returns silently if the txn is gone. Probe: COMMIT issued inside simulate() persists the simulated write (iban=EVIL, digest moved), no error. ROLLBACK inside simulate() within a caller txn silently drops the caller's kept writes; the only symptom is an OperationalError at txn COMMIT (store.py:188). Fix: simulate/savepoint raise StateError('transaction ended inside savepoint') when not in_transaction at exit. (2) READ-RULE HOLE store.py:161/427: fields defaults to empty and is not persisted. Store written without fields=, reopened with suppliers.iban: read(S17) returns iban with read_set=[row] only. Fix: store sensitive_fields in meta and refuse a mismatch on open (like schema, store.py:166-170), or require fields=. Minor: read() consumes a generator project twice (store.py:247 then :264), so it returns {} while listing iban. Safe direction, but do tuple(project) as read_table does (:273).\n\n[kabir · done] Re-review: all 3 findings fixed with regression tests (tests/state/test_b304_review.py). tests/state+contracts 406 passed. Bypass probe (30 cases, simulate() alone and inside a caller txn): executescript COMMIT/SELECT, conn.commit()/rollback(), autocommit=True, isolation_level changes, END TRANSACTION, RELEASE ks_sp_1 all refused 'not authorized'; second connection gets 'database is locked'; a TEMP trigger RAISE(ROLLBACK) is caught by the StateError backstop. No simulated write reached disk and caller writes were kept. Field pinning: opened without fields then with fields -> StateError; legacy db with objects but no meta row -> StateError (also with fields=None); empty legacy db pins; order/duplicates compare equal; fields=None adopts the stored list and lists iban. Residual, not blocking: code that calls conn.set_authorizer(None), COMMITs and re-creates SAVEPOINT ks_sp_N persists writes silently. In-process code is trusted (agents never hold the conn), so this guard catches bugs, not malice; describe it that way. Minor: _end_savepoint sets the authorizer to None, which clobbers any authorizer the caller had installed.",
   "log": [
     {
       "t": "19 Nov 11:34",
@@ -40,6 +40,31 @@
       "t": "19 Nov 16:06",
       "who": "vikram",
       "msg": "→ in_review: read rule, digest/fold, savepoints done; tests/state 36 green"
+    },
+    {
+      "t": "19 Nov 16:20",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 16:20",
+      "who": "vikram",
+      "msg": "→ in_progress: fixing kabir's 2 findings"
+    },
+    {
+      "t": "19 Nov 16:23",
+      "who": "vikram",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 16:23",
+      "who": "vikram",
+      "msg": "→ in_review: Fixed kabir's 3 findings with regression tests; ready for re-review"
+    },
+    {
+      "t": "19 Nov 16:25",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

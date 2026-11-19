@@ -1,0 +1,31 @@
+{
+  "id": "B3-42",
+  "title": "Kabir follow-ups on B3-08/B3-36: witness seq-head equivocation, signer drip, unbound-connection S3",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "arjun",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "Witness refuses to sign a second head for a seq it already signed; signer drip and unbound connections can't evade M2/S3",
+  "acceptance": [
+    "push(2,H2,4) then push(2,H3,5): witness refuses the second, no ack, no line (test)",
+    "A signer line with no newline counts against the per-tick budget and closes the connection at the cap; tick time bounded under a drip (test)",
+    "An envelope on a connection with no bound agent is denied, never admitted unchecked (test)"
+  ],
+  "depends": [
+    "B3-08",
+    "B3-36"
+  ],
+  "deliverable": "src/ks/witness/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 16:30",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

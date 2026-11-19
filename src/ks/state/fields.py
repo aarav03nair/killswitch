@@ -35,6 +35,19 @@ class FieldSchema:
             by_table.setdefault(table, []).append(field)
         self._by_table = {t: tuple(sorted(set(fs))) for t, fs in by_table.items()}
 
+    def entries(self) -> tuple[str, ...]:
+        """Every ``table.field`` entry, sorted (the form persisted in ``state.db`` meta, B3-04)."""
+        return tuple(f"{t}.{f}" for t in sorted(self._by_table) for f in self._by_table[t])
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, FieldSchema) and self.entries() == other.entries()
+
+    def __hash__(self) -> int:
+        return hash(self.entries())
+
+    def __repr__(self) -> str:
+        return f"FieldSchema({list(self.entries())!r})"
+
     @classmethod
     def from_config(cls, config: RunConfig) -> FieldSchema:
         return cls(config.sensitive_fields)

@@ -3,9 +3,11 @@
 It holds two socket ends and nothing else: the gateway (TickFrame in, Submit/Noop out, Reply in) and its
 signer handle (SignRequest out, SignReply or SignRefusal in). No keys, no paths, no record access.
 
-    main(["--agent", ID, "--seed", N, "--gw-fd", F, "--signer-fd", G, "--behaviour", MODULE])
+    main(["--agent", ID, "--seed", N, "--gw-fd", F, "--signer-fd", G, "--behaviour", MODULE, ["--hero-tick", H]])
 
-``MODULE.step(agent_id, seed, tick)`` returns an action (``tool``, ``args``, ``action_id``) or ``None``.
+``MODULE.step(agent_id, seed, tick)`` returns an action (``tool``, ``args``, ``action_id``) or ``None``. With
+``--hero-tick`` (the ADR-06 world, B3-10) it is ``MODULE.step(agent_id, seed, tick, view, MODULE.Schedule(H))``:
+the agent decides from the ``TickFrame.view`` the gateway sent, nothing else.
 """
 
 from __future__ import annotations
@@ -29,8 +31,10 @@ def main(argv: list[str]) -> int:
     ap.add_argument("--gw-fd", type=int, required=True)
     ap.add_argument("--signer-fd", type=int, required=True)
     ap.add_argument("--behaviour", default="ks.world.skeleton")
+    ap.add_argument("--hero-tick", type=int, default=None)
     a = ap.parse_args(argv)
     behaviour = importlib.import_module(a.behaviour)
+    sched = behaviour.Schedule(a.hero_tick) if a.hero_tick is not None else None
     gw = socket.socket(fileno=a.gw_fd)
     signer = socket.socket(fileno=a.signer_fd)
     gw_in, signer_in = gw.makefile("rb"), signer.makefile("rb")
@@ -39,7 +43,8 @@ def main(argv: list[str]) -> int:
         frame = decode_frame(line)
         if not isinstance(frame, TickFrame):
             continue  # ReplyFrame: nothing to do with it yet
-        act = behaviour.step(a.agent, a.seed, frame.tick)
+        act = (behaviour.step(a.agent, a.seed, frame.tick) if sched is None
+               else behaviour.step(a.agent, a.seed, frame.tick, frame.view, sched))
         if act is None or frame.epoch is None:
             gw.sendall(encode_frame(NoopFrame(tick=frame.tick)))
             continue

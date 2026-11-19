@@ -21,7 +21,7 @@ from collections.abc import Iterable
 from pathlib import Path
 
 __all__ = ["WITNESS_UID", "AGENT_UID_BASE", "agent_uid", "BOOT", "spawn_child", "proc_uid", "pids_with_uids",
-           "kill_uids", "set_nondumpable", "set_oom_score_adj"]
+           "kill_uids", "set_nondumpable", "set_oom_score_adj", "plan_agent_uids", "SHARED_AGENT_UID"]
 
 WITNESS_UID = 60000
 AGENT_UID_BASE = 60001
@@ -31,8 +31,11 @@ PR_SET_DUMPABLE = 4
 SRC = str(Path(__file__).resolve().parents[2])
 """Directory that contains the ``ks`` package; children put it on sys.path themselves (clean env)."""
 
+LINUX = sys.platform == "linux"
+"""prctl, oom_score_adj and /proc uid readback exist only on Linux; elsewhere the run is shared-uid (degraded)."""
+
 BOOT = ("import ctypes,sys\n"
-        "if ctypes.CDLL(None).prctl(4,0,0,0,0)!=0: sys.exit(70)\n"
+        "if sys.platform=='linux' and ctypes.CDLL(None).prctl(4,0,0,0,0)!=0: sys.exit(70)\n"
         "sys.path.insert(0,sys.argv[1])\n"
         "import importlib\n"
         "sys.exit(importlib.import_module(sys.argv[2]).main(sys.argv[3:]))\n")
@@ -43,11 +46,27 @@ def agent_uid(index: int) -> int:
     return AGENT_UID_BASE + index
 
 
+SHARED_AGENT_UID = AGENT_UID_BASE
+"""The one unprivileged uid every agent shares under ``--shared-uid`` as root (SKEL-01 S2): never 0."""
+
+
+def plan_agent_uids(root: bool, separate: bool, agents: int) -> list[int | None]:
+    """uid for each agent index. ``None`` = our own uid (not root: nothing to drop to). As root, agents are
+    **never** uid 0: per-agent uids when ``separate``, else one shared unprivileged uid (S2)."""
+    if not root:
+        return [None] * agents
+    return [agent_uid(i) if separate else SHARED_AGENT_UID for i in range(agents)]
+
+
 def set_nondumpable() -> bool:
+    if not LINUX:
+        return False
     return ctypes.CDLL(None, use_errno=True).prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) == 0
 
 
 def set_oom_score_adj(pid: int | str, value: int) -> bool:
+    if not LINUX:
+        return False
     try:
         Path(f"/proc/{pid}/oom_score_adj").write_text(str(value))
         return True
@@ -91,6 +110,8 @@ def pids_with_uids(uids: Iterable[int]) -> list[int]:
     """Every live (non-zombie) process whose real, effective, saved or fs uid is in ``uids``."""
     want = set(uids)
     out = []
+    if not LINUX:
+        return out
     for d in os.listdir("/proc"):
         if not d.isdigit():
             continue

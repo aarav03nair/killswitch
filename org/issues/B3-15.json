@@ -32,6 +32,11 @@
       "t": "19 Nov 11:38",
       "who": "pmo",
       "msg": "Panel S4 added: verify checks records against config (ticks, agents, ts_us formula) without --head"
+    },
+    {
+      "t": "19 Nov 16:30",
+      "who": "pmo",
+      "msg": "→ todo: Scope note from kabir's B3-09 review: no_state/mismatch reconcile already landed in B3-09. Narrow reconcile to value-vs-hash: an edited value in state.db currently verifies OK (hole). Add edited-state.db tests. Also fix: first append failure raises OSError, not RecorderAborted."
     }
   ]
 }

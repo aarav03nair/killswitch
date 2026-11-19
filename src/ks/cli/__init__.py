@@ -25,16 +25,18 @@ def _parser() -> argparse.ArgumentParser:
     ap = _Parser(prog="ks")
     sub = ap.add_subparsers(dest="cmd", required=True, parser_class=_Parser)
     r = sub.add_parser("run", help="run agents through the gateway and write a run dir")
-    r.add_argument("--agents", type=int, default=2)
+    r.add_argument("--scenario", choices=("skeleton", "world"), default="skeleton",
+                   help="skeleton (agent_NN) or the 10 ADR-06 world agents")
+    r.add_argument("--agents", type=int, default=None, help="default 2 (skeleton) or 10 (world)")
     r.add_argument("--ticks", type=int, default=10)
     r.add_argument("--seed", type=int, default=0)
     r.add_argument("--key-mode", choices=("fresh", "repro"), default="fresh")
     r.add_argument("--repro-secret", help="0600 file outside the run dir (repro mode only)")
     r.add_argument("--tick-deadline-ms", type=int, default=2000)
-    r.add_argument("--run-id", help="config run_id (default skeleton-s<seed>, so same-seed runs compare equal)")
+    r.add_argument("--run-id", help="config run_id (default <scenario>-s<seed>, so same-seed runs compare equal)")
     r.add_argument("--shared-uid", action="store_true",
                    help="do not separate uids even as root (degraded mode: per-agent attribution void)")
-    r.add_argument("--out", help="run dir to create (default runs/<run_id>)")
+    r.add_argument("--out", help="run dir to create; must not exist (default /run/ks/<run_id> as Linux root, else runs/<run_id>)")
     v = sub.add_parser("verify", help="verify a run dir")
     v.add_argument("run")
     v.add_argument("--head", help="the RunAnchor line printed at the end of ks run")
@@ -51,11 +53,12 @@ def main(argv: list[str] | None = None) -> int:
 
 def _run(args) -> int:
     from ks.runtime import run
-    out = args.out or f"runs/{args.run_id or f'skeleton-s{args.seed}'}"
+    from ks.runtime.setup import default_out, default_run_id
+    out = args.out or default_out(args.run_id or default_run_id(args.scenario, args.seed))
     try:
         run(agents=args.agents, ticks=args.ticks, seed=args.seed, key_mode=args.key_mode, out=out,
             repro_secret=args.repro_secret, tick_deadline_ms=args.tick_deadline_ms,
-            separate_uids=False if args.shared_uid else None, run_id=args.run_id)
+            separate_uids=False if args.shared_uid else None, run_id=args.run_id, scenario=args.scenario)
     except ValueError as e:
         print(f"ks run: {e}", file=sys.stderr)
         return Exit.USAGE

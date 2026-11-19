@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "Honest runs always verify with --head; a flooding rogue cannot bloat gateway memory or stall ticks",
   "acceptance": [
     "test: late witness ack → anchor equals newest verified checkpoint; verify --head OK",
@@ -19,13 +19,33 @@
     "B3-01"
   ],
   "deliverable": "src/ks/",
-  "summary": "",
-  "review": "",
+  "summary": "M1: WitnessLink keeps the newest signature-verified ack (late ones too) and close() drains the socket after the witness exits; run() anchors from witness.newest. M2: SignerService.refusals is a Counter (counted, not stored), per-tick line budget MAX_SIGNER_LINES_PER_TICK=8, handle() returns None past it and the barrier closes that connection (tick stays bounded, other agents unaffected). S3: Gateway binds conn_id to the barrier's agent per tick; envelope agent_id != connection's agent -> deny/bad_sig (sig_ok False). S2: spawn.plan_agent_uids; as root --shared-uid runs agents under one unprivileged uid (60001), never 0; banner/K2/teardown follow. Tests in tests/panel/test_skel01_panel_fixes.py pass natively (M1, M2 x2, S3, uid plan). LINUX-ROOT-ONLY, UNEXECUTED (skipped on macOS): test_shared_uid_run_as_root_uses_one_unprivileged_uid. Also unexecuted until the container: tests/witness/test_witness.py::test_witness_file_owned_by_witness_uid_mode_0600_and_gateway_holds_no_fd (B3-08). Full suite: 506 passed, 6 skipped.",
+  "review": "[kabir · done] Accept. M1: newest = highest-count signature-verified ack, late acks drained after the witness exits. The anchor is never newer than a verified witness line, and the test verifies anchored --head. M2: refusals is a Counter, an 8-line per-tick budget, the flooder is closed, the tick is bounded, other agents unaffected. Path-less socketpairs mean a rogue cannot open more connections. A non-reading rogue only drops replies (non-blocking send), with no stall. Memory is bounded: _sig_in is capped at MAX_FRAME_BYTES and each read is at most 64 KiB. S3: the check is in _sig_ok, before nonce/action consumption and before any state effect, and the deny is recorded (sig_ok False, conn_id). S2: plan_agent_uids never gives an agent uid 0, and K2 and teardown cover the shared uid. FOLLOW-UPS (non-blocking): (a) an oversize or no-LF signer partial is silently cleared, not counted or closed. A drip never spends budget and can keep the select loop busy until the deadline, so count it as a line or close it (parity with gw F8). (b) S3 fails open when conn_id has no binding (direct admit() outside tick()). Deny unbound non-system conns. UNEXECUTED: test_shared_uid_run_as_root_uses_one_unprivileged_uid is Linux-root-only. It must pass in the container before the wave's demo.",
   "log": [
     {
       "t": "19 Nov 11:38",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 16:28",
+      "who": "arjun",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "19 Nov 16:28",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 16:28",
+      "who": "arjun",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "19 Nov 16:30",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

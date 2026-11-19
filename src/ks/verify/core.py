@@ -15,7 +15,7 @@ from pathlib import Path
 from ks.contracts import (GENESIS_HASH, SYSTEM_CONN, SYSTEM_PRINCIPALS, VERIFY_REASONS, CanonicalError, Keyring,
                           Record, RunAnchor, RunConfig, VerifyReport, WitnessCheckpoint, anchor_status,
                           witness_chain_problems)
-from ks.contracts.rundir import CONFIG, KEYS, RECORD, WITNESS
+from ks.contracts.rundir import CONFIG, KEYS, RECORD, STATE_DB, WITNESS
 from ks.identity import verify_hex
 
 __all__ = ["verify"]
@@ -63,13 +63,15 @@ def verify(run: str | Path, anchor: RunAnchor | None = None, *, log=lambda s: pr
                 raise _Fail(probs[0], None, "anchor hash differs from the files")
         if keyring.problems(config):
             raise _Fail("unreadable", None, f"keys.json incomplete: {keyring.problems(config)}")
-        hashes = _record_pass(record_bytes, keyring)
+        writes: list = []
+        hashes = _record_pass(record_bytes, keyring, writes)
         last = _witness_pass(run, hashes, keyring, state)
         if anchor is not None:
             probs = anchor.checkpoint_problems(last)
             if probs:
                 n = len(hashes)
                 raise _Fail(probs[0], n + 1 if probs[0] == "truncated" else min(anchor.seq, n) + 1)
+        _reconcile_pass(run, writes)
     except _Fail as f:
         if f.detail:
             log(f"verify: {f.reason}: {f.detail}")
@@ -95,7 +97,7 @@ def _load(run: Path) -> tuple[RunConfig, Keyring, bytes]:
     return config, keyring, raw[RECORD]
 
 
-def _record_pass(data: bytes, keyring: Keyring) -> list[str]:
+def _record_pass(data: bytes, keyring: Keyring, writes: list) -> list[str]:
     """Per line: parse, seq == line, prev_hash, hash, gw_sig, agent signature consistent with sig_ok."""
     gw_pub = keyring.pub("ks.gateway") or ""
     hashes: list[str] = []
@@ -121,6 +123,7 @@ def _record_pass(data: bytes, keyring: Keyring) -> list[str]:
                          and not (env.agent_id in SYSTEM_PRINCIPALS and rec.conn_id != SYSTEM_CONN))
             if (checkable and verify_hex(pub, env.sig, env.signing_bytes())) != rec.sig_ok:
                 raise _Fail("agent_sig_mismatch", i)
+        writes.extend(rec.write_set)
         hashes.append(rec.hash)
         prev = rec.hash
     return hashes
@@ -155,3 +158,32 @@ def _witness_pass(run: Path, hashes: list[str], keyring: Keyring, state: dict) -
             raise _Fail("witness_mismatch", cp.seq)
         state["lws"] = cp.seq
     return cps[-1]
+
+
+def _reconcile_pass(run: Path, writes: list) -> None:
+    """``state_digest(fold(record))`` against ``workspace/state.db`` (ADR-02 §6; last pass). No state file: fine
+    if the record has no state writes, else ``no_state``. A crash between state commit and record append, or an
+    unmediated write, shows here as ``reconcile_mismatch``. Never silent (B3-09)."""
+    from ks.contracts import state_digest
+    from ks.state import FoldError, Store, fold
+
+    try:
+        folded = fold(writes)
+    except FoldError as e:
+        raise _Fail("reconcile_mismatch", None, f"record write sets do not chain: {e}") from None
+    db = run / STATE_DB
+    if not db.is_file():
+        if folded:
+            raise _Fail("no_state", None, "the record has state writes but there is no state.db")
+        return
+    import sqlite3
+    try:
+        conn = sqlite3.connect(f"{db.as_uri()}?mode=ro", uri=True, isolation_level=None)
+        try:
+            live = Store(conn).state_digest()
+        finally:
+            conn.close()
+    except Exception as e:  # unreadable or foreign database: the state cannot be reconciled
+        raise _Fail("reconcile_mismatch", None, f"state.db unreadable: {type(e).__name__}: {e}") from None
+    if live != state_digest(folded):
+        raise _Fail("reconcile_mismatch", None, "state.db differs from fold(record)")

@@ -3,7 +3,8 @@
 Seams: ``Gateway.open``/``Gateway.tick`` toward ks.runtime; ``ToolDispatcher`` toward ks.world (B3-37).
 """
 
-from .dispatch import Execution, StateTxn, ToolDispatcher
+from .dispatch import Execution, OutboxRequest, StateSnapshot, StateTxn, ToolDispatcher, ViewProvider
 from .stub import Admission, Gateway, InFrame
 
-__all__ = ["Admission", "Execution", "Gateway", "InFrame", "StateTxn", "ToolDispatcher"]
+__all__ = ["Admission", "Execution", "Gateway", "InFrame", "OutboxRequest", "StateSnapshot", "StateTxn",
+           "ToolDispatcher", "ViewProvider"]

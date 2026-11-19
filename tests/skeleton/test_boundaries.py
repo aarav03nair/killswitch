@@ -1,11 +1,15 @@
 """B3-37: module seams before the parallel build (barrier = I/O + timing; tools behind ToolDispatcher; ks.rng)."""
 
 import ast
+import subprocess
+import sys
 from pathlib import Path
 
+import pytest
+
 import ks
-from ks.contracts import ActionClass, Decision, Reason
-from ks.gateway import Gateway, InFrame, ToolDispatcher
+from ks.contracts import ActionClass, Decision, Reason, ViewEntry, value_hash
+from ks.gateway import Execution, Gateway, InFrame, OutboxRequest, ToolDispatcher, ViewProvider
 from ks.world.tools import SkeletonDispatcher
 
 from .test_units import _frame, gw  # noqa: F401  (fixture)
@@ -42,7 +46,9 @@ def test_barrier_is_io_and_timing_only():
     tree = ast.parse((SRC / "runtime" / "barrier.py").read_text())
     names = {n.id for n in ast.walk(tree) if isinstance(n, ast.Name)}
     attrs = {n.attr for n in ast.walk(tree) if isinstance(n, ast.Attribute)}
-    assert not names & {"decode_frame", "SubmitFrame", "Envelope", "Decision", "Reason", "TickFrame"}
+    imported = {a.asname or a.name for n in ast.walk(tree) if isinstance(n, ast.ImportFrom) for a in n.names}
+    banned = {"decode_frame", "SubmitFrame", "Envelope", "Decision", "Reason", "TickFrame"}
+    assert not (names | imported) & banned
     assert not attrs & {"admit", "dispatcher", "classify", "execute", "epochs"}
     assert {"open", "tick"} <= attrs  # the only calls into the gateway's logic
 
@@ -74,3 +80,61 @@ def test_gateway_tick_orders_by_agent_and_dispatches(gw):  # noqa: F811
     assert all((r.decision, r.reason) == (Decision.EXEC, Reason.OK) for _, r in replies)
     assert [r.action_class for r in g.recorder.rundir.records()] == [ActionClass.R] * 2
     assert isinstance(g, Gateway)
+
+
+def test_importing_world_loads_no_runtime():  # B3-40: transitive, not just static imports
+    code = ("import pkgutil, importlib, sys, ks.world\n"
+            "for m in pkgutil.walk_packages(ks.world.__path__, 'ks.world.'): importlib.import_module(m.name)\n"
+            "bad = sorted(m for m in sys.modules if m == 'ks.runtime' or m.startswith('ks.runtime.'))\n"
+            "assert not bad, bad\n")
+    r = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True)
+    assert r.returncode == 0, r.stderr
+
+
+def test_open_fills_view_from_provider(gw):  # noqa: F811  B3-40
+    g, _ = gw
+    entry = ViewEntry(obj="suppliers:S-17", ver=4, hash=value_hash({"name": "Acme"}), value={"name": "Acme"})
+    seen = []
+
+    class Views:
+        def view(self, agent_id, tick, state):
+            seen.append((agent_id, tick))
+            return (entry,) if agent_id == "agent_00" else ()
+
+    assert isinstance(Views(), ViewProvider) and isinstance(SkeletonDispatcher(), ViewProvider)
+    g.views = Views()
+    opened = g.open(3, ["agent_00", "agent_01"])
+    assert opened["agent_00"].view == (entry,) and opened["agent_01"].view == ()
+    assert seen == [("agent_00", 3), ("agent_01", 3)] and g.delivered["agent_00"] == (entry,)
+
+
+def test_execution_outbox_defaults_empty_and_is_not_dropped(gw):  # noqa: F811  B3-40
+    g, keys = gw
+    assert Execution(None).outbox == ()
+
+    class Emits(SkeletonDispatcher):
+        def execute(self, env, txn):
+            return Execution(None, outbox=(OutboxRequest("email", ActionClass.I1, {"to": "x"}),))
+
+    g.dispatcher = Emits()
+    with pytest.raises(NotImplementedError):  # until B3-11 creates OutboxItems, never silently dropped
+        g.admit("c-1", _frame(keys))
+
+
+def test_sets_refuses_write_without_txn(gw):  # noqa: F811  B3-40 panel change (1)
+    from ks.contracts import WriteEntry
+    from tests.contracts.samples import record_exec
+    g, keys = gw
+    w = record_exec().write_set[0]
+    assert isinstance(w, WriteEntry)
+    with pytest.raises(ValueError, match="without a state txn"):
+        Gateway._sets(Execution(None, write_set=(w,)), None)
+
+    class Writes(SkeletonDispatcher):
+        def execute(self, env, txn):
+            return Execution(None, write_set=(w,))
+
+    g.dispatcher = Writes()
+    with pytest.raises(ValueError, match="without a state txn"):  # B3-41 turns this into a recorded deny
+        g.admit("c-1", _frame(keys))
+    assert Gateway._sets(Execution(None), None) == ((), ())

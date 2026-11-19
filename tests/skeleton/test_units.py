@@ -78,7 +78,8 @@ def test_signer_refusals(gw):
     assert isinstance(reply("agent_00", req(action="a2")), SignReply)
     assert reply("agent_00", req(action="a3")) == SignRefusal(reason="rate")               # MAX_SIGN_PER_TICK = 2
     assert reply("agent_00", b"garbage\n") == SignRefusal(reason="schema")
-    assert [r[2] for r in s.refusals] == ["foreign_agent", "system_tool", "suspended", "rate", "schema"]
+    assert s.refusals == {("agent_00", "foreign_agent"): 1, ("agent_00", "system_tool"): 1,
+                          ("agent_01", "suspended"): 1, ("agent_00", "rate"): 1, ("agent_00", "schema"): 1}
 
 
 class _NoWitness:

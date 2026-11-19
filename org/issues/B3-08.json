@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "Witness file ownership and handover per erratum (findings 5, 11) and Kabir's owner item",
   "acceptance": [
     "witness.jsonl is owned by the witness uid, mode 0600, created at RunDir.create and handed over as an O_APPEND fd; gateway holds no write fd after attach (test, run as root)",
@@ -18,13 +18,33 @@
     "B3-01"
   ],
   "deliverable": "src/ks/witness/",
-  "summary": "",
-  "review": "",
+  "summary": "ks.witness.server: new Witness class; push is idempotent per tick (same seq/head/tick returns the existing checkpoint, no new line), regressing or second head for a tick gets no ack, count +1 per line, ticks strictly increase. WitnessLink.attach now closes the gateway's two fds itself (run.py updated). Tests: tests/witness/test_witness.py (idempotency, strict ticks, signatures: pass natively) and test_contracts_12 updated. LINUX-ROOT-ONLY, UNEXECUTED (skipped on macOS): tests/witness/test_witness.py::test_witness_file_owned_by_witness_uid_mode_0600_and_gateway_holds_no_fd (uid 60000 ownership, 0600, /proc/self/fd shows gateway holds no write fd after attach). Link already used 1.2 frames only (test_witness_and_identity_use_no_adhoc_dicts passes).",
+  "review": "[kabir · done] Accept. Suite 506 passed / 6 skipped. fd handover: os.open fds are non-inheritable, attach() closes both in finally, no dup anywhere; the root test checks /proc/self/fd after attach (correct by reading). Residual, not a defect: the gateway is uid 0 and can reopen witness.jsonl by path (CAP_DAC_OVERRIDE). THREAT-MODEL already puts gateway root compromise out of scope, and verify catches forged lines (witness sig, heads vs records). Idempotency: the same (seq,head,tick) returns the existing cp with no line; a second head for the same tick or an earlier tick gets no ack. FOLLOW-UP (non-blocking, open an issue): Witness.push accepts the SAME seq with a DIFFERENT head at a later tick (probe: push(2,H2,4) then push(2,H3,5) is signed). That is witness equivocation. verify's heads-vs-records pass catches it, but the witness should refuse m.seq==last.seq and m.head!=last.head. UNEXECUTED: test_witness_file_owned_by_witness_uid_mode_0600_and_gateway_holds_no_fd is Linux-root-only. It must pass in the container before the wave's demo.",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 16:23",
+      "who": "arjun",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "19 Nov 16:23",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 16:23",
+      "who": "arjun",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "19 Nov 16:30",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

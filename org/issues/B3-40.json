@@ -1,0 +1,61 @@
+{
+  "id": "B3-40",
+  "title": "B3-37 follow-ups: view provider, Execution.outbox, sets checked against txn, indirect-import test",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "maya",
+  "reviewer": "panel",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "done",
+  "outcome": "Wave-3 owners build against a stable dispatch/gateway seam without editing dispatch.py themselves",
+  "acceptance": [
+    "ToolDispatcher (or a sibling protocol) exposes a view provider; Gateway.open fills TickFrame.view from it, not view=() (test)",
+    "Execution has outbox=() for I1 enqueue requests (test)",
+    "Docstring and code agree on who owns read/write sets; gateway cross-checks Execution sets against the txn once StateTxn is wired (TODO linked to B3-11 if not wireable yet)",
+    "Test fails if importing ks.world loads ks.runtime transitively; unused TickFrame import in barrier.py removed"
+  ],
+  "depends": [
+    "B3-37"
+  ],
+  "deliverable": "src/ks/gateway/dispatch.py",
+  "summary": "dispatch.py: new ViewProvider protocol view(agent_id, tick, state: StateSnapshot) -> tuple[ViewEntry,...]; OutboxRequest(sink, action_class: ActionClass I1/I2, payload) and Execution.outbox=(); docstring now says sets are the gateway's (from txn). stub.py: Gateway(..., views=None) defaults to dispatcher if it is a ViewProvider; open() fills TickFrame.view and stores Gateway.delivered; admit() routes sets through Gateway._sets (rejects writes without a txn; txn cross-check TODO(B3-11)); non-empty outbox raises NotImplementedError until B3-11 (never silently dropped). barrier.py: unused TickFrame import removed; AST test now also checks imported names. tests/skeleton/test_boundaries.py: +3 tests (subprocess sys.modules transitive check over every ks.world module, view provider, outbox). SkeletonDispatcher.view returns (). Verified in a scratch copy (tara's WIP tools.py currently fails to import: missing dataclass/Store imports): 460 pass; 1 unrelated fail in test_contracts_12 witness test from uncommitted src/ks/witness edits (not mine). Sequencing for Gateway.admit (item 4): B3-04 txn -> B3-11 sets/outbox -> B3-09 hooks.",
+  "review": "[panel · changes] Good: ViewProvider fills TickFrame.view (tested); Execution.outbox=() and a non-empty outbox raises NotImplementedError (tested, not dropped); barrier TickFrame import removed and AST test covers imported names; transitive test verified: a temp ks.world module importing ks.runtime via a third module made it FAIL, reverted, passes. Full suite 492 pass. Changes (small): (1) write-without-txn refusal in Gateway._sets has no test; add one. (2) TODO(B3-11) is a dangling link: B3-11 acceptance (admission pipeline) says nothing about taking sets from the txn, the mismatch refusal, or creating OutboxItems. Add those as B3-11 acceptance lines (ask pmo) or open a linked issue, so the B3-37 set-ownership concern has an owner. (3) Note: both raises happen after execute, so the envelope goes unrecorded (rule 11). Fine as fail-stop for now; B3-11 must turn them into recorded denials. Read sets are still self-reported while txn is None; the docstring says so honestly.\n\n[panel · done] Re-review: (1) test_sets_refuses_write_without_txn covers _sets directly and via admit with a writing dispatcher, plus the empty no-txn case. (2) Every TODO in stub.py and dispatch.py now points at B3-41, whose acceptance owns txn-sourced sets, lying-adapter mismatch deny, recorded denials for no-txn write and outbox, and gateway-built OutboxItems. (3) Post-execute raise accepted as fail-stop until B3-41. Suite 515 pass, 8 skip.",
+  "log": [
+    {
+      "t": "19 Nov 16:20",
+      "who": "pmo",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 16:21",
+      "who": "maya",
+      "msg": "→ in_progress: starting: view provider, outbox, txn cross-check TODO, transitive import test"
+    },
+    {
+      "t": "19 Nov 16:22",
+      "who": "maya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 16:22",
+      "who": "maya",
+      "msg": "→ in_review: ready for panel"
+    },
+    {
+      "t": "19 Nov 16:24",
+      "who": "panel",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 16:26",
+      "who": "maya",
+      "msg": "→ in_review: Panel changes: (1) added test_sets_refuses_write_without_txn (direct _sets + via admit); (2) TODO(B3-11) repointed to B3-41 (pmo opened it, gateway authority on sets/outbox, recorded denials) in stub.py and dispatch.py; (3) the recorded-deny point is B3-41 acceptance line 2."
+    },
+    {
+      "t": "19 Nov 16:32",
+      "who": "panel",
+      "msg": "review: done"
+    }
+  ]
+}

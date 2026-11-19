@@ -20,6 +20,7 @@ import samples as S
 ROOT = Path(__file__).resolve().parents[2]
 SRC = ROOT / "src" / "ks"
 H = S.record_exec().hash
+H2 = "ab" * 32
 
 WITNESS_FRAMES = [
     WitnessInit(key_seed=None), WitnessInit(key_seed="ab" * 32), WitnessPub(pub=S.pub("ks.witness")),
@@ -113,13 +114,12 @@ def test_witness_server_speaks_contract_frames(tmp_path):
     (tmp_path / "heads").mkdir()
     (tmp_path / "witness.jsonl").touch()
     wfd, hfd = open_witness_fds(tmp_path / "witness.jsonl", tmp_path / "heads")
-    link.attach(wfd, hfd, timeout_s=10)
-    os.close(wfd)
-    os.close(hfd)
+    link.attach(wfd, hfd, timeout_s=10)  # closes both descriptors
     cp = link.push(1, H, 0, timeout_s=10)
     assert isinstance(cp, WitnessCheckpoint) and (cp.seq, cp.head, cp.tick, cp.count) == (1, H, 0, 1)
     assert verify_hex(pub, cp.sig, cp.signing_bytes())
-    assert link.push(1, H, 0, timeout_s=0.3) is None   # tick does not increase: no ack (stall)
+    assert link.push(1, H, 0, timeout_s=10) == cp      # same (seq, head, tick): the existing checkpoint (B3-08)
+    assert link.push(1, H2, 0, timeout_s=0.3) is None  # another head for the same tick: no ack (stall)
     gw.sendall(b"not a frame\n")                       # garbage: no ack, no crash
     cp2 = link.push(2, H, 1, timeout_s=10)
     assert cp2 is not None and cp2.count == 2

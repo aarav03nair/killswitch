@@ -17,8 +17,8 @@
   ],
   "depends": [],
   "deliverable": "Dockerfile",
-  "summary": "",
-  "review": "",
+  "summary": "Fixes: prctl/oom/proc guarded to Linux in spawn.py (BOOT, set_nondumpable, set_oom_score_adj, pids_with_uids); run.py forces degraded off Linux, so native verify reports isolation=degraded, attribution VOID, exit 0. Full suite native: 458 pass, 4 skip (need root). Added make smoke (UNEXECUTED: docker/OrbStack not installed). Base pinned python:3.13.1-slim-bookworm (tag not pulled/verified, no digest). Dockerfile wording now credits per-agent uids. README notes rundir.py chown-to-60000 bind-mount risk as untested. demo.sh hero-path switch (F2+) left as TODO.",
+  "review": "[kabir · changes] Static review only: Docker is not installed on Aarav's Mac, so the image has never been built or run anywhere. (1) BLOCKER, README claim false: native 'degraded mode' crashes, it does not warn. src/ks/runtime/run.py calls set_nondumpable() unconditionally, and spawn.py set_nondumpable/BOOT call ctypes.CDLL(None).prctl, which does not exist on Darwin -> AttributeError. Reproduced with 'ks run --shared-uid'; 13 skeleton tests fail natively. Fix: guard prctl/oom/proc on sys.platform=='linux', and in BOOT skip prctl only when not Linux (forces isolation=degraded). Or change the README to say native is unsupported. (2) AC4 not met: no smoke test. Add 'make smoke' (build, run, verify, assert exit 0 and isolation=per_agent_uid in --json). (3) Unverified: rundir.py chowns witness.jsonl and witness-heads to uid 60000 on the ./runs bind mount. Docker Desktop virtiofs/OrbStack chown semantics might break witness writes. The smoke test must cover this. (4) Pin the base image (python:3.13-slim@sha256 or at least 3.13.x-slim-bookworm). Default caps (SETUID/SETGID/KILL/CHOWN) look sufficient, and the prctl dumpable flag needs no cap. oom -1000 silently fails without SYS_RESOURCE (fine). The ptrace EPERM startup check is not implemented in code. (5) Dockerfile comment 'Isolation comes from the container boundary' contradicts C2 wording; say per-agent uids inside the container. (6) demo.sh still runs the skeleton, not F2+ (AC2 partial, TODO acknowledged). --network none is correct.",
   "log": [
     {
       "t": "19 Nov 12:21",
@@ -39,6 +39,26 @@
       "t": "19 Nov 16:03",
       "who": "pmo",
       "msg": "Docker not available in sandbox: build/make demo/make test untested — first real run on Aarav's Mac"
+    },
+    {
+      "t": "19 Nov 16:19",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 16:20",
+      "who": "ishaan",
+      "msg": "→ in_progress: fixing kabir's findings"
+    },
+    {
+      "t": "19 Nov 16:21",
+      "who": "ishaan",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 16:21",
+      "who": "ishaan",
+      "msg": "→ in_review: kabir findings addressed"
     }
   ]
 }

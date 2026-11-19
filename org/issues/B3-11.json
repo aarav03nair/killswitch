@@ -26,6 +26,11 @@
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 16:33",
+      "who": "pmo",
+      "msg": "→ todo: From maya's B3-06 review: pass views a snapshot with visible_to = first seq of the tick as an int (tick 1 -> 2 per D-SEQ1), then make WorldDispatcher.view reject visible_to=None (M2). Also add the seq-1 seed record (D-SEQ1)."
     }
   ]
 }

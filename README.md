@@ -24,6 +24,13 @@ at runtime (the demo uses `--network none`).
 **Warning:** running natively on macOS (outside Docker) is degraded isolation. Per-agent uid
 separation is unavailable, so per-agent attribution is VOID. Use the container for the real demo.
 
+`make smoke` builds the image, runs and verifies in the container, and asserts exit 0 with
+`isolation=per_agent_uid`.
+
+Known risk (untested until `make smoke` has run on Docker/OrbStack): `src/ks/contracts/rundir.py`
+chowns `witness.jsonl` and `witness-heads/` to uid 60000, which may fail or behave differently on a
+macOS bind mount (virtiofs). If so, use a named volume instead of `./runs`.
+
 Note: `scripts/demo.sh` currently runs the skeleton (`--agents 2 --ticks 10`); it switches to
 `--fault F2+ --pause-at ... --step` once the hero path exists (TODO in the script).
 

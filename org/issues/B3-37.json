@@ -7,7 +7,7 @@
   "reviewer": "panel",
   "model": "opus",
   "created_by": "maya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "Barrier is I/O+timing only behind Gateway.tick(); tools dispatch via a world/state interface; RNG lives in ks.rng — so owners don't collide",
   "acceptance": [
     "runtime/barrier.py contains no admission/control/view/dispatch logic",
@@ -19,7 +19,7 @@
   ],
   "deliverable": "src/ks/",
   "summary": "Done. (1) runtime/barrier.py is now I/O + timing only: it sends what Gateway.open(tick, agents) returns, collects frames with deadlines and signer I/O, calls Gateway.tick(tick, [InFrame]) -> [(conn_id, ReplyFrame)], then does the sends, the K-miss/oversize close and the witness push. Epoch/view, admission and dispatch, plus agent_id ordering, now live in the gateway. TickBarrier no longer takes epochs. (2) gateway/stub.py has no TOOLS table. The new ks.gateway.dispatch defines the ToolDispatcher protocol (classify(env)->ActionClass, execute(env, txn)->Execution(result, read_set, write_set); StateTxn placeholder, None until ks.state is wired), and the record now carries read/write sets from Execution. ks.world.tools.SkeletonDispatcher implements it, and run.py wires it in. Gateway(..., dispatcher=) is a required kwarg. (3) RNG moved to ks.rng; runtime/rng.py is deleted, and world/skeleton and agent_template import ks.rng. ks.world never imports ks.runtime. src/ks/ARCHITECTURE.md maps module -> owner -> interface. New tests/skeleton/test_boundaries.py (5 tests) checks the seams: barrier AST, no TOOLS, world imports, rng location, Gateway.tick ordering and dispatch. Behaviour unchanged: ks run (seed 7, 3 agents, 6 ticks) + ks verify --head gives OK and anchored, and the suite is 462 passed. ks.state was not touched. Note: running pytest at the same time as another ks run fails intermittently with K2 'processes already run under uids 60000..' because uids are shared on this machine; this is environmental and was there before.",
-  "review": "",
+  "review": "[panel · done] All 3 acceptance items met. Checked: barrier.py has no admission/control/view/dispatch (only frame length/LF for oversize close, which is I/O); no TOOLS anywhere in ks.gateway; ks.world has no static import of ks.runtime, and importing ks.world.tools/skeleton loads no ks.runtime module at runtime either. Boundary tests are real (relative and 'from ks import runtime' forms resolve), but static-only. On Mac: boundaries+units 8/8; full suite 445 pass, 2 fail + 11 errors are all dlsym prctl (Linux-only). Carried items, to fix before wave-3 merges: (1) Execution.read_set/write_set come from the dispatcher, so they are self-reported, which contradicts dispatch.py's own docstring. B3-06 acceptance bakes this in. Gateway must take the sets from txn, or cross-check against it. (2) There is no outbox field on Execution, but B3-06 I1 tools need one: add outbox=() now, or tara and nisha both edit dispatch.py. (3) There is no view seam: Gateway.open has view=() and B3-05 has nowhere to plug in. Add a ViewProvider to the protocol. (4) B3-09 hooks, B3-04 txn and nisha all edit Gateway.admit around execute(env, None), so sequence those. (5) Nit: barrier imports TickFrame but never uses it, and the AST test misses it because it only checks Name nodes. Add a sys.modules transitive test.",
   "log": [
     {
       "t": "19 Nov 11:38",
@@ -40,6 +40,11 @@
       "t": "19 Nov 16:07",
       "who": "maya",
       "msg": "→ in_review: ready for panel review; 462 green"
+    },
+    {
+      "t": "19 Nov 16:19",
+      "who": "panel",
+      "msg": "review: done"
     }
   ]
 }

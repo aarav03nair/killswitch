@@ -19,6 +19,35 @@ from ks.identity import pub_hex, sign_hex
 from .protocol import HEADS_FILE
 
 
+class Witness:
+    """The witness's state: signs and appends at most one checkpoint per tick (SKEL-01 #11).
+
+    ``push`` returns the checkpoint to ack, or ``None`` (no ack, the gateway sees a stall) for a regressing or
+    conflicting head. A repeated push of the last ``(seq, head, tick)`` returns the existing checkpoint and
+    writes nothing, so ``witness.jsonl`` ticks strictly increase and ``count`` rises by exactly 1 per line."""
+
+    def __init__(self, key: Ed25519PrivateKey, fds: list[int]):
+        self._key = key
+        self._out_fd, self._heads_fd = fds
+        self.last: WitnessCheckpoint | None = None
+
+    def push(self, m: WitnessHead) -> WitnessCheckpoint | None:
+        last = self.last
+        if last is not None:
+            if (m.seq, m.head, m.tick) == (last.seq, last.head, last.tick):
+                return last
+            if m.tick <= last.tick or m.seq < last.seq:
+                return None  # never anchor a regressing head, nor a second head for one tick
+        cp = WitnessCheckpoint(witness_id="ks.witness", seq=m.seq, tick=m.tick, head=m.head,
+                               count=1 if last is None else last.count + 1, sig=None)
+        cp = cp.with_sig(sign_hex(self._key, cp.signing_bytes()))
+        data = cp.to_canonical() + b"\n"
+        os.write(self._heads_fd, data)
+        os.write(self._out_fd, data)
+        self.last = cp
+        return cp
+
+
 def main(argv: list[str]) -> int:
     sock = socket.socket(fileno=int(argv[0]))
     rd = sock.makefile("rb")
@@ -47,7 +76,7 @@ def main(argv: list[str]) -> int:
     os.close(heads_dir)
     sock.sendall(encode_frame(WitnessReady()))
 
-    count, last_tick, last_seq = 0, -1, 0
+    w = Witness(key, [out_fd, heads_fd])
     for line in rd:
         try:
             m = decode_witness_frame(line)
@@ -55,16 +84,11 @@ def main(argv: list[str]) -> int:
             continue  # garbage gets no ack: the gateway raises a stall
         if isinstance(m, WitnessClose):
             break
-        if not isinstance(m, WitnessHead) or m.tick <= last_tick or m.seq < last_seq:
-            continue  # never anchor a regressing head; the gateway sees no ack and raises a stall
-        count += 1
-        cp = WitnessCheckpoint(witness_id="ks.witness", seq=m.seq, tick=m.tick, head=m.head, count=count, sig=None)
-        cp = cp.with_sig(sign_hex(key, cp.signing_bytes()))
-        data = cp.to_canonical() + b"\n"
-        os.write(heads_fd, data)
-        os.write(out_fd, data)
-        sock.sendall(data)
-        last_tick, last_seq = cp.tick, cp.seq
+        if not isinstance(m, WitnessHead):
+            continue
+        cp = w.push(m)
+        if cp is not None:
+            sock.sendall(cp.to_canonical() + b"\n")
     os.close(out_fd)
     os.close(heads_fd)
     return 0

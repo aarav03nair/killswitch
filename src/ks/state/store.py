@@ -6,7 +6,9 @@ Layout of ``workspace/state.db`` (0600, gateway uid):
 * ``versions(obj, ver, hash, author, seq, action_id)``: **append-only** (triggers abort UPDATE/DELETE),
   one row per write, PK ``(obj, ver)``;
 * ``side(hash PK, domain, value, redacted)``: the value of every version, by value hash (redactable);
-* ``meta(k PK, v)``: schema version.
+* ``meta(k PK, v)``: schema version and the sensitive-field list (``sensitive_fields``, canonical JSON
+  array). The field list is fixed at creation: reopening with a different :class:`FieldSchema` raises,
+  and ``fields=None`` on reopen adopts the persisted one, so the read rule cannot drift (B3-04 review).
 
 Conventions (M11). ``ver`` starts at 1 and is ``before.ver + 1`` per write. (a) A delete writes a tombstone
 (value ``None``, ``TOMBSTONE_HASH``); a re-create continues the counter. (b) A restore writes a **new**
@@ -27,6 +29,9 @@ lists its field object. :meth:`Store.state_digest` is the live side of reconcili
 
 Savepoints (B3-04, ADR-05 §7). :meth:`Store.savepoint` nests inside the caller's transaction and keeps its
 writes unless the block raises; :meth:`Store.simulate` always rolls back (dry-run re-run simulation, B3-24).
+Inside either block SQLite refuses transaction-control SQL on the connection (authorizer guard), so simulated
+code cannot COMMIT its writes or ROLLBACK the caller's; if the transaction or savepoint is nevertheless gone
+on exit, both raise :class:`StateError` instead of silently keeping or dropping writes.
 """
 
 from __future__ import annotations
@@ -158,9 +163,10 @@ class Store:
         if conn.isolation_level is not None:
             raise StateError("connection must use isolation_level=None (the caller issues BEGIN IMMEDIATE)")
         self.conn = conn
-        self.fields = fields if fields is not None else FieldSchema()
         self.side = SqliteSideStore(conn)
         self._sp = itertools.count(1)
+        self._depth = 0  # open savepoint blocks; >0 installs the transaction-control guard
+        self._ctl = False
         for stmt in _DDL:
             conn.execute(stmt)
         row = conn.execute("SELECT v FROM meta WHERE k = 'schema'").fetchone()
@@ -168,6 +174,24 @@ class Store:
             conn.execute("INSERT INTO meta(k, v) VALUES ('schema', ?)", (SCHEMA_VERSION,))
         elif row[0] != SCHEMA_VERSION:
             raise StateError(f"state.db schema {row[0]!r}, expected {SCHEMA_VERSION!r}")
+        self.fields = self._pin_fields(fields)
+
+    def _pin_fields(self, fields: FieldSchema | None) -> FieldSchema:
+        """The read rule depends on the field list, so it is part of the store (B3-04 review): persisted on
+        first open, adopted when ``fields`` is ``None``, and a mismatch is refused."""
+        row = self.conn.execute("SELECT v FROM meta WHERE k = 'sensitive_fields'").fetchone()
+        if row is None:
+            if self.conn.execute("SELECT 1 FROM objects LIMIT 1").fetchone() is not None:
+                raise StateError("state.db has objects but no persisted sensitive_fields; cannot verify the read rule")
+            pinned = fields if fields is not None else FieldSchema()
+            self.conn.execute("INSERT INTO meta(k, v) VALUES ('sensitive_fields', ?)",
+                              (_text(list(pinned.entries())),))
+            return pinned
+        stored = FieldSchema(_value(row[0]))
+        if fields is not None and fields != stored:
+            raise StateError(f"state.db was created with sensitive_fields {list(stored.entries())}, "
+                             f"opened with {list(fields.entries())}")
+        return stored
 
     def close(self) -> None:
         self.conn.close()
@@ -183,50 +207,90 @@ class Store:
         try:
             yield self
         except BaseException:
-            self.conn.execute("ROLLBACK")
+            if self.conn.in_transaction:
+                self.conn.execute("ROLLBACK")
             raise
+        if not self.conn.in_transaction:
+            raise StateError("transaction ended inside txn() (COMMIT/ROLLBACK issued by the block)")
         self.conn.execute("COMMIT")
 
     @contextmanager
     def savepoint(self) -> Iterator[Store]:
         """Nested ``SAVEPOINT``: its writes join the enclosing transaction unless the block raises, in which
-        case only they are rolled back. Outside a transaction it opens (and commits) ``BEGIN IMMEDIATE``."""
+        case only they are rolled back. Outside a transaction it opens (and commits) ``BEGIN IMMEDIATE``.
+        Inside the block, transaction-control SQL on ``self.conn`` (``BEGIN``/``COMMIT``/``ROLLBACK``/
+        ``SAVEPOINT``/``RELEASE``) is refused by SQLite (``sqlite3.DatabaseError: not authorized``)."""
         name, outer = self._begin_savepoint()
         try:
             yield self
         except BaseException:
-            self._rollback_savepoint(name, outer)
+            self._end_savepoint(name, outer, keep=False)
             raise
-        self.conn.execute(f"RELEASE {name}")
-        if outer:
-            self.conn.execute("COMMIT")
+        self._end_savepoint(name, outer, keep=True)
 
     @contextmanager
     def simulate(self) -> Iterator[Store]:
         """Dry-run block (ADR-05 §7, B3-24 re-run simulation): reads and writes see the block's own writes,
         and everything (versions, heads, side values, redactions) is rolled back on exit, raise or not.
-        Nests: an inner ``simulate``/``savepoint`` inside it is discarded with it."""
+        Nests: an inner ``simulate``/``savepoint`` inside it is discarded with it. Transaction-control SQL
+        inside the block is refused as in :meth:`savepoint`, so simulated code cannot COMMIT its writes."""
         name, outer = self._begin_savepoint()
         try:
             yield self
         finally:
-            self._rollback_savepoint(name, outer)
+            self._end_savepoint(name, outer, keep=False)
+
+    def _authorize(self, action: int, arg1: str | None, *_: object) -> int:
+        """SQLite authorizer active while any savepoint block is open: only the store's own transaction
+        control passes (B3-04 review: a COMMIT inside simulate() persisted simulated writes)."""
+        if action in (sqlite3.SQLITE_TRANSACTION, sqlite3.SQLITE_SAVEPOINT) and not self._ctl:
+            return sqlite3.SQLITE_DENY
+        return sqlite3.SQLITE_OK
+
+    def _exec_ctl(self, sql: str) -> None:
+        self._ctl = True
+        try:
+            self.conn.execute(sql)
+        finally:
+            self._ctl = False
 
     def _begin_savepoint(self) -> tuple[str, bool]:
         name = f"ks_sp_{next(self._sp)}"
         outer = not self.conn.in_transaction
         if outer:
-            self.conn.execute("BEGIN IMMEDIATE")
-        self.conn.execute(f"SAVEPOINT {name}")
+            self._exec_ctl("BEGIN IMMEDIATE")
+        try:
+            self._exec_ctl(f"SAVEPOINT {name}")
+        except BaseException:
+            if outer:
+                self._exec_ctl("ROLLBACK")
+            raise
+        if self._depth == 0:
+            self.conn.set_authorizer(self._authorize)
+        self._depth += 1
         return name, outer
 
-    def _rollback_savepoint(self, name: str, outer: bool) -> None:
-        if not self.conn.in_transaction:  # sqlite already rolled the whole transaction back
-            return
-        self.conn.execute(f"ROLLBACK TO {name}")
-        self.conn.execute(f"RELEASE {name}")
+    def _end_savepoint(self, name: str, outer: bool, *, keep: bool) -> None:
+        """Release (``keep``) or roll back savepoint ``name``. Backstop for the guard: if the transaction or
+        the savepoint is gone (ended inside the block), raise :class:`StateError` rather than silently keep
+        or drop writes."""
+        self._depth -= 1
+        if self._depth == 0:
+            self.conn.set_authorizer(None)
+        if not self.conn.in_transaction:
+            raise StateError(f"transaction ended inside savepoint {name} (COMMIT/ROLLBACK issued by the block)")
+        try:
+            if keep:
+                self._exec_ctl(f"RELEASE {name}")
+            else:
+                self._exec_ctl(f"ROLLBACK TO {name}")
+                self._exec_ctl(f"RELEASE {name}")
+        except sqlite3.OperationalError as e:  # savepoint released or rolled past inside the block
+            if outer and self.conn.in_transaction:
+                self._exec_ctl("ROLLBACK")
+            raise StateError(f"savepoint {name} ended inside the block: {e}") from e
         if outer:
-            self.conn.execute("ROLLBACK")
+            self._exec_ctl("COMMIT" if keep else "ROLLBACK")
 
     # --- reads with read sets (X2) ---------------------------------------------------------------
     def read(self, obj: str, *, project: Iterable[str] | None = None,
@@ -244,6 +308,7 @@ class Store:
         ``None`` if ``obj`` does not exist (at ``visible_to``): there is no absence read in v1 (SEC-03 F7).
         A deleted row reads as ``value=None`` and still lists its tombstone version."""
         _, _, field = split_obj_id(obj)
+        project = None if project is None else tuple(project)
         objs = self.fields.read_objs(obj, project)
         head = self.get(obj, visible_to=visible_to)
         if head is None:

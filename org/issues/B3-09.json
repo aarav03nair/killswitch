@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "seq taken at txn start, append after commit, crash-between aborts and verify reports RECONCILE; RT8(g) hook",
   "acceptance": [
     "test_crash_commit_append: kill between commit and append -> run aborts, verify RECONCILE, never silent",
@@ -18,13 +18,33 @@
     "B3-03"
   ],
   "deliverable": "src/ks/recorder/",
-  "summary": "",
-  "review": "",
+  "summary": "ks.recorder: Recorder.begin() reserves seq at txn start (RecorderTxn.append after state commit / rollback frees it); a failed append aborts the recorder for good (RecorderAborted). New ks.recorder.GatewayHooks (skip_checkpoint, between_check_and_txn; no-ops), wired in Gateway(hooks=...) and TickBarrier (skip_checkpoint; one push per tick). ks.verify gained the reconcile pass (state_digest(fold(record)) vs workspace/state.db; reconcile_mismatch / no_state), overlapping B3-15's reconcile bullet. Tests tests/recorder/test_recorder.py all pass natively: test_crash_commit_append (real SIGKILL between commit and append -> RECONCILE), hooks no-ops, hung witness (witness_ack=false in timing.jsonl, ticks strictly increase, verify --head OK). No Linux-root-only tests in this issue.",
+  "review": "[kabir · done] Acceptance met; full suite 506 passed/6 skipped. Checked: rollback frees the seq (no gap; reuse only of a never-committed seq, and a wrong rollback after commit still shows as RECONCILE); test_crash_commit_append really SIGKILLs itself right after the state commit, every run -> reconcile_mismatch; a failed append stops the run (the exception reaches run(), teardown runs in finally, later begin() raises RecorderAborted); hooks do nothing by default and only tests can enable them (run.py builds Gateway without hooks; no CLI flag); one push per tick; hung witness -> witness_ack=false. Follow-ups: (1) HOLE, owner B3-15: editing objects.head_value (or head_redacted) in state.db still gives verify OK, because reconcile compares only head_hash. The docstring line 'unmediated write -> reconcile_mismatch' is false until fixed. Add a value_hash(head_value)==head_hash check. (2) Raise RecorderAborted from the OSError on the first failure. (3) The gateway never calls begin(), so B3-41 must repeat the crash test through the gateway. (4) The test named ..._without_writes_is_ok never tests the no-writes case. (5) The hung witness is simulated with timeout 0; a SIGSTOP of the witness process would be a stronger test. B3-15: shrink the reconcile bullet to the value-integrity check plus the edited-db tests; no_state/mismatch are done.",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 16:26",
+      "who": "arjun",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "19 Nov 16:26",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 16:26",
+      "who": "arjun",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "19 Nov 16:30",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

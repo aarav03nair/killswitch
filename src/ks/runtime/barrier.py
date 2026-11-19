@@ -15,7 +15,7 @@ import subprocess
 import time
 from dataclasses import dataclass, field
 
-from ks.contracts import MAX_FRAME_BYTES, TickFrame, WitnessCheckpoint, encode_frame
+from ks.contracts import MAX_FRAME_BYTES, WitnessCheckpoint, encode_frame
 from ks.gateway import Gateway, InFrame
 from ks.identity import SignerService
 from ks.witness import WitnessLink
@@ -181,7 +181,7 @@ class TickBarrier:
         # checkpoint (records are already flushed: one append per record)
         cp = None
         rec = self.gateway.recorder
-        if rec.seq > 0:
+        if rec.seq > 0 and not self.gateway.hooks.skip_checkpoint(tick):  # one push per tick, at most
             cp = self.witness.push(rec.seq, rec.head, tick, self.deadline_s)  # F6: wait up to the deadline
             if cp is not None:
                 self.last_checkpoint = cp
@@ -212,13 +212,23 @@ class TickBarrier:
                     break
                 for key, _ in sel.select(left):
                     kind, c = key.data
+                    if not c.alive:  # closed earlier in this batch (flood, EOF)
+                        continue
                     if kind == "signer":
                         lines = c.signer_lines()
                         if lines is None:
                             sel.unregister(c.signer)
                             continue
                         for line in lines:
-                            c.reply_signer(self.signer.handle(c.agent_id, line))  # SignReply | SignRefusal
+                            reply = self.signer.handle(c.agent_id, line)  # SignReply | SignRefusal | None
+                            if reply is None:  # over its per-tick line budget: counted, connection closed (M2)
+                                waiting.discard(c)
+                                for s in (c.gw, c.signer):
+                                    if s.fileno() >= 0 and s in sel.get_map():
+                                        sel.unregister(s)
+                                c.close()
+                                break
+                            c.reply_signer(reply)
                         continue
                     if c not in waiting:
                         continue
