@@ -404,21 +404,6 @@
   ],
   "activity": [
     {
-      "t": "19 Nov 01:00",
-      "who": "zoya",
-      "msg": "reviewed ABS-01: changes"
-    },
-    {
-      "t": "19 Nov 01:00",
-      "who": "zoya",
-      "msg": "moved ABS-06 to in_progress"
-    },
-    {
-      "t": "19 Nov 01:00",
-      "who": "ishaan",
-      "msg": "moved ABS-03 to in_review"
-    },
-    {
       "t": "19 Nov 01:01",
       "who": "panel",
       "msg": "reviewed ABS-02: changes"
@@ -1402,6 +1387,21 @@
       "t": "19 Nov 16:33",
       "who": "pmo",
       "msg": "moved B3-13 to todo"
+    },
+    {
+      "t": "19 Nov 16:41",
+      "who": "pmo",
+      "msg": "moved B3-10 to changes"
+    },
+    {
+      "t": "19 Nov 16:41",
+      "who": "pmo",
+      "msg": "moved B3-08 to changes"
+    },
+    {
+      "t": "19 Nov 16:41",
+      "who": "pmo",
+      "msg": "moved B3-39 to in_review"
     }
   ]
 }

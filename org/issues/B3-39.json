@@ -59,6 +59,11 @@
       "t": "19 Nov 16:21",
       "who": "ishaan",
       "msg": "→ in_review: kabir findings addressed"
+    },
+    {
+      "t": "19 Nov 16:41",
+      "who": "pmo",
+      "msg": "→ in_review: make smoke executed on Aarav's Mac (OrbStack, arm64, docker 29.8.2): smoke OK, isolation=per_agent_uid, exit 0; bind-mount chown to 60000 worked. Note verify ran without --head (anchored:false)."
     }
   ]
 }

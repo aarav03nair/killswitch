@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "maya",
-  "status": "done",
+  "status": "changes",
   "outcome": "Runtime runs the real world agents, fixes RunConfig.isolation before spawn and aborts on contradiction (findings 1, 4, 12)",
   "acceptance": [
     "ks run --agents 10 spawns the ADR-06 agents; cross-uid ptrace from agent i to agent j and to the witness is EPERM (dumpable set after exec)",
@@ -51,6 +51,11 @@
       "t": "19 Nov 16:33",
       "who": "kabir",
       "msg": "review: done"
+    },
+    {
+      "t": "19 Nov 16:41",
+      "who": "pmo",
+      "msg": "→ changes: Container run (OrbStack, root): test_cross_uid_ptrace_eperm_and_nondumpable_after_exec FAILS: /proc/<agent pid> st_uid=60001, expected 0, i.e. agent still dumpable after exec."
     }
   ]
 }

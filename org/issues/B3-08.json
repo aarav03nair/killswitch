@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "done",
+  "status": "changes",
   "outcome": "Witness file ownership and handover per erratum (findings 5, 11) and Kabir's owner item",
   "acceptance": [
     "witness.jsonl is owned by the witness uid, mode 0600, created at RunDir.create and handed over as an O_APPEND fd; gateway holds no write fd after attach (test, run as root)",
@@ -45,6 +45,11 @@
       "t": "19 Nov 16:30",
       "who": "kabir",
       "msg": "review: done"
+    },
+    {
+      "t": "19 Nov 16:41",
+      "who": "pmo",
+      "msg": "→ changes: Container run (OrbStack, root): test_witness_file_owned_by_witness_uid_mode_0600_and_gateway_holds_no_fd FAILS with FileNotFoundError on /proc/self/fd/14 (listdir's own fd, closed before readlink); ownership/mode asserts passed."
     }
   ]
 }

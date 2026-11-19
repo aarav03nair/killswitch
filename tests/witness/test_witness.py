@@ -70,6 +70,31 @@ def test_ticks_strictly_increase_and_regressions_get_no_ack(link, tmp_path):
     assert all(verify_hex(link.pub, x.sig, x.signing_bytes()) for x in got)
 
 
+def _fds_on(*paths):
+    """Open fds of this process that refer (by path text or by dev/ino, so dup'd and O_PATH fds count) to any of
+    `paths` or anything under them. fds that vanish mid-scan (e.g. the one os.listdir used) are skipped."""
+    ids, texts = set(), []
+    for p in paths:
+        p = os.path.realpath(p)
+        texts.append(p)
+        for q in [p] + ([os.path.join(p, n) for n in os.listdir(p)] if os.path.isdir(p) else []):
+            st = os.stat(q)
+            ids.add((st.st_dev, st.st_ino))
+    hits = []
+    for n in os.listdir("/proc/self/fd"):
+        fp = f"/proc/self/fd/{n}"
+        try:
+            link = os.readlink(fp)
+            st = os.stat(fp)
+        except (FileNotFoundError, ProcessLookupError):
+            continue
+        except OSError:
+            st = None
+        if (st is not None and (st.st_dev, st.st_ino) in ids) or any(link == t or link.startswith(t + "/") for t in texts):
+            hits.append((n, link))
+    return hits
+
+
 @linux_root
 def test_witness_file_owned_by_witness_uid_mode_0600_and_gateway_holds_no_fd(tmp_path):
     """Real witness process under uid 60000 gets the fds over SCM_RIGHTS and never opens a run-dir path; after
@@ -95,8 +120,7 @@ def test_witness_file_owned_by_witness_uid_mode_0600_and_gateway_holds_no_fd(tmp
     lk.init(None, timeout_s=30)
     lk.attach(*open_witness_fds(rd.path / "witness.jsonl", rd.path / "witness-heads"), timeout_s=10)
     target = os.path.realpath(rd.path / "witness.jsonl")
-    held = [os.readlink(f"/proc/self/fd/{n}") for n in os.listdir("/proc/self/fd")]
-    assert target not in held and not any(h.startswith(str(rd.path / "witness-heads")) for h in held)
+    assert _fds_on(rd.path / "witness.jsonl", rd.path / "witness-heads") == []
     cp = lk.push(1, H1, 0, timeout_s=10)
     assert cp is not None and lk.push(1, H1, 0, timeout_s=10) == cp
     lk.close(timeout_s=10)
