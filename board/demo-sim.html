@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Kill Switch demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a calm incident-room rehearsal; the presenter's script beside what the jury sees.
+   IDEA: a flight recorder played back beat by beat.
+   PICTURE: the live console (agents, provenance graph, terminal) changing with each step.
+   COLOUR and TYPE: white, ink #121212, kill-switch red #e3120b, slate #2e6f8e, amber for held, green for kept; Source Serif 4 + Inter + JetBrains Mono.
+   LAYOUT: beat strip, console (agents | graph | terminal), narration and controls below. */
+:root{color-scheme:light dark;--bg:light-dark(#fff,#10191e);--ink:light-dark(#121212,#e9eef1);--mut:light-dark(#5b6670,#9fb0bb);--red:#e3120b;--sl:light-dark(#2e6f8e,#6fb3d3);--pan:light-dark(#e3ecf0,#18252c);--pan2:light-dark(#f2f6f8,#142027);--rule:light-dark(#cfd9de,#2a3a43);--ok:light-dark(#1f7a4d,#5cc38c);--amb:light-dark(#a35b00,#f0a640);--term:#0d1418;--termink:#d6e2e8}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.5 Inter,system-ui,sans-serif;overflow-x:clip}
+.band{padding:clamp(16px,3vw,36px) max(4vw,14px)}.wrap{max-width:1240px;margin:0 auto}
+h1{font:600 clamp(28px,4.4vw,44px)/1.05 "Source Serif 4",Georgia,serif;margin:0 0 6px;text-wrap:balance}
+.tab{display:inline-block;background:var(--red);color:#fff;font-weight:600;font-size:13px;padding:4px 9px;margin-bottom:10px}
+.sim{font-size:13px;color:var(--mut)}
+.beats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-top:16px}
+.beat{background:var(--pan2);border:0;border-top:4px solid var(--rule);padding:8px;text-align:left;font:inherit;color:inherit;cursor:pointer;min-height:56px}
+.beat b{display:block;font-size:14px}.beat span{font-size:12px;color:var(--mut)}
+.beat.on{border-top-color:var(--red);background:var(--pan)}.beat.past{border-top-color:var(--ok)}
+.console{display:grid;grid-template-columns:minmax(0,.9fr) minmax(0,1.3fr) minmax(0,1.2fr);gap:10px;margin-top:14px}
+.pane{background:var(--pan2);padding:10px;min-height:340px}.pane h2{font-size:13px;font-weight:600;margin:0 0 8px;color:var(--mut);display:flex;justify-content:space-between}
+.agents{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:6px}
+.ag{background:var(--bg);border:1px solid var(--rule);padding:6px 8px;font-size:13px;line-height:1.3;transition:border-color .3s,background .3s}
+.ag b{display:block;font-weight:600}.ag i{font-style:normal;font-size:12px;color:var(--mut)}
+.ag.run i::before{content:"● ";color:var(--ok)}.ag.bad{border-color:var(--red)}.ag.bad i::before{content:"● ";color:var(--red)}
+.ag.sus{background:light-dark(#fde8e7,#3a1715);border-color:var(--red)}.ag.sus i::before{content:"■ ";color:var(--red)}
+.ag.held{border-color:var(--amb)}.ag.held i::before{content:"◆ ";color:var(--amb)}
+.ag.rerun{border-color:var(--sl)}.ag.rerun i::before{content:"↻ ";color:var(--sl)}
+.ag.kept{border-color:var(--ok)}.ag.kept i::before{content:"✓ ";color:var(--ok)}
+.fig{position:relative;height:300px}.fig svg{position:absolute;inset:0;width:100%;height:100%}
+.term{background:var(--term);color:var(--termink);font:12.5px/1.5 "JetBrains Mono",ui-monospace,monospace;padding:10px;height:300px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+.term .c{color:#8fd3ff}.term .e{color:#ff7b72}.term .w{color:#f0a640}.term .g{color:#7ee2a8}.term .m{color:#7f939c}
+.lower{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:16px;margin-top:14px}
+.say{background:var(--pan);padding:14px 16px;border-left:4px solid var(--red)}.say h3{margin:0 0 6px;font:600 20px/1.2 "Source Serif 4",serif}
+.say p{margin:6px 0}.say .lbl{font-size:12px;font-weight:600;color:var(--mut)}
+.ctrl{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px;align-items:center}
+button.b{font:500 15px Inter,sans-serif;min-height:44px;padding:8px 16px;border:1px solid var(--rule);background:var(--pan2);color:var(--ink);cursor:pointer}
+button.b.pri{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+button.b[aria-pressed=true]{background:var(--amb);color:#000;border-color:var(--amb)}
+:focus-visible{outline:3px solid var(--sl);outline-offset:2px}
+.score{width:100%;border-collapse:collapse;font-size:14px}.score th,.score td{padding:6px 8px;border-bottom:1px solid var(--rule);text-align:left}.score td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}.score th{font-size:12px;color:var(--mut);font-weight:600}
+.good{color:var(--ok);font-weight:600}.badv{color:var(--red);font-weight:600}
+.steps{margin:0;padding-left:20px;font-size:14px}.steps li{margin:3px 0}.steps li.now{font-weight:600}
+.clock{font:500 14px "JetBrains Mono",monospace;color:var(--mut)}
+@media(max-width:980px){.console{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}.console .pane:nth-child(3){grid-column:1/-1}.lower{grid-template-columns:minmax(0,1fr)}}
+@media(max-width:600px){.console{grid-template-columns:minmax(0,1fr)}.beats{grid-template-columns:repeat(3,minmax(0,1fr))}.pane{min-height:0}.fig{height:260px}.term{height:240px}}
+@media(prefers-reduced-motion:reduce){.ag{transition:none}}
+</style>
+</head>
+<body>
+<header class="band" style="padding-bottom:0"><div class="wrap">
+  <span class="tab">Finale rehearsal · 5 minutes</span>
+  <h1>Kill Switch: how the demo will run</h1>
+  <p class="sim">A simulation of the planned finale. Nothing here runs; every number is an illustrative target, not a measurement.</p>
+  <div class="beats" id="beats"></div>
+</div></header>
+<main class="band" style="padding-top:0"><div class="wrap">
+  <div class="console">
+    <section class="pane"><h2><span>Agents (10)</span><span id="tick" class="clock"></span></h2><div class="agents" id="agents"></div></section>
+    <section class="pane"><h2><span>Provenance graph</span><span id="gstate"></span></h2><div class="fig"><svg id="graph" role="img" aria-label="Provenance graph of the hero scenario"></svg></div></section>
+    <section class="pane"><h2><span>Presenter terminal</span><span class="clock" id="clock"></span></h2><div class="term" id="term" aria-live="polite"></div></section>
+  </div>
+  <div class="lower">
+    <div>
+      <div class="say" id="say"></div>
+      <div class="ctrl">
+        <button class="b" id="prev">← Back</button>
+        <button class="b pri" id="next">Next step →</button>
+        <button class="b" id="hold" aria-pressed="false" title="Replay with hold window = 0">Hold window = 0</button>
+        <span class="sim" id="pos"></span>
+      </div>
+    </div>
+    <div>
+      <h2 style="font:600 20px 'Source Serif 4',serif;margin:0 0 8px">Scorecard</h2>
+      <table class="score"><thead><tr><th>Measure</th><th>Kill Switch</th><th>Snapshot restore</th><th>Revert culprit only</th></tr></thead><tbody id="score"></tbody></table>
+      <p class="sim" id="scnote">Fills in at the Recover beat.</p>
+      <h2 style="font:600 20px 'Source Serif 4',serif;margin:18px 0 8px">Run of show</h2>
+      <ol class="steps" id="steps"></ol>
+    </div>
+  </div>
+</div></main>
+<script>{
+const AG=[["intake","tickets in"],["triage","risk notes"],["crm","supplier records"],["billing","invoices"],["payments","transfers"],["inventory","stock"],["reporter","daily report"],["comms","supplier email"],["compliance","findings"],["docs","manuals"]];
+const BEATS=[["Setup","0:00"],["Break","0:00–0:45"],["Identify","0:45–1:45"],["Contain","1:45–2:45"],["Recover","2:45–4:00"],["Audit","4:00–5:00"]];
+// graph nodes: id,label,x,y
+const N=[["crm","crm",60,40],["iban","S-17.iban",190,40],["price","SKU-9 price",190,110],["billing","billing → invoice",330,30],["pay","payments → transfer",330,90],["comms","comms → email",330,150],["triage","triage",60,200],["note","S-17.risk_note",190,200],["inv","inventory",330,220],["docs","docs",330,265]];
+const E=[["crm","iban"],["crm","price"],["iban","billing"],["iban","pay"],["price","billing"],["billing","comms"],["triage","note"]];
+let holdZero=false;
+const S=[
+{b:0,t:"tick 38",clk:"0:00",ag:{},g:{},cmd:[["c","$ ks run --fault F2+ --seed 7 --pause-at 40 --step"],["m","isolation: per-agent uids 60001–60010 · witness uid 60000"],["m","10 agents running · record.jsonl chained · witness checkpoint every tick"],["g","tick 38 … all invariants green"]],
+ h:"Ten agents, one shared company",say:"Ten agents run a small company: tickets, supplier records, invoices, payments, email. Each runs as its own locked-down process, signs every action, and every read and write is recorded. Nothing is wrong yet.",show:"All ten tiles green. Empty graph. Terminal shows the run starting under per-agent isolation."},
+{b:1,t:"tick 41",clk:"0:20",ag:{crm:"bad"},g:{crm:"bad",iban:"bad",price:"bad"},cmd:[["m","tick 41  seq 412  crm  crm.update_supplier  S-17.iban  v2 → v3"],["m","tick 41  seq 413  crm  crm.update_price     SKU-9.price ×10"]],
+ h:"crm writes a bad bank account",say:"The fault is injected: crm swaps a supplier's IBAN and inflates one price tenfold. These look like normal, in-scope writes, which is why rate limits and kill switches miss them.",show:"crm turns red. The bad versions appear in the graph."},
+{b:1,t:"tick 43",clk:"0:40",ag:{crm:"bad",billing:"run",payments:"run",comms:"run",triage:"run"},g:{crm:"bad",iban:"bad",price:"bad",billing:"bad",pay:"bad",comms:"bad",triage:"ok",note:"ok"},cmd:[["m","tick 42  seq 415  billing   billing.draft_invoice  reads S-17.iban@v3"],["m","tick 42  seq 416  payments  payments.send  → outbox #77 (class I1, queued)"],["m","tick 43  seq 418  comms     comms.send_email → outbox #78 (class I1, queued)"],["m","tick 43  seq 419  triage    supplier.set_risk_note  S-17.risk_note v1 → v2"]],
+ h:"Honest agents build on it",say:"Honest agents now read the bad data. An invoice is drafted, a payment and an email are queued. Separately, triage adds an unrelated note to the same supplier. This is the brief's hard case: undo crm without discarding anyone else's work.",show:"Taint spreads along read edges. triage's edit stays green: different field."},
+{b:2,t:"tick 44",clk:"1:00",ag:{crm:"bad"},g:{crm:"bad",iban:"bad",price:"bad",billing:"bad",pay:"bad",comms:"bad",triage:"ok",note:"ok"},cmd:[["w","ALERT  inv.beneficiary_changed_then_paid  hard  evidence seq 412, 416"],["c","$ ks blame --alert a-3"],["m","root candidates (ranked):"],["g","  1. crm   wrote S-17.iban@v3 at seq 412   (writer of the bad version)"],["m","  readers reached: billing, payments, comms  (never auto-suspended)"],["m","time-to-identify: detect 1 tick · attribute 0 ticks   [simulated]"]],
+ h:"Identify: the data itself trips a detector",say:"A detector checks the data, not the agent's behaviour: a beneficiary was changed and then paid. Attribution is a lookup in the record. It names the writer of the bad value, not a guess by a model.",show:"Alert line in the terminal; crm ranked first; readers listed but not blamed."},
+{b:3,t:"tick 45",clk:"2:00",ag:{crm:"sus",payments:"held",comms:"held"},g:{crm:"bad",iban:"bad",price:"bad",billing:"bad",pay:"held",comms:"held",triage:"ok",note:"ok"},cmd:[["c","$ ks contain suspend agent:crm"],["g","Control signed by ks.operator · crm epoch 3 → 4"],["w","lineage hold: outbox #77 payment, #78 email  (inputs trace to seq 412)"],["m","tick 45  crm  envelope a-913  DENY stale_epoch"],["m","inventory, docs, intake, reporter, compliance: running"]],
+ h:"Contain: one agent stops, the rest keep working",say:"crm is suspended under a fresh epoch, so even actions it signed earlier are refused. The payment and email are held because their inputs trace back to the bad write. Everyone else keeps working.",show:"crm tile goes red-filled; payments and comms amber (held); other agents keep ticking."},
+{b:4,t:"tick 46",clk:"3:00",ag:{crm:"sus",payments:"held",comms:"held",triage:"kept",inventory:"kept",docs:"kept"},g:{crm:"bad",iban:"fix",price:"fix",billing:"rerun",pay:"rerun",comms:"rerun",triage:"ok",note:"ok"},cmd:[["c","$ ks recover --dry-run"],["m","plan p-1 (dry-run diff):"],["g","  restore  S-17.iban   v3 → v2   (still holds crm's version)"],["g","  restore  SKU-9.price ×10 → original"],["m","  re-run   billing.draft_invoice, payments.send, comms.send_email, reporter"],["m","  cancel   outbox #77, #78 (replaced by re-run items)"],["g","  keep     S-17.risk_note v2 (triage, different field)"],["m","apply with: ks recover --apply p-1 --approve all"]],
+ h:"Recover: a dry-run diff first",say:"Recovery is shown before it happens. Only bad writes still current are restored. Dependent steps are re-run on clean data through an outbox that never sends twice. Triage's note is kept.",show:"Graph: bad nodes turn to 'restored', readers to 're-run'; triage stays green."},
+{b:4,t:"tick 48",clk:"3:40",ag:{crm:"sus",billing:"rerun",payments:"rerun",comms:"rerun",triage:"kept",inventory:"kept",docs:"kept"},g:{crm:"bad",iban:"fix",price:"fix",billing:"rerun",pay:"rerun",comms:"rerun",triage:"ok",note:"ok"},cmd:[["c","$ ks recover --apply p-1 --approve all"],["g","restored 2 · re-ran 4 · cancelled 2 · kept 1 · re-emitted 0"],["c","$ ks score"],["g","residual damage R 0/6 · collateral loss C 0/42 · post-alert tainted 0 · irreversible released 0   [targets]"]],
+ h:"Approve, apply, and score against a clean run",say:"We approve and apply. Then we score against the same run with the fault switched off: no damage left, no honest work lost. Snapshot restore loses honest work; reverting crm alone leaves the invoice and email wrong.",show:"Scorecard fills in. Toggle 'Hold window = 0' to show the honest failure case.",score:true},
+{b:5,t:"run end",clk:"4:20",ag:{crm:"sus",triage:"kept",inventory:"kept",docs:"kept"},g:{crm:"bad",iban:"fix",price:"fix",billing:"rerun",pay:"rerun",comms:"rerun",triage:"ok",note:"ok"},cmd:[["m","RunAnchor (copy into ks verify --head): {count:48, head:64f7…, seq:524, tick:47}"],["c","$ ks verify run-7 --head ANCHOR"],["g","verify: OK; anchored · last witnessed seq 524"],["m","# jury edits one line of record.jsonl …"],["c","$ ks verify run-7 --head ANCHOR"],["e","verify: TAMPER hash_mismatch · first bad seq 418 · exit 2"]],
+ h:"Audit: let the jury try to break it",say:"The record is evidence, not testimony. A juror edits any line, or rewrites the whole file; verify against the anchor printed at run end catches it and points to the first bad entry. Our threat model states what is detected and what is out of scope.",show:"Terminal: OK, then a juror's edit, then TAMPER with the exact sequence number.",score:true}
+];
+const $=id=>document.getElementById(id);let i=0;
+$("beats").innerHTML=BEATS.map((b,k)=>`<button class="beat" data-b="${k}"><b>${b[0]}</b><span>${b[1]}</span></button>`).join("");
+$("steps").innerHTML=S.map((s,k)=>`<li data-k="${k}">${s.h}</li>`).join("");
+const lbl={run:"running",bad:"wrote bad data",sus:"suspended",held:"output held",rerun:"re-run on clean data",kept:"work kept"};
+function graph(g){const s=$("graph"),W=s.clientWidth||400,H=s.clientHeight||300,sx=W/420,sy=H/290;
+ const col=k=>({bad:"var(--red)",held:"var(--amb)",fix:"var(--ok)",rerun:"var(--sl)",ok:"var(--ok)"}[g[k]]||"var(--rule)");
+ const P=Object.fromEntries(N.map(n=>[n[0],[n[2]*sx,n[3]*sy]]));const show=k=>g[k]!==undefined||k==="inv"||k==="docs";
+ let h=`<defs><marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto"><path d="M0,0L10,5L0,10z" fill="var(--mut)"/></marker></defs>`;
+ for(const [a,b] of E){if(!show(a)||!show(b))continue;const[x1,y1]=P[a],[x2,y2]=P[b];h+=`<line x1="${x1+40*sx}" y1="${y1}" x2="${x2-46*sx}" y2="${y2}" stroke="${col(b)}" stroke-width="1.6" marker-end="url(#ar)" opacity=".85"/>`}
+ for(const [k,t] of N){if(!show(k))continue;const[x,y]=P[k];const w=Math.min(118,W*.3),c=g[k]?col(k):"var(--rule)";
+  const tag={bad:"tainted",held:"held",fix:"restored",rerun:"re-run",ok:k==="note"?"kept":""}[g[k]]||(k==="inv"||k==="docs"?"independent":"");
+  h+=`<g><rect x="${x-w/2}" y="${y-15}" width="${w}" height="30" rx="3" fill="var(--bg)" stroke="${c}" stroke-width="${g[k]?2:1}"/><text x="${x}" y="${y-1}" text-anchor="middle" font-size="${W<420?10:11.5}" fill="var(--ink)" font-family="Inter">${t}</text><text x="${x}" y="${y+11}" text-anchor="middle" font-size="9.5" fill="${c}" font-family="Inter">${tag}</text></g>`}
+ s.innerHTML=h}
+function render(){const s=S[i];
+ document.querySelectorAll(".beat").forEach(b=>{const k=+b.dataset.b;b.classList.toggle("on",k===s.b);b.classList.toggle("past",k<s.b)});
+ document.querySelectorAll("#steps li").forEach(l=>l.classList.toggle("now",+l.dataset.k===i));
+ $("tick").textContent=s.t;$("clock").textContent=s.clk;$("pos").textContent=`Step ${i+1} of ${S.length}`;
+ $("agents").innerHTML=AG.map(([n,r])=>{const st=s.ag[n]||"run";return `<div class="ag ${st}"><b>${n}</b><i>${lbl[st]} · ${r}</i></div>`}).join("");
+ let lines=[];for(let k=0;k<=i;k++)if(S[k].b===s.b||k===i)lines=lines.concat(S[k].cmd);
+ if(holdZero&&s.score)lines=lines.concat([["w","# replay with hold window = 0"],["e","outbox #77 payment dispatched at tick 43, before the alert"],["e","irreversible tainted released 1 · residual damage R 1/6 · reported, not hidden"]]);
+ $("term").innerHTML=lines.map(([c,t])=>`<span class="${c}">${t.replace(/</g,"&lt;")}</span>`).join("\n");$("term").scrollTop=1e6;
+ $("gstate").textContent=Object.values(s.g).includes("bad")&&!Object.values(s.g).includes("fix")?"taint spreading":Object.values(s.g).includes("fix")?"repaired":"";
+ graph(s.g);
+ $("say").innerHTML=`<p class="lbl">${BEATS[s.b][0]} · ${BEATS[s.b][1]}</p><h3>${s.h}</h3><p><span class="lbl">Say:</span> ${s.say}</p><p><span class="lbl">On screen:</span> ${s.show}</p>`;
+ const R=holdZero?'<span class="badv">1/6</span>':'<span class="good">0/6</span>',IR=holdZero?'<span class="badv">1</span>':'<span class="good">0</span>';
+ $("score").innerHTML=s.score?[["Residual damage R",R,"0/6","2/6"],["Collateral loss C",'<span class="good">0/42</span>',"11/42","0/42"],["Post-alert tainted effects",'<span class="good">0</span>',"0","1"],["Irreversible tainted released",IR,"0","1"],["Re-emitted effects",'<span class="good">0</span>',"0","0"]].map(r=>`<tr><td>${r[0]}</td><td class="n">${r[1]}</td><td class="n">${r[2]}</td><td class="n">${r[3]}</td></tr>`).join(""):`<tr><td colspan="4" class="sim">Not scored yet</td></tr>`;
+ $("scnote").textContent=s.score?"Illustrative targets. Baselines are oracle-assisted (given the fault time). Measured over 20 seeds in the real build.":"Fills in at the Recover beat.";
+ $("prev").disabled=i===0;$("next").textContent=i===S.length-1?"Restart ↺":"Next step →"}
+$("next").onclick=()=>{i=i===S.length-1?0:i+1;render()};$("prev").onclick=()=>{if(i>0){i--;render()}};
+$("hold").onclick=e=>{holdZero=!holdZero;e.currentTarget.setAttribute("aria-pressed",holdZero);render()};
+$("beats").onclick=e=>{const b=e.target.closest(".beat");if(!b)return;const k=S.findIndex(s=>s.b===+b.dataset.b);if(k>=0){i=k;render()}};
+$("steps").onclick=e=>{const l=e.target.closest("li");if(l){i=+l.dataset.k;render()}};
+addEventListener("keydown",e=>{if(e.key==="ArrowRight")$("next").click();if(e.key==="ArrowLeft")$("prev").click()});
+new ResizeObserver(()=>graph(S[i].g)).observe($("graph"));render();
+}</script>
+</body>
+</html>
