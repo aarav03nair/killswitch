@@ -1,0 +1,30 @@
+{
+  "id": "B3-23",
+  "title": "ks.gateway: outbox, lineage/sensitive holds, dispatch record (F4)",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "nisha",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "I1 outbox with hold window, lineage-based early hold and the ks.dispatch record",
+  "acceptance": [
+    "release_tick = max(tick+H, v+2H) when lineage holds a sensitive field written at v; H=0 disables it (test)",
+    "ks.dispatch record by ks.gateway with read_set = lineage + outbox object, write_set = status change (F4)",
+    "On F2+ the payment and email are held at creation; dispatched items appear as residual when H=0"
+  ],
+  "depends": [
+    "B3-14"
+  ],
+  "deliverable": "src/ks/gateway/outbox.py",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

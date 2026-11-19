@@ -1,0 +1,34 @@
+{
+  "id": "B3-35",
+  "title": "Red-team suite wiring RT1-RT13",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "maya",
+  "reviewer": "kabir",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "tests/redteam executes every SPEC v2 RT against the hero build; each passes or is an xfail naming an issue",
+  "acceptance": [
+    "Every RT in SPEC v2 has a runnable test; no silent skips (root-only tests run as root in CI-style command)",
+    "Each xfail names an open issue id; list attached to the issue summary for S4",
+    "Full suite green under PYTHONHASHSEED 0, 1, 999"
+  ],
+  "depends": [
+    "B3-25",
+    "B3-27",
+    "B3-30",
+    "B3-31",
+    "B3-32"
+  ],
+  "deliverable": "tests/redteam/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

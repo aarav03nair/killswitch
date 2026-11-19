@@ -14,7 +14,7 @@
     "owner": "Aarav (Product Owner)",
     "updated": ""
   },
-  "phase": "Sprint 2 · Frame & Design",
+  "phase": "Sprint 3 · Build",
   "sprints": [
     {
       "n": 0,
@@ -32,13 +32,13 @@
       "n": 2,
       "name": "Frame & Design",
       "goal": "Abstract kit, architecture, ADRs, threat model",
-      "status": "active"
+      "status": "done"
     },
     {
       "n": 3,
       "name": "Build core",
       "goal": "Identity, black-box ledger, gateway, monitor, containment, rollback",
-      "status": "planned"
+      "status": "active"
     },
     {
       "n": 4,
@@ -261,6 +261,29 @@
         "Abstract kit updates for the new D13 wording",
         "Sprint 3 build"
       ]
+    },
+    {
+      "id": "CALL-03",
+      "title": "Call #3 — Sprint 3 build kickoff",
+      "date": "19 Nov 2026",
+      "attendees": [
+        "pmo",
+        "maya",
+        "panel",
+        "kabir",
+        "vikram"
+      ],
+      "summary": "The walking skeleton held up: the Panel ran 40 tamper cases and a real rogue agent, and found two bugs. A plan of 37 issues was adopted, with the hero path due green on 24 Nov and code freeze on 26 Nov.",
+      "decisions": [
+        "Build plan B3-01…B3-35 adopted, plus B3-36 (Panel M1/M2 fixes) and B3-37 (refactor seams)",
+        "Contracts 1.2 is additive only; isolation mode is recorded so a degraded run can never verify as fully isolated",
+        "Critical path: state → taint → planner → re-run simulation → hero end to end (24 Nov)",
+        "Slip rule: Maya pairs on re-run simulation if it isn't green by 24 Nov 18:00"
+      ],
+      "next": [
+        "Day 1: contracts 1.2, state store, detectors",
+        "Then B3-36/B3-37 before gateway work starts"
+      ]
     }
   ],
   "decisions": [
@@ -373,179 +396,13 @@
     {
       "r": "Recovery modules need 9.5 build days against an 8-day window",
       "mit": "Build starts now; re-run simulation is the critical path"
+    },
+    {
+      "r": "Kabir is reviewer on 19 build issues",
+      "mit": "Batched reviews twice a day; Sonnet for non-critical reviews"
     }
   ],
   "activity": [
-    {
-      "t": "19 Nov 00:29",
-      "who": "pmo",
-      "msg": "opened ORG-01 — Stand up org: charter, roster, tracker CLI, live board"
-    },
-    {
-      "t": "19 Nov 00:29",
-      "who": "pmo",
-      "msg": "moved ORG-01 to done"
-    },
-    {
-      "t": "19 Nov 00:29",
-      "who": "pmo",
-      "msg": "opened ORG-02 — Research plan: break Sprint 1 into small research issues"
-    },
-    {
-      "t": "19 Nov 00:30",
-      "who": "anaya",
-      "msg": "moved ORG-02 to in_progress"
-    },
-    {
-      "t": "19 Nov 00:32",
-      "who": "anaya",
-      "msg": "opened RES-01 — Selective undo & intrusion recovery prior art (Retro, Warp, Aire, GoEx)"
-    },
-    {
-      "t": "19 Nov 00:32",
-      "who": "anaya",
-      "msg": "opened RES-02 — Compensation, sagas & irreversible actions: a reversibility taxonomy for agent effects"
-    },
-    {
-      "t": "19 Nov 00:32",
-      "who": "anaya",
-      "msg": "opened RES-03 — Per-agent identity & delegation on every action (SPIFFE, OAuth token exchange, MCP auth, IETF agent drafts)"
-    },
-    {
-      "t": "19 Nov 00:32",
-      "who": "anaya",
-      "msg": "opened RES-04 — Action record schema: OpenTelemetry GenAI conventions + tamper-evident log"
-    },
-    {
-      "t": "19 Nov 00:32",
-      "who": "anaya",
-      "msg": "opened RES-05 — OSS survey: agent observability, guardrails & policy engines — reuse vs. missing"
-    },
-    {
-      "t": "19 Nov 00:32",
-      "who": "anaya",
-      "msg": "opened RES-06 — OSS survey: checkpointing, time-travel & versioned data stores for per-agent rollback"
-    },
-    {
-      "t": "19 Nov 00:32",
-      "who": "anaya",
-      "msg": "opened RES-07 — Real incidents of agents causing damage + state of automated failure attribution"
-    },
-    {
-      "t": "19 Nov 00:32",
-      "who": "anaya",
-      "msg": "opened RES-08 — Metrics for TTI/TTC/clean recovery + regulatory & bank-audit hooks"
-    },
-    {
-      "t": "19 Nov 00:32",
-      "who": "anaya",
-      "msg": "opened RES-SYN — Synthesis: findings → problem framing + design principles"
-    },
-    {
-      "t": "19 Nov 00:32",
-      "who": "anaya",
-      "msg": "moved ORG-02 to in_review"
-    },
-    {
-      "t": "19 Nov 00:33",
-      "who": "pmo",
-      "msg": "reviewed ORG-02: done"
-    },
-    {
-      "t": "19 Nov 00:33",
-      "who": "leela",
-      "msg": "moved RES-05 to in_progress"
-    },
-    {
-      "t": "19 Nov 00:33",
-      "who": "meera",
-      "msg": "moved RES-02 to in_progress"
-    },
-    {
-      "t": "19 Nov 00:33",
-      "who": "sameer",
-      "msg": "moved RES-08 to in_progress"
-    },
-    {
-      "t": "19 Nov 00:33",
-      "who": "meera",
-      "msg": "moved RES-01 to in_progress"
-    },
-    {
-      "t": "19 Nov 00:33",
-      "who": "leela",
-      "msg": "moved RES-06 to in_progress"
-    },
-    {
-      "t": "19 Nov 00:33",
-      "who": "sameer",
-      "msg": "moved RES-07 to in_progress"
-    },
-    {
-      "t": "19 Nov 00:34",
-      "who": "rohan",
-      "msg": "moved RES-04 to in_progress"
-    },
-    {
-      "t": "19 Nov 00:34",
-      "who": "rohan",
-      "msg": "moved RES-03 to in_progress"
-    },
-    {
-      "t": "19 Nov 00:34",
-      "who": "maya",
-      "msg": "opened ENG-00 — Strawman architecture for research to stress-test"
-    },
-    {
-      "t": "19 Nov 00:34",
-      "who": "maya",
-      "msg": "moved ENG-00 to in_progress"
-    },
-    {
-      "t": "19 Nov 00:35",
-      "who": "meera",
-      "msg": "moved RES-02 to in_review"
-    },
-    {
-      "t": "19 Nov 00:35",
-      "who": "meera",
-      "msg": "moved RES-01 to in_review"
-    },
-    {
-      "t": "19 Nov 00:35",
-      "who": "rohan",
-      "msg": "moved RES-03 to in_review"
-    },
-    {
-      "t": "19 Nov 00:35",
-      "who": "maya",
-      "msg": "moved ENG-00 to in_review"
-    },
-    {
-      "t": "19 Nov 00:35",
-      "who": "leela",
-      "msg": "moved RES-06 to in_review"
-    },
-    {
-      "t": "19 Nov 00:36",
-      "who": "leela",
-      "msg": "moved RES-05 to in_review"
-    },
-    {
-      "t": "19 Nov 00:36",
-      "who": "rohan",
-      "msg": "moved RES-04 to in_review"
-    },
-    {
-      "t": "19 Nov 00:36",
-      "who": "sameer",
-      "msg": "moved RES-07 to in_review"
-    },
-    {
-      "t": "19 Nov 00:37",
-      "who": "anaya",
-      "msg": "opened RES-09 — Lacuna sweep: 2025-26 ML papers on multi-agent accountability, attribution, rollback"
-    },
     {
       "t": "19 Nov 00:37",
       "who": "anaya",
@@ -1320,6 +1177,231 @@
       "t": "19 Nov 11:26",
       "who": "maya",
       "msg": "moved SKEL-01 to in_review"
+    },
+    {
+      "t": "19 Nov 11:27",
+      "who": "pmo",
+      "msg": "opened ORG-05 — Call #3: Sprint 3 build kickoff"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-01 — Contracts 1.2: witness frames, SignRefusal, isolation, decisions_from, reexec_invalid"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-02 — ADR errata for the 12 SKEL-01 findings"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-03 — ks.state: versioned object store"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-04 — ks.state: read rule, field objects, state_digest, savepoints"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-05 — ks.world: 10 agents, F2+ scenario, per-agent view builder"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-06 — ks.world: catalogue tool adapters with read/write sets"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-07 — ks.monitor: detector catalogue over records (fixtures)"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-08 — ks.witness: witness-owned witness.jsonl, fd handover, 1.2 frames, per-tick idempotency"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-09 — ks.recorder: txn semantics and GatewayHooks"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-10 — ks.runtime: 10-agent world spawn, isolation pinning, run_id default"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-11 — ks.gateway: full admission pipeline"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-12 — ks.cli: command surface and exit codes"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-13 — ks.runtime: c-0 system envelopes and operator socket (R5)"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-14 — ks.policy: classes, scopes and read scope (R2)"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-15 — ks.verify: per-record rules, isolation, reconcile/no_state"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-16 — F7: aggregate reads enumerate every row (adapter test)"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-17 — ks.inject: F2+, F2+c, F2+x, F3 and hero guard"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-18 — ks.taint: closure and seed rule"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-19 — ks.containment: suspend, release, revoke, unhold re-exec"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-20 — R3: anchored decisions replay"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-21 — ks.recovery: planner (restore, cancel_outbox, flag) and dry-run diff"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-22 — ks.oracle: S* run and self test"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-23 — ks.gateway: outbox, lineage/sensitive holds, dispatch record (F4)"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-24 — ks.recovery: re-run simulation in a savepoint"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-25 — F9: cross-record reexec_of check in verify"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-26 — ks.score: score.json metrics"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-27 — Integration: hero path F2+ end to end"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-28 — Console: live timeline and 5-beat pacing"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-29 — ks.recovery: conflict rule and replan/flag (F2+x)"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-30 — Recovery apply via c-0 (approval-bound)"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-31 — ks.verify: dispatch window (F4) and alerts cross-check (F6)"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-32 — F8: frame and flood budget"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-33 — ks.bench: baselines and seed harness"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-34 — Console: recovery diff, scorecard, hold=0 toggle, audit beat"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened B3-35 — Red-team suite wiring RT1-RT13"
+    },
+    {
+      "t": "19 Nov 11:35",
+      "who": "panel",
+      "msg": "reviewed SKEL-01: changes"
+    },
+    {
+      "t": "19 Nov 11:35",
+      "who": "nisha",
+      "msg": "moved B3-07 to in_progress"
+    },
+    {
+      "t": "19 Nov 11:35",
+      "who": "maya",
+      "msg": "moved B3-01 to in_progress"
+    },
+    {
+      "t": "19 Nov 11:36",
+      "who": "vikram",
+      "msg": "moved B3-03 to in_progress"
+    },
+    {
+      "t": "19 Nov 11:36",
+      "who": "maya",
+      "msg": "moved B3-02 to in_review"
+    },
+    {
+      "t": "19 Nov 11:38",
+      "who": "maya",
+      "msg": "opened B3-36 — SKEL-01 Panel fixes: late final ack anchor (M1), signer flood caps (M2), agent_id↔connection check (S3), unprivileged shared uid (S2)"
+    },
+    {
+      "t": "19 Nov 11:38",
+      "who": "maya",
+      "msg": "opened B3-37 — Skeleton refactor before parallel build: Gateway.tick() seam, tool dispatch interface, RNG module"
+    },
+    {
+      "t": "19 Nov 11:38",
+      "who": "pmo",
+      "msg": "reviewed SKEL-01: done"
+    },
+    {
+      "t": "19 Nov 11:38",
+      "who": "pmo",
+      "msg": "moved ORG-05 to done"
     }
   ]
 }

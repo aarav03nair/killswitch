@@ -1,0 +1,31 @@
+{
+  "id": "B3-11",
+  "title": "ks.gateway: full admission pipeline",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "nisha",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Replace the stub with ADR-03 section 1 steps 1-9 in the single canonical order (finding 7), state txn and re-check",
+  "acceptance": [
+    "Table test: one frame per failing step yields exactly the reason of the first failing step in the canonical order (decode..txn)",
+    "Nonces pruned past MAX_EXPIRY_TICKS; (agent_id, action_id) reuse at tick +20 still gives nonce_reused (test_action_id_reuse)",
+    "Step-8 BEGIN IMMEDIATE re-reads epoch and deny-lists; a suspend injected via between_check_and_txn gives deny/suspended (RT5 unit)"
+  ],
+  "depends": [
+    "B3-03",
+    "B3-09"
+  ],
+  "deliverable": "src/ks/gateway/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

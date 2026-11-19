@@ -1,0 +1,31 @@
+{
+  "id": "B3-25",
+  "title": "F9: cross-record reexec_of check in verify",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "arjun",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Verify checks each reexec_of target is a sig_ok hold record with the same envelope_hash, an executed unhold in between, re-executed at most once",
+  "acceptance": [
+    "Hand-built record with reexec_of to a non-hold record -> TAMPER reexec_invalid at that seq",
+    "Two records re-executing the same hold -> TAMPER reexec_invalid at the second",
+    "Re-exec without an intervening executed unhold action:<record_id> -> TAMPER reexec_invalid; clean hero record OK"
+  ],
+  "depends": [
+    "B3-19",
+    "B3-15"
+  ],
+  "deliverable": "src/ks/verify/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

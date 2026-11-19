@@ -11,14 +11,21 @@ Agents reach shared state only through the gateway (B2 TCB). Recovery needs a cl
 1. decode: unparseable, oversize or deeper than `MAX_DEPTH` gives `deny/schema`, `envelope=None`, and the connection closes
 2. schema: unknown keys give `deny/schema`
 3. signature against the claimed principal: `deny/bad_sig` (connection only). A system agent_id on `c-1..` gives `bad_sig` without verification; `c-0` carries in-gateway system envelopes only
-4. expiry (`MAX_EXPIRY_TICKS=8`), then nonce (window = 8). The nonce is consumed only after sig and expiry pass. A reused `(agent_id, action_id)` gives `nonce_reused`
-5. epoch and **deny-list**: agent, any `act_chain` ancestor, and the **connection** (`conn:<id>`). Reasons `stale_epoch`, `suspended`, `revoked`, `revoked_ancestor`. Connections are 1:1 and never reconnect
-6. classify per action instance. An agent-signed envelope with a `ks.*` tool gives `deny/out_of_scope`
-7. policy (below)
-8. one **`BEGIN IMMEDIATE`** transaction. It first takes `seq` (execute order, ADR-00 T5), then re-reads epoch and the full deny-list (step 5 is a fast path only), then executes
-9. after commit: append the sealed record (`seq` already fixed; gateway sets `ts`, `record_id`), then enqueue outbox items. The exec record's `write_set` covers the outbox object versions created by the enqueue, so reconciliation stays clean. A crash between commit and append aborts the run and verify reports RECONCILE; never silent.
+4. `late_frame`: a frame for the wrong tick gives `deny/late_frame`, never `expired`
+5. expiry (`MAX_EXPIRY_TICKS=8`)
+6. nonce and `(agent_id, action_id)`: consumed only after sig and expiry pass; reuse gives `nonce_reused`. Nonces are pruned after the 8-tick window; `(agent_id, action_id)` is kept for the whole run
+7. connection deny-list (`conn:<id>`: `suspended`, `revoked`); connections are 1:1 and never reconnect
+8. agent epoch and status (`stale_epoch`, `suspended`, `revoked`)
+9. `act_chain` ancestors (`revoked_ancestor`)
+10. `ks.*` scope: an agent-signed envelope with a `ks.*` tool gives `deny/out_of_scope`
+11. classify per action instance (class U is denied)
+12. policy
 
-The step-8 re-check closes RT5. The suspend commits as a Control in the same store, so a write either commits before it (`seq < q`) or sees it and gets `deny/suspended` or `stale_epoch`. The real window is between steps 5 and 8 (hook `GatewayHooks.between_check_and_txn`). Presigned envelopes die at 5 or 8.
+This is the single admission order (steps 1-12); ADR-01 §8 points here (SKEL-01 #7). Execution follows:
+13. one **`BEGIN IMMEDIATE`** transaction. It first takes `seq` (execute order, ADR-00 T5), then re-reads epoch and the full deny-list (steps 7-8 are a fast path only), then executes
+14. after commit: append the sealed record (`seq` already fixed; gateway sets `ts`, `record_id`), then enqueue outbox items. The exec record's `write_set` covers the outbox object versions created by the enqueue, so reconciliation stays clean. A crash between commit and append aborts the run and verify reports RECONCILE; never silent.
+
+The step-13 re-check (epoch and both deny-lists, D5) closes RT5. The suspend commits as a Control in the same store, so a write either commits before it (`seq < q`) or sees it and gets `deny/suspended` or `stale_epoch`. The real window is between steps 8 and 13 (hook `GatewayHooks.between_check_and_txn`). Presigned envelopes die at 8 or 13.
 
 **2. Classification.** Class is a function of `(tool, args, state)`, not the tool name. Adapters declare it and emit read and write sets; the agent reports nothing. Any tool outside the catalogue, an adapter without a classifier result, or a classifier exception gives **U, `deny/class_u`**, never executable. An R tool becomes U if its pre-image is unreadable. Declared class is ignored.
 
@@ -68,7 +75,7 @@ A sig_ok `deny/out_of_scope` record (`policy_rule p.scope`) is the evidence for 
 **6. Policy**:
 - `p.scope`: tool outside the role gives `deny/out_of_scope`.
 - `p.i1_outbox`: I1 never executes inline. The gateway writes an `OutboxItem` (`queued`, `release_tick = tick + hold_window_ticks`, `lineage` = recorded read set). The agent gets `exec/ok` for the enqueue only.
-- `p.i2_approval`: I2 gives `hold/needs_approval`; `unhold` by `ks.operator` re-executes the envelope through steps 5-8, without nonce or expiry, as a new record citing the hold record.
+- `p.i2_approval`: I2 gives `hold/needs_approval`; `unhold` by `ks.operator` re-executes the envelope through steps 7-13, without nonce or expiry, as a new record citing the hold record.
 - `p.lineage_hold`: an R/C write or I-class item whose recorded read set touches a tainted version gives `hold/lineage_hold` (D8). Agent-declared lineage is ignored.
 - `p.sensitive_early_hold` (generic, **by lineage**, G3): at creation, if the item's lineage contains a sensitive-field version written at tick `v`, `release_tick = max(tick + H, v + 2H)`. Detectors get a full window after the bad write; a post-creation trigger alone would miss F2+, where the swap precedes the payment. After creation, if a lineage sensitive field changes, the dispatcher holds the item with `Control{hold, outbox:<id>, issued_by ks.gateway, auto, reason=sensitive_field}` (an exec record cannot carry that reason). At `H=0` the rule is off. The hero is caught by `beneficiary_changed_then_paid` plus lineage hold; dispatched items stay residual damage (D10).
 
@@ -102,4 +109,8 @@ C1 (expiry 8, nonce, epoch), C2 (`Decision`, `Reason`, `late_frame`, `policy_rul
 - G4, D5, D4: `ks.dispatch` records; connection deny-list; release = fresh epoch, suspension holds only (M3-M5).
 - G5, G7, E1, D2, C2: seq at txn start, `between_check_and_txn`, system-id rules, expiry before nonce, `late_frame` (M6-M8).
 - B1/X1/X2: field objects and read rules. G6: approval binding. IBAN marking dropped from `crm.update_supplier`.
-- Integration pass: outbox enqueue (step 9) is covered by the exec record's `write_set` (outbox object versions).
+- Integration pass: outbox enqueue (step 14) is covered by the exec record's `write_set` (outbox object versions).
+
+## Errata (Call #3, 19 Nov 2026)
+- Errata (SKEL-01) finding 7: step numbers after 6 shifted (txn is now 13, append 14); §1 is the single admission order (late_frame before expiry, conn deny-list before agent epoch/status, `ks.*` scope after act_chain); ADR-01 §8 points here.
+- Errata (SKEL-01) finding 8: nonce pruning vs `(agent_id, action_id)` retention, see §1 step 6 and ADR-01 §6.

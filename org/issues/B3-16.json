@@ -1,0 +1,29 @@
+{
+  "id": "B3-16",
+  "title": "F7: aggregate reads enumerate every row (adapter test)",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "tara",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Kabir F7: coarse reads must list every row and field object read",
+  "acceptance": [
+    "Every aggregate/scan adapter is enumerated by the test; each records every row read plus its field objects",
+    "A scan that found nothing records no read and the limitation is documented in ADR-05 (absence reads deferred to 2.0)"
+  ],
+  "depends": [
+    "B3-06"
+  ],
+  "deliverable": "tests/world/test_aggregate_reads.py",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

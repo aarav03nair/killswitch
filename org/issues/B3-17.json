@@ -1,0 +1,31 @@
+{
+  "id": "B3-17",
+  "title": "ks.inject: F2+, F2+c, F2+x, F3 and hero guard",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "tara",
+  "reviewer": "maya",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Fault injection per ADR-06 with t_inject seeded in [T/4, T/2], scorer-only fields",
+  "acceptance": [
+    "F2+ writes S-17.iban v2 at t_inject and S-22 price x10 at t_inject+1; billing/payments/comms/reporter consume; inventory/docs untouched (test)",
+    "test_hero_no_culprit_write_in_window and test_culprit_honest_write_in_C (F2+c) pass",
+    "T2: records with tick < fault_tick are byte-identical to the S* run (test)"
+  ],
+  "depends": [
+    "B3-05",
+    "B3-06"
+  ],
+  "deliverable": "src/ks/inject/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

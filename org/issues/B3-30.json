@@ -1,0 +1,31 @@
+{
+  "id": "B3-30",
+  "title": "Recovery apply via c-0 (approval-bound)",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "maya",
+  "reviewer": "kabir",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Approved plan steps execute as ks.recover.<op> envelopes on c-0 bound to the ks.approve plan_hash (F5)",
+  "acceptance": [
+    "ks.approve by ks.operator with {plan_id, plan_hash, steps}; each ks.recover.<op> carries {plan_id, plan_hash, n, step}",
+    "Verify rejects a recovery record without a prior matching approval; edited plan file detected",
+    "Apply while frozen (tamper/stall alert) -> recovery_frozen; after hero apply state digest equals S* on untainted objects"
+  ],
+  "depends": [
+    "B3-24",
+    "B3-13"
+  ],
+  "deliverable": "src/ks/runtime/recover.py",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

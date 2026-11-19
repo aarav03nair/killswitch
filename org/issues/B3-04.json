@@ -1,0 +1,30 @@
+{
+  "id": "B3-04",
+  "title": "ks.state: read rule, field objects, state_digest, savepoints",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "vikram",
+  "reviewer": "kabir",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Reads record every object delivered (row + its field objects), digest for reconcile, savepoints for re-run simulation",
+  "acceptance": [
+    "test_row_read_includes_field_objects and test_row_read_lists_field_obj (R2 store side): whole-row reads and aggregates list the row plus every existing field object; a projection without the field lists the row only",
+    "state_digest(fold(record)) equals the live store digest after a scripted 30-write sequence",
+    "savepoint/rollback API: a nested simulate() block leaves the store digest unchanged"
+  ],
+  "depends": [
+    "B3-03"
+  ],
+  "deliverable": "src/ks/state/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

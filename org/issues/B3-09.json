@@ -1,0 +1,30 @@
+{
+  "id": "B3-09",
+  "title": "ks.recorder: txn semantics and GatewayHooks",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "arjun",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "seq taken at txn start, append after commit, crash-between aborts and verify reports RECONCILE; RT8(g) hook",
+  "acceptance": [
+    "test_crash_commit_append: kill between commit and append -> run aborts, verify RECONCILE, never silent",
+    "GatewayHooks.skip_checkpoint and between_check_and_txn exist and are no-ops by default (test)",
+    "At most one checkpoint per tick; a stalled tick is witness_ack=false in timing.jsonl (test_hung_witness)"
+  ],
+  "depends": [
+    "B3-03"
+  ],
+  "deliverable": "src/ks/recorder/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

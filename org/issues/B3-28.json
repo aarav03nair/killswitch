@@ -1,0 +1,30 @@
+{
+  "id": "B3-28",
+  "title": "Console: live timeline and 5-beat pacing",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "ishaan",
+  "reviewer": "maya",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "ks console --live renders ticks, alerts, controls and holds, with pacing for the CALL-01/zoya section 4 beats",
+  "acceptance": [
+    "Live view shows per-tick records, alerts, suspend and holds from the run dir/operator socket, read-only",
+    "Pacing mode stops at beat boundaries (break, identify, contain, recover, audit) with a keypress; timings fit 5 min on the hero seed",
+    "Degraded isolation and repro banners always visible"
+  ],
+  "depends": [
+    "B3-12"
+  ],
+  "deliverable": "console/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "id": "B3-37",
+  "title": "Skeleton refactor before parallel build: Gateway.tick() seam, tool dispatch interface, RNG module",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "maya",
+  "reviewer": "panel",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Barrier is I/O+timing only behind Gateway.tick(); tools dispatch via a world/state interface; RNG lives in ks.rng — so owners don't collide",
+  "acceptance": [
+    "runtime/barrier.py contains no admission/control/view/dispatch logic",
+    "gateway has no TOOLS table; dispatch via interface implemented by world",
+    "ks.world does not import ks.runtime; all tests green"
+  ],
+  "depends": [
+    "B3-01"
+  ],
+  "deliverable": "src/ks/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:38",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

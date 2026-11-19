@@ -91,6 +91,11 @@
       "t": "19 Nov 11:00",
       "who": "maya",
       "msg": "review: done"
+    },
+    {
+      "t": "19 Nov 11:38",
+      "who": "pmo",
+      "msg": "Erratum (B3-02 renumbering): conn deny-list = ADR-03 step 7, txn = step 13"
     }
   ]
 }

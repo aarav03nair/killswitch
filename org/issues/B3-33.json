@@ -1,0 +1,32 @@
+{
+  "id": "B3-33",
+  "title": "ks.bench: baselines and seed harness",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "tara",
+  "reviewer": "maya",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Bench runs F2+/F2+c/F2+x over N seeds against snapshot and revert-culprit-only baselines",
+  "acceptance": [
+    "ks bench --seeds 3 completes and writes per-seed score.json plus a summary table",
+    "Snapshot and revert-culprit-only baselines scored with the same scorer (test)",
+    "Runtime per seed logged; projected 20-seed time fits S4"
+  ],
+  "depends": [
+    "B3-26",
+    "B3-27",
+    "B3-30"
+  ],
+  "deliverable": "src/ks/bench/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+{
+  "id": "B3-10",
+  "title": "ks.runtime: 10-agent world spawn, isolation pinning, run_id default",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "maya",
+  "reviewer": "kabir",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Runtime runs the real world agents, fixes RunConfig.isolation before spawn and aborts on contradiction (findings 1, 4, 12)",
+  "acceptance": [
+    "ks run --agents 10 spawns the ADR-06 agents; cross-uid ptrace from agent i to agent j and to the witness is EPERM (dumpable set after exec)",
+    "/proc readback contradicting RunConfig.isolation aborts before tick 0 (test with forced shared uid)",
+    "Default run_id = <scenario>-s<seed>; two same-seed repro runs stay byte-identical; an existing /run/ks/<run_id> refuses to start"
+  ],
+  "depends": [
+    "B3-01",
+    "B3-05"
+  ],
+  "deliverable": "src/ks/runtime/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "id": "B3-29",
+  "title": "ks.recovery: conflict rule and replan/flag (F2+x)",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "vikram",
+  "reviewer": "maya",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Honest later writes on restored objects become flags at plan time or hold/stale_plan at apply",
+  "acceptance": [
+    "F2+x: triage's edit of S-22 conflicts and is flagged, not overwritten (test_triage_conflict)",
+    "Revert-culprit-only baseline runs on objects and spares triage (test)",
+    "Changed expect at apply -> hold/stale_plan (M8)"
+  ],
+  "depends": [
+    "B3-24"
+  ],
+  "deliverable": "src/ks/recovery/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

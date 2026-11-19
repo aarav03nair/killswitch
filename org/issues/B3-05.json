@@ -1,0 +1,30 @@
+{
+  "id": "B3-05",
+  "title": "ks.world: 10 agents, F2+ scenario, per-agent view builder",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "tara",
+  "reviewer": "maya",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Pure agent functions f(seed, tick, view) -> <=1 envelope for the 10 ADR-06 roles, plus the scenario seed data and TickFrame.view builder",
+  "acceptance": [
+    "10 agents in agent_id order, RNG = sha256(canonical([seed,name,tick])); same seed twice -> identical envelope sequence (test)",
+    "View builder returns <=MAX_VIEW_ENTRIES ViewEntry per agent from the scenario scope; triage's view lists suppliers:S-17, not .iban (test_triage_view_excludes_iban)",
+    "Supplier registry and tick-0 prices present so invariants are non-vacuous (test_registry_nonvacuous)"
+  ],
+  "depends": [
+    "B3-03"
+  ],
+  "deliverable": "src/ks/world/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

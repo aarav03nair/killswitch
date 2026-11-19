@@ -1,0 +1,30 @@
+{
+  "id": "B3-22",
+  "title": "ks.oracle: S* run and self test",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "tara",
+  "reviewer": "anaya",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Oracle per A1: same seed and config, fault disabled, TCB off; ledger per (table, pk, field)",
+  "acceptance": [
+    "test_oracle_self (B empty on S* vs S*) and test_t0_ge_inject pass",
+    "Ledger diff keyed per (table, pk, field) incl. sink deliveries (test_ledger_per_field, test_bypass_enters_B)",
+    "ks.oracle imports none of taint/monitor/policy/recovery (test_import_lint)"
+  ],
+  "depends": [
+    "B3-17"
+  ],
+  "deliverable": "src/ks/oracle/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

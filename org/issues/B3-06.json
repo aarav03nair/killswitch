@@ -1,0 +1,31 @@
+{
+  "id": "B3-06",
+  "title": "ks.world: catalogue tool adapters with read/write sets",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "tara",
+  "reviewer": "maya",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Every ADR-06 catalogue tool executes over ks.state inside the gateway txn and returns its read_set/write_set and class",
+  "acceptance": [
+    "All catalogue tools (R, C, I1, I2) implemented; test_catalogue_covers_world: every tool an agent can emit has an adapter and a class",
+    "Each adapter's read_set/write_set equals the objects it touched (property test over 200 random calls)",
+    "I1 tools (payments.send, comms.send_email) never execute inline; they return an outbox enqueue request"
+  ],
+  "depends": [
+    "B3-03",
+    "B3-04"
+  ],
+  "deliverable": "src/ks/world/tools.py",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

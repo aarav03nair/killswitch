@@ -4,7 +4,7 @@ Owner: kabir · SEC-01 v4 · Binding source: org/meetings/CALL-01.md and CALL-02
 
 **System:** agents are separate subprocesses that reach shared state only through the **gateway**, which owns workspace, record and keys. A separate **witness** process signs `(seq, head, tick, count)` every tick. `verify` checks chain, signatures, witness heads, seq gaps and reconciliation (state = fold(record)). **Anchored** verification, `ks verify RUN --head ANCHOR`, also checks the **run anchor** `{seq, head, tick, count, keyring_hash, config_hash}` that the console prints at run end, off the file system.
 
-**Live setup (fixed day 1).** The container runs as uid 0. Gateway: uid 0; witness: its own uid; **each agent: its own numeric uid** (60001 + index); the agent template sets `PR_SET_DUMPABLE=0` before agent code runs. Cross-uid `ptrace`/`pidfd_getfd` → EPERM (checked 19 Nov). Keys are random per run (**fresh** mode), held in memory, never on disk; the witness makes its own key and the gateway never holds it. Each agent gets a path-less `socketpair`, a clean env and `close_fds`. The operator channel is a socket in a root-only (0700, uid 0) directory, and the gateway accepts it only if `SO_PEERCRED` uid is 0. **Repro mode** (deterministic keys from a secret file) is **not a security run**: it is labelled so, forces `anchored=false`, is refused with `--rogue`, and is banned for D11, RT2 and RT8. **If the gateway uid cannot be separated, C1 and C4 degrade** (a key read by the rogue is the admitted gap, RT2). **If per-agent uids fail, per-agent attribution is void for that run** (RT3b).
+**Live setup (fixed day 1).** The container runs as uid 0. Gateway: uid 0; witness: its own uid; **each agent: its own numeric uid** (60001 + index); the child bootstrap sets `PR_SET_DUMPABLE=0` as its first statement after exec (execve and setuid reset it; the gateway and witness set it at start), before any agent code runs (SKEL-01 #1). Cross-uid `ptrace`/`pidfd_getfd` → EPERM (checked 19 Nov). Keys are random per run (**fresh** mode), held in memory, never on disk; the witness makes its own key and the gateway never holds it. Each agent gets a path-less `socketpair`, a clean env and `close_fds`. The operator channel is a socket in a root-only (0700, uid 0) directory, and the gateway accepts it only if `SO_PEERCRED` uid is 0. **Repro mode** (deterministic keys from a secret file; the gateway holds every key, including the witness's, which is why repro is never anchored, SKEL-01 #6) is **not a security run**: it is labelled so, forces `anchored=false`, is refused with `--rogue`, and is banned for D11, RT2 and RT8. **If the gateway uid cannot be separated, C1 and C4 degrade** (a key read by the rogue is the admitted gap, RT2). **If per-agent uids fail, per-agent attribution is void for that run** (RT3b).
 
 ## 1. Assets
 
@@ -64,7 +64,7 @@ Controls: **D6** chain + signatures + witness + `verify --head`; **D7** auto-sus
 | Rogue | RT5 | Write flood during suspension (TOCTOU) | Rule 5 (epoch + deny-list in the write txn) | 0 culprit writes after suspension `seq` |
 | Rogue | RT12 | Suspended agent retries or acts through a revoked ancestor | Rules 4, 10; deny-list | 0 effects from probe |
 | Rogue | none | Sleep, loop, fork or memory bomb | Per-tick deadline (miss = no-op, EOF after 3); rlimits | Other agents keep ticking |
-| Rogue | RT13 | Replays recorded operator decisions, or runs a rogue in repro mode | Source must pass `verify --head`, plan_hash match; both refused with `--rogue` | 0 Controls replayed; repro refused |
+| Rogue | RT13 | Replays recorded operator decisions, or runs a rogue in repro mode | Source must pass `verify --head`, plan_hash match; both refused with `--rogue`; repro = gateway holds the witness key, never anchored (SKEL-01 #6) | 0 Controls replayed; repro refused |
 | Rogue | F3 (pytest) | Emails PII (rogue comms) | `inv.pii_egress`; rule 9 | 0 values reachable |
 | Colluding | RT9 | Laundering: A plants ticket, B writes IBAN | D8 + rule 7; backward taint | A in top-3 root candidates; payment held |
 | Colluding | none | Splitting under thresholds | I-class invariants do not depend on rate. **No RT, no claim** | none |
@@ -80,3 +80,7 @@ RT7 boundary: marking a side-store entry `redacted` passes `verify` by design. R
 ## 7. Rules of engagement for the jury
 
 **Live (F5/F6):** `ks run --fault F2+`; arbitrary Python in the rogue template (`ks run --rogue FILE --slot AGENT`); direct `state.db` bypass; a record edit; a full chain rewrite, then `ks verify RUN --head ANCHOR`. **Pytest:** F3. A host shell as the gateway's or witness's user is host compromise (§3), not a break of C1-C6.
+
+## Errata (Call #3, 19 Nov 2026)
+- Errata (SKEL-01) finding 1: dumpable flag set after exec (Live setup).
+- Errata (SKEL-01) finding 6: repro = gateway holds the witness key, never anchored (Live setup, RT13 row). No claim changes.

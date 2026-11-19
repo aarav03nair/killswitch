@@ -1,0 +1,32 @@
+{
+  "id": "B3-20",
+  "title": "R3: anchored decisions replay",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "arjun",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "--decisions RUN replays only operator-signed Controls from a source that passes anchored verify --head",
+  "acceptance": [
+    "Source without a matching anchor, or repro, is refused; config.decisions_from = source anchor hash",
+    "Only ks.operator-signed Controls are replayed; an approval whose plan_hash differs gives hold/stale_plan",
+    "--decisions with --rogue is refused (test)"
+  ],
+  "depends": [
+    "B3-01",
+    "B3-13",
+    "B3-15"
+  ],
+  "deliverable": "src/ks/verify/decisions.py",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

@@ -1,0 +1,32 @@
+{
+  "id": "B3-31",
+  "title": "ks.verify: dispatch window (F4) and alerts cross-check (F6)",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "arjun",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Verify F4 window check and F6 alerts.jsonl vs records, FROZEN derived from records",
+  "acceptance": [
+    "test_dispatch_window: a dispatch with a hold/taint seed/suspend in (created_seq, dispatched_seq) and no unhold -> TAMPER window_violation",
+    "test_alerts_cross_check: deleting a tamper alert from alerts.jsonl -> TAMPER alert_mismatch",
+    "FROZEN is computed from chained ks.alert records only (test_live_edit_freezes)"
+  ],
+  "depends": [
+    "B3-07",
+    "B3-15",
+    "B3-23"
+  ],
+  "deliverable": "src/ks/verify/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

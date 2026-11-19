@@ -1,0 +1,32 @@
+{
+  "id": "B3-34",
+  "title": "Console: recovery diff, scorecard, hold=0 toggle, audit beat",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "ishaan",
+  "reviewer": "maya",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Beats 4-5: dry-run diff, scorecard vs baselines, residual payment at H=0, verify first bad index",
+  "acceptance": [
+    "Dry-run diff view lists restore/rerun/cancel/flag steps from the plan file",
+    "Scorecard shows TTI/TTC/R/C vs snapshot and revert-culprit-only; H=0 rerun shows the escaped payment as residual",
+    "Audit beat: after a one-line edit, console shows verify's first_bad index and reason"
+  ],
+  "depends": [
+    "B3-28",
+    "B3-30",
+    "B3-26"
+  ],
+  "deliverable": "console/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

@@ -7,7 +7,7 @@
   "reviewer": "panel",
   "model": "opus",
   "created_by": "maya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "Thinnest end-to-end path on the frozen contracts before 25 Nov: two agent subprocesses send signed envelopes over Unix sockets, gateway stub runs the tick barrier, recorder writes C2, ks verify passes",
   "acceptance": [
     "2 agent subprocesses (no keys in-process, signer handle) → gateway stub → hash-chained record; ks verify exits 0 on the clean record and non-zero with first bad index after a one-line edit",
@@ -19,7 +19,7 @@
   ],
   "deliverable": "src/ks/",
   "summary": "Walking skeleton on contracts 1.1.0. 'PYTHONPATH=src python3 -m ks run --agents 2 --ticks 10 --seed S --key-mode fresh|repro [--repro-secret F] --out RUN' spawns the witness (uid 60000, own key in fresh mode) and N agents (uid 60001+i, PR_SET_DUMPABLE=0 set by the bootstrap after exec, clean env, close_fds, path-less socketpairs to gateway and signer), runs the tick barrier (one frame per conn FIFO, deadline -> no-op, EOF after 3 misses, execute in agent_id order), records every frame (hash chain, gw_sig, side store), pushes (seq, head, tick) to the witness each tick, kills by uid and prints the RunAnchor. Not root -> degraded mode, per-agent attribution printed VOID. 'ks verify RUN [--head A] [--json]': IO, anchor hashes, keyring, record pass (parse, seq, prev_hash, hash, gw_sig, agent sig vs sig_ok), witness pass (sig, count chain, truncated, heads), anchor vs last checkpoint; Exit codes and VerifyReport from contracts. Modules: ks.identity, ks.runtime, ks.gateway (stub: skel.noop/skel.echo only), ks.recorder, ks.witness, ks.verify, ks.cli, ks.world.skeleton. Tests: tests/skeleton, 18 (e2e anchored/unanchored, run-dir shape, line edit TAMPER first_bad, editor edit parse_error, deleted line seq_gap, truncation first_bad n+1, keyring swap caught only with --head, repro byte-identical, fresh equal under determinism_view with differing sigs, seed changes output, EACCES for agent uid, distinct agent uids, nothing left under run uids, shared-uid fallback, gateway admission paths, signer refusals, barrier deadline/FIFO/late_frame). Full suite 329 passed. ADR gaps found: see SKEL-01 hand-off (dumpable vs execve, no witness or sign-refusal frames, action_id vs nonce window, ADR-02 vs contract on no_state and tail truncation, degraded isolation invisible to verify, run_id vs determinism, final checkpoint vs strictly increasing ticks).",
-  "review": "",
+  "review": "[panel · changes] ACs met on happy path; 329 green; 40 tamper cases (record/witness/keys/config, full re-forge, dir swap) all give correct reason+exit, keyring/config/prefix attacks caught only with --head as claimed; rogue agent uid 60001 gets EACCES on run dir, secret, /proc of gw+siblings, ptrace/kill; survivors killed by uid. MUST: M1 honest run fails verify --head (head_mismatch) when the witness acks the last tick late: anchor printed from tick n-1 while witness.jsonl has tick n; drain link / final checkpoint + test. M2 signer handle unbounded: junk-line flood kept 752k refusals (96 MB/6 ticks), ticks ms->0.8s on an oom_score_adj -1000 gateway; count refusals, per-tick line budget, EOF. Sprint 3: S1 degraded run verifies 'OK; anchored' (bind isolation into RunConfig); S2 --shared-uid as root runs agents as uid 0; S3 no conn->principal check; S4 verify semantic checks vs config. Maya's ADR gaps: real = dumpable/execve (solved), sign-refusal frame (most important), action_id window, no_state contract bug, degraded invisible, final checkpoint (worse: M1); docs-only = tail-truncation reason; fine = run_id, readiness, witness typing (1.2). Boundaries match Call #3 ownership; move gateway phases out of runtime/barrier, TOOLS behind world/state dispatch, rng out of runtime. Report: org/reports/PANEL-SKEL-01.md\n\n[pmo · done] Accepted with follow-ups: Panel M1/M2/S2/S3 → B3-36 (arjun), refactor seams → B3-37 (maya), S1 → B3-01, S4 → B3-15. Skeleton is the base for Sprint 3.",
   "log": [
     {
       "t": "19 Nov 00:54",
@@ -40,6 +40,16 @@
       "t": "19 Nov 11:26",
       "who": "maya",
       "msg": "→ in_review: Skeleton built; 18 new tests, suite 329 green; ready for panel review"
+    },
+    {
+      "t": "19 Nov 11:35",
+      "who": "panel",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 11:38",
+      "who": "pmo",
+      "msg": "review: done"
     }
   ]
 }

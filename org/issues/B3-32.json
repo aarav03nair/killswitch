@@ -1,0 +1,30 @@
+{
+  "id": "B3-32",
+  "title": "F8: frame and flood budget",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "nisha",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Bounded reader and per-connection denial budget with auto conn suspend",
+  "acceptance": [
+    "Reader takes at most MAX_FRAME_BYTES+1; oversize -> deny/schema with raw_hash over the prefix, connection closed",
+    "K recorded denials per conn per tick, then Control{suspend, conn:<id>, reason=flood} by ks.gateway and close; agent not suspended",
+    "A 10k-frame flood adds at most K+1 records per tick and no witness stall (test)"
+  ],
+  "depends": [
+    "B3-11"
+  ],
+  "deliverable": "src/ks/gateway/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

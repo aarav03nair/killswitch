@@ -1,0 +1,30 @@
+{
+  "id": "B3-18",
+  "title": "ks.taint: closure and seed rule",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "vikram",
+  "reviewer": "maya",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Taint from recorded read sets with the A8 seed rule (t0_seq_est, root_candidates), never reading RunConfig",
+  "acceptance": [
+    "Seed = every write by root_candidates[0] with t0_seq_est <= seq <= suspend_seq; hero seed = {S-17.iban v2, S-22 v2} on the F2+ fixture",
+    "Triage (read the clean row only) is not tainted; billing/payments/comms/reporter are (test)",
+    "test_root_candidates -> [crm, intake]; AST guard: no RunConfig import"
+  ],
+  "depends": [
+    "B3-04"
+  ],
+  "deliverable": "src/ks/taint/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

@@ -1,0 +1,38 @@
+{
+  "id": "B3-01",
+  "title": "Contracts 1.2: witness frames, SignRefusal, isolation, decisions_from, reexec_invalid",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "maya",
+  "reviewer": "kabir",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "in_progress",
+  "outcome": "Additive contracts bump closing SKEL-01 findings 2-4 plus the contract parts of R3 and F9",
+  "acceptance": [
+    "Transport has WitnessInit/Pub/Files/Ready/Head/Close and SignRefusal{reason} (closed vocabulary) with round-trip + unknown-key tests; ks.witness and ks.identity use them (no ad-hoc dicts)",
+    "RunConfig.isolation in {per_agent_uid, degraded} and VerifyReport.isolation exist; RunConfig.decisions_from: Hash|None is rejected with fault=rogue and with key_mode=repro (tests)",
+    "VERIFY_REASONS gains reexec_invalid -> TAMPER; CONTRACTS_VERSION 1.2.0, schemas regenerated, golden hashes re-pinned with README changelog lines; full suite green"
+  ],
+  "depends": [],
+  "deliverable": "src/ks/contracts/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 11:35",
+      "who": "maya",
+      "msg": "→ in_progress"
+    },
+    {
+      "t": "19 Nov 11:38",
+      "who": "pmo",
+      "msg": "Panel S1 confirmed in scope: RunConfig.isolation covered by config_hash; verify echoes it"
+    }
+  ]
+}

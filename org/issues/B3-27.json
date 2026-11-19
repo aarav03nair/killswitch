@@ -1,0 +1,36 @@
+{
+  "id": "B3-27",
+  "title": "Integration: hero path F2+ end to end",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "maya",
+  "reviewer": "nisha",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "One test drives F2+ through break, identify, contain and recovery dry-run with re-run, scored, verify OK",
+  "acceptance": [
+    "ks run --fault F2+ (repro, fixed seed): detector fires, crm suspended, payment+email held, independents keep writing (asserts per beat)",
+    "Recovery dry-run plan restores S-17/S-22, re-runs billing/reporter, cancels payment; score.json R=0 for the hero",
+    "ks verify exits 0 on the run dir; anchored in fresh mode"
+  ],
+  "depends": [
+    "B3-07",
+    "B3-13",
+    "B3-17",
+    "B3-19",
+    "B3-23",
+    "B3-24",
+    "B3-26"
+  ],
+  "deliverable": "tests/integration/test_hero_f2plus.py",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

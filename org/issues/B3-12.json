@@ -1,0 +1,30 @@
+{
+  "id": "B3-12",
+  "title": "ks.cli: command surface and exit codes",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "ishaan",
+  "reviewer": "maya",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "ks run/inject/verify/contain/recover/repro/bench per ADR-07 with contracts Exit codes",
+  "acceptance": [
+    "Every ADR-07 command parses, --help lists it, bad args exit Exit.USAGE",
+    "ks run --fault F2+ --seed S and ks inject F2+ --seed S --culprit crm reach the runtime; repro prints NOT A SECURITY RUN",
+    "ks verify prints VerifyReport as the last stdout line incl. isolation (test)"
+  ],
+  "depends": [
+    "B3-10"
+  ],
+  "deliverable": "src/ks/cli/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

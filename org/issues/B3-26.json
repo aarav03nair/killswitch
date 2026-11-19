@@ -1,0 +1,30 @@
+{
+  "id": "B3-26",
+  "title": "ks.score: score.json metrics",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "tara",
+  "reviewer": "anaya",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "TTI from chained ks.alert records only, TTC, R, C, residual, invariants_ok per ADR-06-metrics",
+  "acceptance": [
+    "test_score_schema_golden; tti computed from chained ks.alert records, never alerts.jsonl (test_tti_from_chained_alerts)",
+    "post_alert_tainted_effects and irreversible_tainted_released come from the ledger; c_culprit_window reported",
+    "test_held_at_T_left and test_f7_null pass"
+  ],
+  "depends": [
+    "B3-22"
+  ],
+  "deliverable": "src/ks/score/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

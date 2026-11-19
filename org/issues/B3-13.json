@@ -1,0 +1,30 @@
+{
+  "id": "B3-13",
+  "title": "ks.runtime: c-0 system envelopes and operator socket (R5)",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "maya",
+  "reviewer": "kabir",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "In-gateway system principals sign on c-0; operator requests arrive only via the J1 peercred socket",
+  "acceptance": [
+    "ks.monitor/ks.gateway/ks.recovery/ks.operator envelopes go through the pipeline on c-0 and are signature-verified; a system agent_id on c-1.. is bad_sig, a c-0 frame with an agent id is rejected (both ways)",
+    "Operator socket in a 0700 uid-0 dir; SO_PEERCRED uid != 0 is refused (test_operator_sock_rejects_agent)",
+    "ks.console is absent from SYSTEM_PRINCIPALS and from every issuer path (grep test)"
+  ],
+  "depends": [
+    "B3-11"
+  ],
+  "deliverable": "src/ks/runtime/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "id": "B3-03",
+  "title": "ks.state: versioned object store",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "vikram",
+  "reviewer": "maya",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "in_progress",
+  "outcome": "SQLite-backed versioned store per ADR-05: get -> (value, ver, author), history(obj), put with before/after versions",
+  "acceptance": [
+    "put/get/history round-trip with monotonic ver per object; put returns WriteEntry before/after ver+hash matching contracts C3",
+    "put raises if a row value carries a sensitive key (each datum in exactly one object); field create/delete writes/tombstones field objects (test_sensitive_field_object)",
+    "test_field_only_update_keeps_row_ver passes; store runs inside a caller-owned BEGIN IMMEDIATE txn"
+  ],
+  "depends": [
+    "B3-01"
+  ],
+  "deliverable": "src/ks/state/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "Dependency on B3-01 is soft: the store needs no 1.2 field, start D1 on contracts 1.1.0 (keeps the critical path off the contracts bump)"
+    },
+    {
+      "t": "19 Nov 11:36",
+      "who": "vikram",
+      "msg": "→ in_progress: started: SQLite versioned store on contracts 1.1.0"
+    }
+  ]
+}

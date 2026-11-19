@@ -1,0 +1,40 @@
+{
+  "id": "B3-07",
+  "title": "ks.monitor: detector catalogue over records (fixtures)",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "nisha",
+  "reviewer": "maya",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "in_progress",
+  "outcome": "Pure-function detectors from ADR-04 section 1, emitting Alerts that are submitted as ks.alert envelopes (F6)",
+  "acceptance": [
+    "beneficiary_changed_then_paid, IBAN invariant, price bound and inv.pii_egress fire on fixture records and stay silent on the clean fixture",
+    "Each Alert carries evidence_seqs and evidence_versions; test_hard_table pins hard/soft to the C4 validator",
+    "Alert -> ks.alert envelope helper (args = alert.to_obj()); monitor never reads RunConfig fault/culprit (AST guard)"
+  ],
+  "depends": [
+    "B3-01"
+  ],
+  "deliverable": "src/ks/monitor/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "Dependency on B3-01 is soft: detectors run on 1.1.0 fixtures from D1"
+    },
+    {
+      "t": "19 Nov 11:35",
+      "who": "nisha",
+      "msg": "→ in_progress: started"
+    }
+  ]
+}

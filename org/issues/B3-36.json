@@ -1,0 +1,31 @@
+{
+  "id": "B3-36",
+  "title": "SKEL-01 Panel fixes: late final ack anchor (M1), signer flood caps (M2), agent_id↔connection check (S3), unprivileged shared uid (S2)",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "arjun",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Honest runs always verify with --head; a flooding rogue cannot bloat gateway memory or stall ticks",
+  "acceptance": [
+    "test: late witness ack → anchor equals newest verified checkpoint; verify --head OK",
+    "test: signer flood → refusals counted not stored, per-socket per-tick line cap, connection closed; tick time bounded",
+    "test: envelope agent_id ≠ connection's agent → deny bad_sig on that conn",
+    "--shared-uid runs agents under one unprivileged uid, never 0"
+  ],
+  "depends": [
+    "B3-01"
+  ],
+  "deliverable": "src/ks/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:38",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

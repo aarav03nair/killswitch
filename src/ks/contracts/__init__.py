@@ -1,4 +1,4 @@
-"""ks.contracts: frozen contracts C1-C6 (CON-01, v1.1 CON-02). Import from here, not from submodules.
+"""ks.contracts: frozen contracts C1-C6 (CON-01, v1.1 CON-02, v1.2 B3-01). Import from here, not from submodules.
 
 C1 Envelope · C2 Record + WitnessCheckpoint · C3 State API + values + side store ·
 C4 Alert + Control · C5 RecoveryPlan · C6 RunConfig + Keyring + RunDir + verify Exit · transport frames.
@@ -19,16 +19,19 @@ from .record import (REASONS_FOR, ActionClass, Decision, Reason, Record, Witness
 from .recovery import (APPROVE_TOOL, ActionRef, Approval, CancelOutboxStep, CompensateStep, DiffEntry, FlagStep,
                        RecoverArgs, RecoveryPlan, ReplanStep, RerunStep, RestoreStep, StepOp, TaintSet, recover_tool)
 from .rundir import (BASELINES_DIR, DETERMINISTIC_FILES, PROJECTED_FILES, SCORER_ONLY_FIELDS, VERIFY_REASONS,
-                     WITNESS_HEADS_DIR, Exit, KeyEntry, Keyring, RunAnchor, RunConfig, RunDir, VerifyReport,
-                     anchor_status, sidestore_relpath)
+                     WITNESS_HEADS_DIR, Exit, Isolation, KeyEntry, Keyring, RunAnchor, RunConfig, RunDir,
+                     VerifyReport, anchor_status, sidestore_relpath)
 from .state import (HistoryEntry, ObjVer, OutboxItem, OutboxStatus, ReadEntry, SideDomain, SideEntry, SideStore,
                     StateRead, StateView, StateWriter, VersionRef, ViewEntry, WriteEntry, field_obj_id,
                     idempotency_key, is_field_obj, make_obj_id, row_obj_id, split_obj_id, state_digest)
-from .transport import (MAX_FRAME_BYTES, MAX_SIGN_PER_TICK, MAX_VIEW_ENTRIES, NoopFrame, ReplyFrame, SignReply,
-                        SignRequest, SubmitFrame, TickFrame, decode_frame, encode_frame, signer_refusal)
+from .transport import (MAX_FRAME_BYTES, MAX_SIGN_PER_TICK, MAX_VIEW_ENTRIES, SIGN_REFUSAL_REASONS,
+                        WITNESS_FILES_FDS, NoopFrame, ReplyFrame, SignRefusal, SignReply, SignRequest, SubmitFrame,
+                        TickFrame, WitnessClose, WitnessFiles, WitnessHead, WitnessInit, WitnessPub, WitnessReady,
+                        decode_frame, decode_witness_frame, encode_frame, signer_refusal)
 
-CONTRACTS_VERSION = "1.1.0"
-"""Contract version. 1.1.0 = CON-02 design freeze (CALL-02); see README changelog. Any change to fields,
+CONTRACTS_VERSION = "1.2.0"
+"""Contract version. 1.1.0 = CON-02 design freeze (CALL-02); 1.2.0 = B3-01, additive (witness link frames,
+SignRefusal, RunConfig.isolation/decisions_from, VerifyReport.isolation, reexec_invalid); see README changelog. Any change to fields,
 patterns, canonical rules or domain tags bumps it, regenerates ``schema/`` and re-pins golden hashes."""
 
 DOCUMENTS = {
@@ -66,10 +69,14 @@ __all__ = [
     "RecoveryPlan", "TaintSet", "ActionRef", "DiffEntry", "StepOp", "RestoreStep", "RerunStep", "ReplanStep",
     "CancelOutboxStep", "CompensateStep", "FlagStep", "APPROVE_TOOL", "Approval", "RecoverArgs", "recover_tool",
     # C6
-    "RunConfig", "Keyring", "KeyEntry", "RunDir", "Exit", "VerifyReport", "VERIFY_REASONS", "RunAnchor",
+    "RunConfig", "Keyring", "KeyEntry", "RunDir", "Exit", "VerifyReport", "VERIFY_REASONS", "RunAnchor", "Isolation",
     "anchor_status", "DETERMINISTIC_FILES", "PROJECTED_FILES", "SCORER_ONLY_FIELDS", "WITNESS_HEADS_DIR",
     "BASELINES_DIR", "sidestore_relpath",
     # transport
     "TickFrame", "SubmitFrame", "NoopFrame", "ReplyFrame", "SignRequest", "SignReply", "encode_frame",
     "decode_frame", "signer_refusal", "MAX_FRAME_BYTES", "MAX_VIEW_ENTRIES", "MAX_SIGN_PER_TICK",
+    "SignRefusal", "SIGN_REFUSAL_REASONS",
+    # transport: witness link (v1.2)
+    "WitnessInit", "WitnessPub", "WitnessFiles", "WitnessReady", "WitnessHead", "WitnessClose",
+    "decode_witness_frame", "WITNESS_FILES_FDS",
 ]

@@ -1,0 +1,30 @@
+{
+  "id": "B3-08",
+  "title": "ks.witness: witness-owned witness.jsonl, fd handover, 1.2 frames, per-tick idempotency",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "arjun",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Witness file ownership and handover per erratum (findings 5, 11) and Kabir's owner item",
+  "acceptance": [
+    "witness.jsonl is owned by the witness uid, mode 0600, created at RunDir.create and handed over as an O_APPEND fd; gateway holds no write fd after attach (test, run as root)",
+    "Link uses contracts 1.2 witness frames only",
+    "A repeated push of the same (seq, head, tick) returns the existing checkpoint without a new line; ticks in witness.jsonl strictly increase (test)"
+  ],
+  "depends": [
+    "B3-01"
+  ],
+  "deliverable": "src/ks/witness/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

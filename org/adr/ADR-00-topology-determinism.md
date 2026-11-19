@@ -14,7 +14,7 @@ If scheduling noise, a human click or a key changes order, time or ids, re-runs 
 - the **witness**: uid 60000, `oom_score_adj −1000`, head store `<run>/witness-heads/` (0700, witness uid). In fresh mode it generates its own key and the gateway never holds it (E4);
 - one **agent per entry of `RunConfig.agents`**: index i, uid 60001+i, `conn_id = c-(i+1)`. `c-0` is reserved for in-gateway system envelopes; system agent_id ⇔ `c-0` in both directions (X7).
 
-Each agent gets two path-less, **non-blocking** `socketpair`s (gateway, signer), `close_fds`, env `{PYTHONHASHSEED=0}` only, `PR_SET_DUMPABLE=0`, `oom_score_adj +1000`, `RLIMIT_NPROC` (K2, K3); the `--rogue` slot also runs at nice 19, `SCHED_IDLE`, `RLIMIT_CPU`. Outbound queues cap at 64 KiB per connection (overflow → EOF); the reader is bounded by `MAX_FRAME_BYTES` and never waits for an LF (K1). At start the gateway refuses to run if any process with uid 60000..6000N exists (K2), checks cross-uid `ptrace` → EPERM, and the console prints `key_mode` and any degraded mode.
+Each agent gets two path-less, **non-blocking** `socketpair`s (gateway, signer), `close_fds`, env `{PYTHONHASHSEED=0}` only, `oom_score_adj +1000`, `RLIMIT_NPROC` (K2, K3); **`PR_SET_DUMPABLE=0` is set by the child bootstrap as its first statement after exec** (execve and setuid reset it, so setting it before exec does nothing); the gateway and witness set it at their own start, and a cross-uid ptrace EPERM check covers all three (SKEL-01 #1); the `--rogue` slot also runs at nice 19, `SCHED_IDLE`, `RLIMIT_CPU`. Outbound queues cap at 64 KiB per connection (overflow → EOF); the reader is bounded by `MAX_FRAME_BYTES` and never waits for an LF (K1). At start the gateway refuses to run if any process with uid 60000..6000N exists (K2), checks cross-uid `ptrace` → EPERM, and the console prints `key_mode` and any degraded mode.
 
 **Operator channel** (J1): `/run/ks/<run_id>/operator.sock` in a 0700 uid-0 dir, `SO_PEERCRED` uid == 0. `ks contain`, `ks recover --apply` and `ks console --live` reach the gateway only here; it turns requests into `ks.operator`-signed Controls (E2; `ks.console` no longer exists).
 
@@ -40,7 +40,7 @@ Key isolation, verbatim: **"enforced in production (uid/container), detected her
 - `ts_us = start_ts_us + tick·tick_us + slot` (slot = 0-based position in the tick). Records per tick ≤ 32 + |agents| + 32; startup asserts `tick_us` exceeds it (C7).
 - `claimed_*` fields are evidence only.
 
-**Witness cadence** (F6). After the flush the gateway sends `(seq, head, tick)`; the witness signs `WitnessCheckpoint(seq, head, tick, count)` (`count` from 1, +1 per line), appends to its head store and to `witness.jsonl` (created and owned by the witness uid) and acks. Tick n+1 waits for the ack **up to the deadline, then proceeds** and queues `witness_stall` (W = 1, never hard; ADR-02). No-op ticks repeat `(seq, head)` with a new `count`.
+**Witness cadence** (F6). After the flush the gateway sends `(seq, head, tick)`; the witness signs `WitnessCheckpoint(seq, head, tick, count)` (`count` from 1, +1 per line), appends to its head store and to `witness.jsonl` and acks. The gateway creates `witness.jsonl` in `RunDir.create`, fchowns it to the witness uid (mode 0600), passes the O_APPEND fd and the heads-dir fd by SCM_RIGHTS, then closes its copies; the witness never opens a run-dir path (SKEL-01 #5). At most one checkpoint per tick: a stalled tick has none (`timing.jsonl` `witness_ack=false` plus a `witness_stall` alert), the final checkpoint is the last tick's checkpoint, teardown writes no records, and the witness is idempotent per tick (a repeated push returns the existing line) (SKEL-01 #11). Tick n+1 waits for the ack **up to the deadline, then proceeds** and queues `witness_stall` (W = 1, never hard; ADR-02). No-op ticks repeat `(seq, head)` with a new `count`. A tick with no witness ack has no checkpoint.
 
 **Sources of determinism.**
 - The tick is the only clock; wall clock goes only to `timing.jsonl`.
@@ -69,7 +69,7 @@ Consumes the contracts v1.1.0 names landed by CON-02 (not edited here): `RunConf
 - **T2 faulty ≡ S\* before t_inject**: per fault, records and checkpoints with `tick < fault_tick` byte-identical, no earlier alerts, equal state digest at `fault_tick − 1`; `test_oracle_self`.
 - **T3 jitter** below the deadline → T1-identical. **T3b** flooding, pre-sent, wrong-tick frames → T1-identical, `late_frame` in the slot.
 - **T4 stall**: sleep, fork, non-reader, CPU spin, memory bomb: per-agent projection (tick, tool, args_hash, decision, read/write sets) of honest agents unchanged, 0 honest misses, wall time bounded by K4. `test_fork_survivor_killed`.
-- **T5 conventions**: seq 1..n, `record_id_for`, `ts_us` and caps, one checkpoint per tick, `count` chain, conn_ids in spawn order, system ⇔ `c-0`.
+- **T5 conventions**: seq 1..n, `record_id_for`, `ts_us` and caps, at most one checkpoint per tick (none on a stalled tick), `count` chain, conn_ids in spawn order, system ⇔ `c-0`.
 - `test_replay_decisions_identical`, `test_tcb_blind` + AST guard, `test_operator_sock_rejects_agent`, `test_hung_witness`, `test_same_tick_visibility`, `test_crm_record_reads_T3`.
 
 ## Amendments (Call #2)
@@ -79,3 +79,9 @@ Consumes the contracts v1.1.0 names landed by CON-02 (not edited here): `RunConf
 - Panel must-fixes: **M1** → C1; **M2** → A1/A3; **M3** → C2; **M4** → K1, F6; **M5** → K2–K4; **M6** → C3–C5, E4; **M7** → J1. Should-fixes: **S1** → M1; **S2**, **S4**, **S6** → C7; **S3** → M2; **S5** → C4.
 - Trimmed: run-dir creation, append-only steps (ADR-02).
 - Integration pass: `barrier.deadline` anomaly has `conn_id` and empty `root_candidates`; `record.jsonl` is 0600 gateway-only.
+
+## Errata (Call #3, 19 Nov 2026)
+- Errata (SKEL-01) finding 1: `PR_SET_DUMPABLE=0` is set by the child bootstrap after exec, not before; tested by a cross-uid ptrace EPERM check.
+- Errata (SKEL-01) finding 5: gateway creates and chowns `witness.jsonl`, hands over fds by SCM_RIGHTS (see ADR-02 §3).
+- Errata (SKEL-01) finding 11: at most one checkpoint per tick; final checkpoint = last tick's; witness idempotent per tick (T5 and Witness cadence).
+- Code-only note (SKEL-01 #12): `run_id` defaults to `<scenario>-s<seed>`; `--run-id` is allowed but byte-identity holds only between runs with the same id; `/run/ks/<run_id>` refuses to start if it exists.

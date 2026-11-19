@@ -1,0 +1,31 @@
+{
+  "id": "B3-19",
+  "title": "ks.containment: suspend, release, revoke, unhold re-exec",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "nisha",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "ADR-04 controls with fresh epochs and the gateway side of F9",
+  "acceptance": [
+    "Hard alert -> Control{suspend} on c-0 in the same tick; zero culprit writes after quarantine seq (test)",
+    "Release gives a strictly higher epoch; presigned old-epoch envelope -> stale_epoch (replaces the weak assert in test_epoch_monotonic)",
+    "Unhold re-executes a hold record once, as a new record citing it; a second unhold of the same hold is denied (F9 gateway side)"
+  ],
+  "depends": [
+    "B3-13",
+    "B3-14"
+  ],
+  "deliverable": "src/ks/containment/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

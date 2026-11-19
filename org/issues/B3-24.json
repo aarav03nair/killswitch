@@ -1,0 +1,32 @@
+{
+  "id": "B3-24",
+  "title": "ks.recovery: re-run simulation in a savepoint",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "vikram",
+  "reviewer": "maya",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Readers of reverted versions re-run against restored state inside a savepoint; changed payloads re-held",
+  "acceptance": [
+    "Hero: billing and reporter re-run, payment cancelled, 0 re-emitted effects (test)",
+    "Simulation leaves the live store digest unchanged until apply",
+    "Re-run outputs are deterministic for a given seed (two runs, identical plan hash)"
+  ],
+  "depends": [
+    "B3-21",
+    "B3-06",
+    "B3-05"
+  ],
+  "deliverable": "src/ks/recovery/rerun.py",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

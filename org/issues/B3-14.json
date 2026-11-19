@@ -1,0 +1,31 @@
+{
+  "id": "B3-14",
+  "title": "ks.policy: classes, scopes and read scope (R2)",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "nisha",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "ADR-03 policy, class per action instance, write scopes and read scope = I1 view scope",
+  "acceptance": [
+    "test_scope_table: each role's write scope enforced, out-of-scope -> deny/out_of_scope",
+    "R2: a read outside the role's view scope is deny/out_of_scope; a payments read of suppliers lists the field object (test_row_read_lists_field_obj, gateway side)",
+    "I2 tool gives hold/needs_approval; class U denied (rule 6)"
+  ],
+  "depends": [
+    "B3-11",
+    "B3-04"
+  ],
+  "deliverable": "src/ks/policy/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

@@ -55,7 +55,7 @@ __all__ = [
     "CONFIG", "KEYS", "RECORD", "WITNESS", "ALERTS", "PLANS_DIR", "SIDESTORE_DIR", "ORACLE_DIR", "EFFECTS",
     "SCORE", "TIMING", "WORKSPACE_DIR", "STATE_DB", "WITNESS_HEADS_DIR", "BASELINES_DIR", "DETERMINISTIC_FILES",
     "PROJECTED_FILES", "SCORER_ONLY_FIELDS", "SensitiveField", "RunConfig", "KeyEntry", "Keyring", "Exit",
-    "VERIFY_REASONS", "VerifyReport", "RunAnchor", "anchor_status", "RunDir", "sidestore_relpath",
+    "VERIFY_REASONS", "VerifyReport", "Isolation", "RunAnchor", "anchor_status", "RunDir", "sidestore_relpath",
 ]
 
 CONFIG = "config.json"
@@ -84,6 +84,9 @@ PROJECTED_FILES = (RECORD, WITNESS)
 
 SCORER_ONLY_FIELDS = ("fault", "culprit", "fault_tick")
 """Ground truth (A3): read by ks.score/ks.oracle only. The TCB gets :meth:`RunConfig.tcb_view`."""
+
+Isolation = Literal["per_agent_uid", "degraded"]
+"""v1.2: ``RunConfig.isolation`` / ``VerifyReport.isolation`` (SKEL-01 finding 4)."""
 
 SensitiveField = Annotated[str, StringConstraints(strict=True, pattern=r"^[a-z][a-z0-9_]{0,31}\.[a-z][a-z0-9_]{0,63}$")]
 """``table.field``, e.g. ``suppliers.iban``."""
@@ -145,6 +148,16 @@ class RunConfig(Document):
        recorded ``Control{hold, outbox:<id>, reason=sensitive_field}``. ``release`` never lifts such holds."""
     agents: tuple[AgentId, ...]
     """Agents in tick-barrier order (agent_id order), sorted."""
+    isolation: Isolation = "degraded"
+    """v1.2 (SKEL-01 finding 4): the uid isolation the run was started with, fixed before spawn and covered by
+    ``config_hash``. ``per_agent_uid`` = each agent under its own uid, the witness under its own; ``degraded``
+    = shared or unverified uids, so **per-agent attribution is VOID** for the run (RT3b). The runtime aborts if
+    the /proc readback contradicts it; verify echoes it as ``VerifyReport.isolation``. Defaults to
+    ``degraded`` so a config that does not say claims nothing."""
+    decisions_from: Hash | None = None
+    """v1.2 (R3): ``RunConfig.content_hash()`` of the anchored source run whose operator decisions ``--decisions``
+    replays; ``None`` for a live run. Refused with ``fault == "rogue"`` and with ``key_mode == "repro"``
+    (validator; the X6 replay checks are gateway code, B3-20)."""
 
     @field_validator("sensitive_fields", "agents")
     @classmethod
@@ -165,6 +178,10 @@ class RunConfig(Document):
             raise ValueError("fault_tick must be in [ticks // 4, ticks // 2] (A2)")
         if self.key_mode == "repro" and self.fault == "rogue":
             raise ValueError("repro key mode is refused with a rogue slot (X7: not a security run)")
+        if self.decisions_from is not None and self.fault == "rogue":
+            raise ValueError("decisions_from is refused with a rogue slot (R3)")
+        if self.decisions_from is not None and self.key_mode == "repro":
+            raise ValueError("decisions_from is refused with repro keys (R3: the source must be anchored)")
         return self
 
     def tcb_view(self) -> RunConfig:
@@ -259,7 +276,7 @@ VERIFY_REASONS: dict[str, Exit] = {
     "parse_error": Exit.TAMPER, "hash_mismatch": Exit.TAMPER, "seq_gap": Exit.TAMPER,
     "gw_sig_invalid": Exit.TAMPER, "agent_sig_mismatch": Exit.TAMPER, "side_entry_mismatch": Exit.TAMPER,
     "alert_mismatch": Exit.TAMPER, "epoch_regression": Exit.TAMPER, "expired_admitted": Exit.TAMPER,
-    "window_violation": Exit.TAMPER,
+    "window_violation": Exit.TAMPER, "reexec_invalid": Exit.TAMPER,
     "witness_missing": Exit.WITNESS, "witness_sig_invalid": Exit.WITNESS, "witness_mismatch": Exit.WITNESS,
     "count_mismatch": Exit.WITNESS, "truncated": Exit.WITNESS, "head_mismatch": Exit.WITNESS,
     "keyring_mismatch": Exit.WITNESS, "config_mismatch": Exit.WITNESS,
@@ -268,7 +285,9 @@ VERIFY_REASONS: dict[str, Exit] = {
 }
 """K16 reason vocabulary (closed) and the exit each implies. Check order (F3): record, side, witness, reconcile.
 Truncation (F4): ``truncated`` with ``first_bad = n + 1``; an anchor that disagrees: ``head_mismatch``,
-``keyring_mismatch`` (RT8(h)) or ``config_mismatch``. Adding a reason is a minor version bump."""
+``keyring_mismatch`` (RT8(h)) or ``config_mismatch``. v1.2 (F9): ``reexec_invalid`` -> TAMPER, a record with
+``reexec_of`` that is not a valid unhold re-execution (no matching hold, released twice, or not released).
+Adding a reason is a minor version bump."""
 
 
 class VerifyReport(Value):
@@ -289,6 +308,9 @@ class VerifyReport(Value):
     The C1 claim (an insider cannot rewrite history undetected) holds **only when anchored** (F1)."""
     unanchored_reason: Literal["no_anchor", "repro_keys"] | None
     """Why not anchored: no ``--head`` given, or ``key_mode == repro`` (X7/R4). ``None`` iff ``anchored``."""
+    isolation: Isolation | None = None
+    """v1.2: echo of ``RunConfig.isolation``; ``None`` only when config.json could not be read. When
+    ``degraded``, verify prints "per-agent attribution VOID" (SKEL-01 finding 4)."""
 
     @model_validator(mode="after")
     def _ok(self) -> VerifyReport:

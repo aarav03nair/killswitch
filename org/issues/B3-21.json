@@ -1,0 +1,30 @@
+{
+  "id": "B3-21",
+  "title": "ks.recovery: planner (restore, cancel_outbox, flag) and dry-run diff",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "vikram",
+  "reviewer": "maya",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "C5 RecoveryPlan from the taint set, per-object restore with expect, plan file and dry-run diff",
+  "acceptance": [
+    "Hero plan restores S-17.iban and S-22 to their pre-culprit versions with expect = crm's after-version, cancels held payment/email",
+    "Plan file written outside the run dir; plan.content_hash() stable across reruns (determinism test)",
+    "Dry-run prints the per-object diff and changes no state (digest unchanged)"
+  ],
+  "depends": [
+    "B3-18"
+  ],
+  "deliverable": "src/ks/recovery/planner.py",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:34",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

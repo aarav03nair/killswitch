@@ -37,7 +37,7 @@ A checksum-valid EVIL IBAN passes `iban_checksum`; `beneficiary_changed_then_pai
 - ANOMALY, RATE and `barrier.deadline`: alert only, one click to act.
 - **Read-reached agents are never auto-suspended.** A laundered honest writer is suspended and counted in `false_accusations`. In RT9, crm (the writer) is `[0]` and intake is in the top 3.
 
-**4. Suspend bumps the epoch.** `Control{op=suspend}` is a signed, recorded envelope issued by the monitor. Epochs start at 0 and are strictly monotonic per principal: suspend, revoke and release each set a new maximum, and verify folds them. Stale-epoch envelopes are denied, which fences in-flight work. The connection joins the deny-list (ADR-03 step 5 and the step-8 txn). A suspended agent's `act_chain` descendants are denied as revoked ancestors.
+**4. Suspend bumps the epoch.** `Control{op=suspend}` is a signed, recorded envelope issued by the monitor. Epochs start at 0 and are strictly monotonic per principal: suspend, revoke and release each set a new maximum, and verify folds them. Stale-epoch envelopes are denied, which fences in-flight work. The connection joins the deny-list (ADR-03 step 7 (conn deny-list) and the step-13 txn). A suspended agent's `act_chain` descendants are denied as revoked ancestors.
 
 **5. Per-action lineage hold and unhold.** On an alert the gateway marks the seed versions tainted.
 - A new action whose recorded read set touches a tainted version is held at policy time: that **is** the `hold/lineage_hold` record (ADR-03 `p.lineage_hold`).
