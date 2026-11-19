@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "maya",
-  "status": "in_progress",
+  "status": "in_review",
   "outcome": "Contracts implement the CON-02 checklist + X1, X7, X8(F1) with tests; Kabir can sign",
   "acceptance": [
     "every checklist item in CALL-02/resolutions.md implemented with a test",
@@ -16,7 +16,7 @@
   ],
   "depends": [],
   "deliverable": "src/ks/contracts/",
-  "summary": "",
+  "summary": "Contracts 1.1.0 landed in src/ks/contracts/ (CONTRACTS_VERSION 1.1.0, schemas regenerated with new c5.approval, c5.recover_args, c6.run_anchor). Every CON-02 checklist item plus X1, X2, X7, X8-F1 and PMO S5 (barrier.deadline may carry conn_id, never an agent; reconcile can have empty evidence and names nobody) is implemented with a test in tests/contracts/test_con02_checklist.py. Kabir's sign-off tests are in tests/contracts/test_signoff_kabir.py: test_count_chain, test_rt8h_keyring_swap_detected_by_anchor, test_fresh_keys_differ, test_epoch_monotonic, test_expiry_cap_and_admitted_expiry (RT4-ready), test_depth_6kb_denied, test_pk_dot_rejected, test_repro_forces_unanchored_and_refuses_rogue, test_rundir_perms_agent_eacces (actually runs: root drops to uid 60001). Golden hashes re-pinned on purpose; each change is explained in the README changelog, and the format vectors did not change. Breaking for callers: split_obj_id now returns a 3-tuple, t0_seq is renamed t0_seq_est, TickFrame needs epoch and view, and Record needs reexec_of. pytest: 310 passed (was 231), also green under PYTHONHASHSEED 0, 1 and 999.",
   "review": "",
   "log": [
     {
@@ -28,6 +28,21 @@
       "t": "19 Nov 06:34",
       "who": "maya",
       "msg": "→ in_progress: started contracts v1.1.0"
+    },
+    {
+      "t": "19 Nov 11:06",
+      "who": "maya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 11:06",
+      "who": "maya",
+      "msg": "→ in_review: ready for kabir: 310 green"
+    },
+    {
+      "t": "19 Nov 11:07",
+      "who": "pmo",
+      "msg": "PMO alignment: record.jsonl 0600 gateway-only per ADR-00/02 integration pass (was 0640 witness-group); test updated"
     }
   ]
 }

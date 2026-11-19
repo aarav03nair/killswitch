@@ -12,7 +12,7 @@
         },
         "agent_id": {
           "description": "Attributed principal of that record.",
-          "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+          "pattern": "^(?:ks\\.(?:gateway|monitor|operator|recovery|witness)|[a-z][a-z0-9_]{0,31})$",
           "title": "Agent Id",
           "type": "string"
         },
@@ -273,7 +273,7 @@
     },
     "RerunStep": {
       "additionalProperties": false,
-      "description": "Re-execute a deterministic honest action on repaired state; outbox dedupes on idempotency_key.",
+      "description": "Re-execute a deterministic honest action on repaired state; outbox dedupes on idempotency_key (M14).\n\nExecutes the original tool and args (side store, ARGS domain) for ``action.agent_id``/``action_id``.\nIdempotency keys derive from those, not from the ``ks.recovery`` envelope, so a re-run payment updates\nthe same ``outbox:<id>`` (v+1, back on hold). ``OutboxItem.author`` stays the original agent.\nRedacted args make the step a ``flag``.",
       "properties": {
         "action": {
           "$ref": "#/$defs/ActionRef",
@@ -314,7 +314,7 @@
       "properties": {
         "expect": {
           "$ref": "#/$defs/VersionRef",
-          "description": "Must still be current (the culprit's after-version); otherwise the step fails closed."
+          "description": "The culprit's after-version (B6). Must still be the head, otherwise the step fails closed\n(``hold/stale_plan``); an honest later write makes it a ``flag`` at plan time instead."
         },
         "n": {
           "description": "Position in ``steps`` (0-based); steps run in this order.",
@@ -421,7 +421,7 @@
       "type": "object"
     }
   },
-  "$id": "https://killswitch.local/schema/1.0.0/c5.recovery_plan.schema.json",
+  "$id": "https://killswitch.local/schema/1.1.0/c5.recovery_plan.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "C5 plan, written to ``plans/<plan_id>.json``; approved by content hash.",
@@ -504,11 +504,11 @@
       "title": "Steps",
       "type": "array"
     },
-    "t0_seq": {
-      "description": "First tainted record seq (taint starts here).",
+    "t0_seq_est": {
+      "description": "Estimated first tainted seq (A2, X3): the earliest write by ``culprit`` in the bounded backward closure\nof the alerts' ``evidence_versions``. An estimate from the record only; the planner never reads\n``RunConfig.fault_tick`` (scorer-only). Taint seed (A8): every culprit write in [t0_seq_est, suspend].",
       "maximum": 9007199254740991,
       "minimum": 1,
-      "title": "T0 Seq",
+      "title": "T0 Seq Est",
       "type": "integer"
     },
     "taint_set": {
@@ -524,7 +524,7 @@
     "diff",
     "plan_id",
     "steps",
-    "t0_seq",
+    "t0_seq_est",
     "taint_set"
   ],
   "title": "RecoveryPlan",

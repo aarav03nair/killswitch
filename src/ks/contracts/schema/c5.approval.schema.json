@@ -1,0 +1,36 @@
+{
+  "$id": "https://killswitch.local/schema/1.1.0/c5.approval.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Args of a ``ks.approve`` envelope (G6): the operator approves these steps of exactly this plan.",
+  "properties": {
+    "plan_hash": {
+      "description": "``RecoveryPlan.content_hash()`` of the approved plan file.",
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Plan Hash",
+      "type": "string"
+    },
+    "plan_id": {
+      "description": "Plan approved.",
+      "pattern": "^p-[0-9]{6,16}$",
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "steps": {
+      "description": "Step numbers approved, ascending, unique.",
+      "items": {
+        "minimum": 0,
+        "type": "integer"
+      },
+      "title": "Steps",
+      "type": "array"
+    }
+  },
+  "required": [
+    "plan_hash",
+    "plan_id",
+    "steps"
+  ],
+  "title": "Approval",
+  "type": "object"
+}

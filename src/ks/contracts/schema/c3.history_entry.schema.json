@@ -1,5 +1,5 @@
 {
-  "$id": "https://killswitch.local/schema/1.0.0/c3.history_entry.schema.json",
+  "$id": "https://killswitch.local/schema/1.1.0/c3.history_entry.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "One element of ``StateView.history(obj)``, oldest first.",
@@ -12,7 +12,7 @@
     },
     "author": {
       "description": "Principal that wrote it.",
-      "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+      "pattern": "^(?:ks\\.(?:gateway|monitor|operator|recovery|witness)|[a-z][a-z0-9_]{0,31})$",
       "title": "Author",
       "type": "string"
     },

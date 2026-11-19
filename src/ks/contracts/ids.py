@@ -18,7 +18,7 @@ __all__ = [
 SYSTEM_PRINCIPALS = frozenset({"ks.gateway", "ks.monitor", "ks.operator", "ks.recovery", "ks.witness"})
 """Non-agent principals. Each holds its own key; agents can never claim a ``ks.*`` id.
 v1.1 (E2/X7): the human signer is ``ks.operator`` ("incident console" is only the read-only page).
-``ks.console`` is gone with no alias: it no longer even matches :data:`PRINCIPAL_RE`."""
+The 1.0 console signer id is removed with no alias: it no longer even matches :data:`PRINCIPAL_RE`."""
 
 AGENT_ID_RE = r"^[a-z][a-z0-9_]{0,31}$"
 PRINCIPAL_RE = r"^(?:ks\.(?:" + "|".join(sorted(p[3:] for p in SYSTEM_PRINCIPALS)) + r")|[a-z][a-z0-9_]{0,31})$"

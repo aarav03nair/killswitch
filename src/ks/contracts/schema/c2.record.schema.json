@@ -12,7 +12,7 @@
         },
         "principal": {
           "description": "Who asked (agent id or ``ks.*``).",
-          "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+          "pattern": "^(?:ks\\.(?:gateway|monitor|operator|recovery|witness)|[a-z][a-z0-9_]{0,31})$",
           "title": "Principal",
           "type": "string"
         }
@@ -86,8 +86,8 @@
           "title": "Epoch"
         },
         "issued_by": {
-          "description": "``ks.monitor``/``ks.gateway`` if auto; ``ks.console``/``ks.recovery`` if human-approved.",
-          "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+          "description": "``ks.monitor``/``ks.gateway`` if auto; ``ks.operator``/``ks.recovery`` if human-approved. Must equal the\nsigning envelope's ``agent_id`` (Record validator).",
+          "pattern": "^(?:ks\\.(?:gateway|monitor|operator|recovery|witness)|[a-z][a-z0-9_]{0,31})$",
           "title": "Issued By",
           "type": "string"
         },
@@ -162,7 +162,7 @@
         },
         "agent_id": {
           "description": "Claimed signer (OTel ``gen_ai.agent.id``). Trusted only if the record's ``sig_ok`` is true.",
-          "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+          "pattern": "^(?:ks\\.(?:gateway|monitor|operator|recovery|witness)|[a-z][a-z0-9_]{0,31})$",
           "title": "Agent Id",
           "type": "string"
         },
@@ -208,14 +208,14 @@
           "type": "string"
         },
         "epoch": {
-          "description": "Agent's credential epoch; stale -> ``deny/stale_epoch``, checked inside the write txn (``ks.agent.epoch``).",
+          "description": "Agent's credential epoch (learned from ``TickFrame.epoch``); stale -> ``deny/stale_epoch``, checked inside\nthe write txn (``ks.agent.epoch``).",
           "maximum": 9007199254740991,
           "minimum": 0,
           "title": "Epoch",
           "type": "integer"
         },
         "expiry_tick": {
-          "description": "Last tick at which the envelope is valid; later -> ``deny/expired`` (``ks.envelope.expiry_tick``).",
+          "description": "Last tick at which the envelope is valid; later, or more than MAX_EXPIRY_TICKS ahead -> ``deny/expired``\n(``ks.envelope.expiry_tick``).",
           "maximum": 9007199254740991,
           "minimum": 0,
           "title": "Expiry Tick",
@@ -317,6 +317,7 @@
         "schema",
         "nonce_reused",
         "expired",
+        "late_frame",
         "stale_epoch",
         "suspended",
         "revoked",
@@ -327,7 +328,8 @@
         "recovery_frozen",
         "lineage_hold",
         "sensitive_field",
-        "needs_approval"
+        "needs_approval",
+        "stale_plan"
       ],
       "title": "Reason",
       "type": "string"
@@ -392,7 +394,7 @@
       "type": "object"
     }
   },
-  "$id": "https://killswitch.local/schema/1.0.0/c2.record.schema.json",
+  "$id": "https://killswitch.local/schema/1.1.0/c2.record.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "C2 Record. Field docs give the OTel mapping (span name ``execute_tool {tool}``).",
@@ -494,7 +496,7 @@
       "type": "string"
     },
     "read_set": {
-      "description": "Versions the adapter read, sorted by obj (``ks.read_set``). Empty on deny.",
+      "description": "Versions the adapter read **plus every ``TickFrame.view`` entry delivered to the agent this tick** (I1),\nsorted by obj (``ks.read_set``). Field objects per C3 X2. Empty on deny.",
       "items": {
         "$ref": "#/$defs/ReadEntry"
       },
@@ -510,6 +512,20 @@
       "pattern": "^r-[0-9]{6,16}$",
       "title": "Record Id",
       "type": "string"
+    },
+    "reexec_of": {
+      "anyOf": [
+        {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Seq of the ``hold`` record whose envelope this record re-executes after ``unhold action:<record_id>``\n(M10); same ``envelope_hash``, nonce/expiry not re-checked. ``None`` for a normal admission.",
+      "title": "Reexec Of"
     },
     "result_hash": {
       "anyOf": [
@@ -575,6 +591,7 @@
     "read_set",
     "reason",
     "record_id",
+    "reexec_of",
     "result_hash",
     "seq",
     "sig_ok",

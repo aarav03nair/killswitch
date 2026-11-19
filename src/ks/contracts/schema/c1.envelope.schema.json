@@ -12,7 +12,7 @@
         },
         "principal": {
           "description": "Who asked (agent id or ``ks.*``).",
-          "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+          "pattern": "^(?:ks\\.(?:gateway|monitor|operator|recovery|witness)|[a-z][a-z0-9_]{0,31})$",
           "title": "Principal",
           "type": "string"
         }
@@ -26,7 +26,7 @@
     },
     "JsonValue": {}
   },
-  "$id": "https://killswitch.local/schema/1.0.0/c1.envelope.schema.json",
+  "$id": "https://killswitch.local/schema/1.1.0/c1.envelope.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "What travels on the socket: the header fields plus the raw ``args``.",
@@ -47,7 +47,7 @@
     },
     "agent_id": {
       "description": "Claimed signer (OTel ``gen_ai.agent.id``). Trusted only if the record's ``sig_ok`` is true.",
-      "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+      "pattern": "^(?:ks\\.(?:gateway|monitor|operator|recovery|witness)|[a-z][a-z0-9_]{0,31})$",
       "title": "Agent Id",
       "type": "string"
     },
@@ -95,14 +95,14 @@
       "type": "string"
     },
     "epoch": {
-      "description": "Agent's credential epoch; stale -> ``deny/stale_epoch``, checked inside the write txn (``ks.agent.epoch``).",
+      "description": "Agent's credential epoch (learned from ``TickFrame.epoch``); stale -> ``deny/stale_epoch``, checked inside\nthe write txn (``ks.agent.epoch``).",
       "maximum": 9007199254740991,
       "minimum": 0,
       "title": "Epoch",
       "type": "integer"
     },
     "expiry_tick": {
-      "description": "Last tick at which the envelope is valid; later -> ``deny/expired`` (``ks.envelope.expiry_tick``).",
+      "description": "Last tick at which the envelope is valid; later, or more than MAX_EXPIRY_TICKS ahead -> ``deny/expired``\n(``ks.envelope.expiry_tick``).",
       "maximum": 9007199254740991,
       "minimum": 0,
       "title": "Expiry Tick",

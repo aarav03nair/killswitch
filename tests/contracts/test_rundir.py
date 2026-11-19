@@ -56,5 +56,6 @@ def test_same_inputs_byte_identical(tmp_path):
             rd.append(r)
         return rd
     a, b = build(tmp_path / "a"), build(tmp_path / "b")
-    for f in C6.DETERMINISTIC_FILES:
+    assert a.determinism_files() == b.determinism_files()
+    for f in (C6.CONFIG, C6.KEYS, C6.RECORD):  # same keys here, so even the raw bytes match
         assert (a.path / f).read_bytes() == (b.path / f).read_bytes()

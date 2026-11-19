@@ -1,9 +1,14 @@
 {
-  "$id": "https://killswitch.local/schema/1.0.0/c6.verify_report.schema.json",
+  "$id": "https://killswitch.local/schema/1.1.0/c6.verify_report.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Last stdout line of ``ks verify`` (canonical JSON).",
   "properties": {
+    "anchored": {
+      "description": "True iff verify ran with ``--head <RunAnchor>``, the anchor matched, and the run used fresh keys.\nThe C1 claim (an insider cannot rewrite history undetected) holds **only when anchored** (F1).",
+      "title": "Anchored",
+      "type": "boolean"
+    },
     "exit": {
       "description": "Numeric exit code (an ``Exit`` value).",
       "maximum": 255,
@@ -38,18 +43,36 @@
       "type": "boolean"
     },
     "reason": {
-      "description": "Short code, e.g. ``ok``, ``hash_mismatch``, ``gw_sig_invalid``, ``seq_gap``, ``witness_mismatch``.",
+      "description": "One of :data:`VERIFY_REASONS`; must match ``exit``.",
       "pattern": "^[a-z][a-z0-9_]{0,63}$",
       "title": "Reason",
       "type": "string"
+    },
+    "unanchored_reason": {
+      "anyOf": [
+        {
+          "enum": [
+            "no_anchor",
+            "repro_keys"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Why not anchored: no ``--head`` given, or ``key_mode == repro`` (X7/R4). ``None`` iff ``anchored``.",
+      "title": "Unanchored Reason"
     }
   },
   "required": [
+    "anchored",
     "exit",
     "first_bad",
     "last_witnessed_seq",
     "ok",
-    "reason"
+    "reason",
+    "unanchored_reason"
   ],
   "title": "VerifyReport",
   "type": "object"

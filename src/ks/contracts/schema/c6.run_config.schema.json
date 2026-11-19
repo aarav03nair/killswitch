@@ -1,5 +1,5 @@
 {
-  "$id": "https://killswitch.local/schema/1.0.0/c6.run_config.schema.json",
+  "$id": "https://killswitch.local/schema/1.1.0/c6.run_config.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "``config.json``: everything needed to reproduce a seeded run, and what the scorer must know.",
@@ -36,21 +36,42 @@
           "type": "null"
         }
       ],
-      "description": "Agent the fault is injected into (ground truth for the scorer only; never read by ks.monitor).",
+      "description": "Agent the fault is injected into (rogue: the slot). **Scorer-only** (A3): never read by ks.monitor,\nks.policy, ks.taint or ks.recovery; the TCB gets :meth:`tcb_view`.",
       "title": "Culprit"
+    },
+    "decision_latency_ticks": {
+      "description": "L (C1): a plan approval blocks the barrier; tick ``plan_tick + L`` does not open until the decision\narrives (an early click waits). Other operator Controls land at the next control phase.",
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "title": "Decision Latency Ticks",
+      "type": "integer"
     },
     "fault": {
       "anyOf": [
         {
-          "pattern": "^F[0-9]+\\+?$",
+          "pattern": "^(F[0-9]+(\\+[a-z0-9]{0,8})?|rogue)$",
           "type": "string"
         },
         {
           "type": "null"
         }
       ],
-      "description": "Injected fault id, e.g. ``F2+``; ``None`` for a clean (oracle) run.",
+      "description": "Injected fault id, e.g. ``F2+``, bench variants ``F2+x``/``F2+c``, or ``rogue`` (``--rogue FILE --slot``);\n``None`` for a clean run. **Scorer-only** (A3).",
       "title": "Fault"
+    },
+    "fault_tick": {
+      "anyOf": [
+        {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "t_inject (A2): the seeded fault tick, in ``[ticks // 4, ticks // 2]``; set iff ``fault`` is set. The oracle's\nt0 is the min tick over B >= fault_tick; rogue slots no-op from it in S*. **Scorer-only** (A3, M2):\nthe planner's ``RecoveryPlan.t0_seq_est`` is an estimate from the record and must not read it.",
+      "title": "Fault Tick"
     },
     "hold_window_ticks": {
       "description": "Hold window: ticks a new outbox item waits before release. 0 = no hold (demo toggle).",
@@ -58,6 +79,15 @@
       "minimum": 0,
       "title": "Hold Window Ticks",
       "type": "integer"
+    },
+    "key_mode": {
+      "description": "C3: ``fresh`` = keys generated in memory per run (the witness makes its own, E4); the only mode for\nsecurity runs. ``repro`` = keys derived from a secret outside the run dir (0600 uid 0) for byte-identical\nreplays; labelled \"not a security run\", forces ``VerifyReport.anchored = false`` (X7, ``repro_keys``),\nbanned for D11/RT2/RT8 and refused with ``fault == \"rogue\"`` (validator).",
+      "enum": [
+        "fresh",
+        "repro"
+      ],
+      "title": "Key Mode",
+      "type": "string"
     },
     "run_id": {
       "description": "Run name (directory name by convention).",
@@ -79,7 +109,7 @@
       "type": "integer"
     },
     "sensitive_fields": {
-      "description": "Fields whose change triggers an early hold of dependent outbox items, sorted.",
+      "description": "``table.field`` entries, sorted. Two effects, both generic (no IBAN-specific code):\n\n1. **Field objects (B1/X1/X2).** Each entry is its own versioned object ``table:pk.field``\n   (:func:`~ks.contracts.state.field_obj_id`); the rest of the row stays ``table:pk`` and its value hash\n   excludes these fields. A whole-row read also lists the row's field objects (:meth:`field_objs_of`);\n   a read that omits the field lists only the row. A ``.suffix`` on an object id must name an entry\n   for that table (:meth:`check_obj`).\n2. **Early hold (G3/K17).** Only when ``hold_window_ticks`` H > 0. At creation, an I-class outbox item\n   whose lineage holds a sensitive-field version written at tick v gets\n   ``release_tick = max(tick + H, v + 2H)``. A change after creation makes the dispatcher hold it via a\n   recorded ``Control{hold, outbox:<id>, reason=sensitive_field}``. ``release`` never lifts such holds.",
       "items": {
         "pattern": "^[a-z][a-z0-9_]{0,31}\\.[a-z][a-z0-9_]{0,63}$",
         "type": "string"
@@ -114,8 +144,11 @@
     "contract",
     "contracts_version",
     "culprit",
+    "decision_latency_ticks",
     "fault",
+    "fault_tick",
     "hold_window_ticks",
+    "key_mode",
     "run_id",
     "scenario",
     "seed",

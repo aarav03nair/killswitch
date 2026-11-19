@@ -11,7 +11,7 @@ from ks.contracts import (
     CONTRACTS_VERSION, GENESIS_HASH, ActionClass, ActionRef, ActLink, Alert, AlertKind, CancelOutboxStep,
     CompensateStep, Control, ControlOp, Decision, DiffEntry, Envelope, FlagStep, HistoryEntry, KeyEntry, Keyring,
     ObjVer, OutboxItem, OutboxStatus, ReadEntry, Reason, Record, RecoveryPlan, ReplanStep, RerunStep, RestoreStep,
-    RunConfig, SideDomain, SideEntry, StateRead, TaintSet, VerifyReport, VersionRef, WitnessCheckpoint, WriteEntry,
+    RunAnchor, RunConfig, SideDomain, SideEntry, StateRead, TaintSet, VerifyReport, VersionRef, WitnessCheckpoint, WriteEntry,
     CONTROL_TOOL, args_hash, idempotency_key, raw_hash, result_hash, value_hash,
 )
 
@@ -53,7 +53,7 @@ def record_exec(prev=GENESIS_HASH, seq=1) -> Record:
         read_set=(ReadEntry(obj="suppliers:S-17", ver=4, hash=H_OLD), ReadEntry(obj="approvals:A-1", ver=1, hash=H_OLD)),
         write_set=(WriteEntry(obj="suppliers:S-17", before=VersionRef(ver=4, hash=H_OLD),
                               after=VersionRef(ver=5, hash=H_NEW)),),
-        outbox_ids=(), result_hash=result_hash({"ok": True}), control=None)
+        outbox_ids=(), result_hash=result_hash({"ok": True}), control=None, reexec_of=None)
     return r.with_gw_sig(sign("ks.gateway", r.signing_bytes()))
 
 
@@ -62,7 +62,7 @@ def record_forged(prev: str, seq=2) -> Record:
     r = Record.seal(prev_hash=prev, seq=seq, tick=11, ts_us=1_000_011_000, record_id=f"r-{seq:06d}",
                     conn_id="c-9", envelope=env.header(), envelope_hash=env.content_hash(), sig_ok=False,
                     decision=Decision.DENY, reason=Reason.BAD_SIG, policy_rule=None, action_class=ActionClass.R,
-                    read_set=(), write_set=(), outbox_ids=(), result_hash=None, control=None)
+                    read_set=(), write_set=(), outbox_ids=(), result_hash=None, control=None, reexec_of=None)
     return r.with_gw_sig(sign("ks.gateway", r.signing_bytes()))
 
 
@@ -70,7 +70,7 @@ def record_garbage(prev: str, seq=3) -> Record:
     r = Record.seal(prev_hash=prev, seq=seq, tick=11, ts_us=1_000_011_001, record_id=f"r-{seq:06d}",
                     conn_id="c-9", envelope=None, envelope_hash=raw_hash(b'{"seq":1}'), sig_ok=False,
                     decision=Decision.DENY, reason=Reason.SCHEMA, policy_rule=None, action_class=ActionClass.U,
-                    read_set=(), write_set=(), outbox_ids=(), result_hash=None, control=None)
+                    read_set=(), write_set=(), outbox_ids=(), result_hash=None, control=None, reexec_of=None)
     return r.with_gw_sig(sign("ks.gateway", r.signing_bytes()))
 
 
@@ -89,7 +89,7 @@ def record_control(prev: str, seq=4) -> Record:
                     conn_id="c-0", envelope=env.header(), envelope_hash=env.content_hash(), sig_ok=True,
                     decision=Decision.EXEC, reason=Reason.OK, policy_rule="hard_alert_suspend",
                     action_class=ActionClass.R, read_set=(), write_set=(), outbox_ids=(), result_hash=None,
-                    control=c)
+                    control=c, reexec_of=None)
     return r.with_gw_sig(sign("ks.gateway", r.signing_bytes()))
 
 
@@ -101,8 +101,8 @@ def chain() -> list[Record]:
     return [r1, r2, r3, r4]
 
 
-def witness(rec: Record) -> WitnessCheckpoint:
-    w = WitnessCheckpoint(witness_id="ks.witness", seq=rec.seq, tick=rec.tick, head=rec.hash, sig=None)
+def witness(rec: Record, count: int = 1) -> WitnessCheckpoint:
+    w = WitnessCheckpoint(witness_id="ks.witness", seq=rec.seq, tick=rec.tick, head=rec.hash, count=count, sig=None)
     return w.with_sig(sign("ks.witness", w.signing_bytes()))
 
 
@@ -115,7 +115,7 @@ def outbox_item() -> OutboxItem:
 
 
 def alert_invariant() -> Alert:
-    return Alert(alert_id="a-000001", tick=11, seq=7, detector="inv.iban_changed_then_paid", kind=AlertKind.INVARIANT,
+    return Alert(alert_id="a-000001", tick=11, seq=7, detector="inv.beneficiary_changed_then_paid", kind=AlertKind.INVARIANT,
                  hard=True, evidence_seqs=(1, 7), evidence_versions=(ObjVer(obj="suppliers:S-17", ver=5),),
                  root_candidates=("crm", "intake"), conn_id=None)
 
@@ -129,7 +129,7 @@ def plan() -> RecoveryPlan:
     pay = ActionRef(seq=7, agent_id="payments", action_id="pay-3")
     bill = ActionRef(seq=6, agent_id="billing", action_id="bill-2")
     return RecoveryPlan(
-        plan_id="p-000001", alert_id="a-000001", culprit="crm", t0_seq=1, as_of_seq=9,
+        plan_id="p-000001", alert_id="a-000001", culprit="crm", t0_seq_est=1, as_of_seq=9,
         taint_set=TaintSet(versions=(ObjVer(obj="suppliers:S-17", ver=5),), actions=(bill, pay),
                            outbox_ids=("ob-000001",)),
         steps=(RestoreStep(n=0, reason="tainted_write", obj="suppliers:S-17", expect=VersionRef(ver=5, hash=H_NEW),
@@ -142,8 +142,21 @@ def plan() -> RecoveryPlan:
         diff=(DiffEntry(obj="suppliers:S-17", current=VersionRef(ver=5, hash=H_NEW), planned_hash=H_OLD),))
 
 
-PRINCIPALS = ("billing", "crm", "docs", "intake", "ks.console", "ks.gateway", "ks.monitor", "ks.recovery",
-              "ks.witness", "payments")
+AGENTS = ("billing", "comms", "compliance", "crm", "docs", "intake", "inventory", "payments", "reporter", "triage")
+PRINCIPALS = tuple(sorted(AGENTS + ("ks.gateway", "ks.monitor", "ks.operator", "ks.recovery", "ks.witness")))
+
+
+def run_config(**over) -> RunConfig:
+    base = dict(run_id="seed0-F2plus", contracts_version=CONTRACTS_VERSION, seed=0, scenario="acme", fault="F2+",
+                culprit="crm", fault_tick=12, key_mode="fresh", decision_latency_ticks=2, ticks=40, tick_us=1000,
+                start_ts_us=1_000_000_000, hold_window_ticks=3, sensitive_fields=("suppliers.iban",), agents=AGENTS)
+    base.update(over)
+    return RunConfig(**base)
+
+
+def keyring(keyfn=None) -> Keyring:
+    keyfn = keyfn or pub
+    return Keyring(keys=tuple(KeyEntry(principal=p, pub=keyfn(p)) for p in PRINCIPALS))
 
 
 def samples() -> dict[str, object]:
@@ -170,15 +183,18 @@ def samples() -> dict[str, object]:
         "control_hold": Control(control_id="k-000003", op=ControlOp.HOLD, target="outbox:ob-000001", epoch=None,
                                 alert_id="a-000001", issued_by="ks.monitor", auto=True, reason="lineage_hold"),
         "control_revoke": Control(control_id="k-000004", op=ControlOp.REVOKE, target="agent:crm", epoch=2,
-                                  alert_id="a-000001", issued_by="ks.console", auto=False, reason="operator"),
+                                  alert_id="a-000001", issued_by="ks.operator", auto=False, reason="operator"),
         "plan": plan(),
-        "run_config": RunConfig(run_id="seed0-F2plus", contracts_version=CONTRACTS_VERSION, seed=0, scenario="acme",
-                                fault="F2+", culprit="crm", ticks=40, tick_us=1000, start_ts_us=1_000_000_000,
-                                hold_window_ticks=3, sensitive_fields=("suppliers.iban",),
-                                agents=("billing", "comms", "compliance", "crm", "docs", "intake", "inventory",
-                                        "payments", "reporter", "triage")),
-        "keyring": Keyring(keys=tuple(KeyEntry(principal=p, pub=pub(p)) for p in PRINCIPALS)),
-        "verify_report": VerifyReport(ok=True, exit=0, first_bad=None, reason="ok", last_witnessed_seq=4),
+        "run_config": run_config(),
+        "keyring": keyring(),
+        "verify_report": VerifyReport(ok=True, exit=0, first_bad=None, reason="ok", last_witnessed_seq=4,
+                                      anchored=True, unanchored_reason=None),
+        "run_anchor": RunAnchor.of(witness(recs[-1]), keyring(), run_config()),
+        "approval": plan().approval(),
+        "recover_args": plan().recover_args(0),
+        "alert_barrier": Alert(alert_id="a-000003", tick=12, seq=4, detector="barrier.deadline",
+                               kind=AlertKind.ANOMALY, hard=False, evidence_seqs=(), evidence_versions=(),
+                               root_candidates=(), conn_id="c-5"),
     }
 
 
@@ -192,6 +208,8 @@ SCHEMA_OF = {
     "alert_signature": "c4.alert", "control_suspend": "c4.control", "control_suspend_conn": "c4.control",
     "control_hold": "c4.control", "control_revoke": "c4.control", "plan": "c5.recovery_plan",
     "run_config": "c6.run_config", "keyring": "c6.keyring", "verify_report": "c6.verify_report",
+    "run_anchor": "c6.run_anchor", "approval": "c5.approval", "recover_args": "c5.recover_args",
+    "alert_barrier": "c4.alert",
 }
 
 if __name__ == "__main__":  # used by the cross-process byte-stability test

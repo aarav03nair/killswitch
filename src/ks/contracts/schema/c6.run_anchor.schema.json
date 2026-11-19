@@ -1,0 +1,57 @@
+{
+  "$id": "https://killswitch.local/schema/1.1.0/c6.run_anchor.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "F1/K1: the run's external anchor, one canonical line. The console prints ``keyring_hash`` and\n``config_hash`` at start and the whole anchor at the end; ``ks verify --head <line>`` checks both hashes\nbefore any signature, then the chain against ``(seq, head, count)``. Swapping ``keys.json`` and re-signing\neverything (RT8(h)) gives ``keyring_mismatch`` -> WITNESS.",
+  "properties": {
+    "config_hash": {
+      "description": "``RunConfig.content_hash()`` of ``config.json``.",
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Config Hash",
+      "type": "string"
+    },
+    "count": {
+      "description": "``WitnessCheckpoint.count`` of the last checkpoint (= number of witness lines, F2).",
+      "maximum": 9007199254740991,
+      "minimum": 1,
+      "title": "Count",
+      "type": "integer"
+    },
+    "head": {
+      "description": "``Record.hash`` at ``seq``.",
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Head",
+      "type": "string"
+    },
+    "keyring_hash": {
+      "description": "``Keyring.content_hash()`` of ``keys.json``.",
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Keyring Hash",
+      "type": "string"
+    },
+    "seq": {
+      "description": "Seq of the last witnessed record.",
+      "maximum": 9007199254740991,
+      "minimum": 1,
+      "title": "Seq",
+      "type": "integer"
+    },
+    "tick": {
+      "description": "Tick of the last checkpoint.",
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "title": "Tick",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "config_hash",
+    "count",
+    "head",
+    "keyring_hash",
+    "seq",
+    "tick"
+  ],
+  "title": "RunAnchor",
+  "type": "object"
+}

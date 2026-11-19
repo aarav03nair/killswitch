@@ -80,6 +80,11 @@
       "t": "19 Nov 06:08",
       "who": "pmo",
       "msg": "uid test moved to tests/redteam/uid_isolation_check.py for reproducibility"
+    },
+    {
+      "t": "19 Nov 11:00",
+      "who": "kabir",
+      "msg": "THREAT-MODEL v4 per Call #2"
     }
   ]
 }

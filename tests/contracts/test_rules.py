@@ -80,7 +80,7 @@ def test_signature_alert_names_connection_only():
 
 
 def test_tamper_alert_names_nobody_and_anomaly_never_hard():
-    base = {**S.alert_invariant().to_obj(), "kind": "tamper"}
+    base = {**S.alert_invariant().to_obj(), "kind": "tamper", "detector": "verify", "hard": False}
     with pytest.raises(ValueError):
         Alert.model_validate(base)
     Alert.model_validate({**base, "root_candidates": []})
@@ -173,7 +173,7 @@ def test_record_chain_and_signatures():
 
 def test_tampered_record_detected():
     r = S.record_exec()
-    edited = Record.model_validate({**r.to_obj(), "tick": 99})
+    edited = Record.model_validate({**r.to_obj(), "tick": 11})
     assert "hash mismatch" in edited.integrity_problems()
 
 
@@ -203,7 +203,7 @@ def test_write_versions_monotonic_and_tombstone():
 
 
 def test_obj_ids():
-    assert split_obj_id(make_obj_id("suppliers", "S-17")) == ("suppliers", "S-17")
+    assert split_obj_id(make_obj_id("suppliers", "S-17")) == ("suppliers", "S-17", None)
     with pytest.raises(ValueError):
         make_obj_id("Suppliers", "x")
 
@@ -254,10 +254,13 @@ def test_run_config_rules():
 
 
 def test_verify_exit_codes_and_report():
-    assert (Exit.OK, Exit.IO, Exit.TAMPER, Exit.WITNESS, Exit.RECONCILE, Exit.FROZEN) == (0, 1, 2, 3, 4, 5)
-    VerifyReport(ok=False, exit=int(Exit.TAMPER), first_bad=7, reason="hash_mismatch", last_witnessed_seq=6)
+    assert (Exit.OK, Exit.IO, Exit.TAMPER, Exit.WITNESS, Exit.RECONCILE, Exit.FROZEN, Exit.DIVERGED) == \
+        (0, 1, 2, 3, 4, 5, 6)
+    VerifyReport(ok=False, exit=int(Exit.TAMPER), first_bad=7, reason="hash_mismatch", last_witnessed_seq=6,
+                 anchored=True, unanchored_reason=None)
     with pytest.raises(ValueError):
-        VerifyReport(ok=True, exit=int(Exit.TAMPER), first_bad=None, reason="ok", last_witnessed_seq=0)
+        VerifyReport(ok=True, exit=int(Exit.TAMPER), first_bad=None, reason="ok", last_witnessed_seq=0,
+                     anchored=True, unanchored_reason=None)
 
 
 def test_enums_are_closed():

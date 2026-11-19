@@ -40,7 +40,7 @@
       "type": "object"
     }
   },
-  "$id": "https://killswitch.local/schema/1.0.0/c4.alert.schema.json",
+  "$id": "https://killswitch.local/schema/1.1.0/c4.alert.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "C4 Alert, appended to ``alerts.jsonl`` in the run dir.",
@@ -61,7 +61,7 @@
           "type": "null"
         }
       ],
-      "description": "Submitting connection; set only for signature alerts (anti-framing: never the claimed agent).",
+      "description": "Connection named by the alert: required for signature alerts (the submitting connection, never the\nclaimed agent); optional for ``barrier.deadline`` (the connection that missed the barrier; PMO S5);\n``None`` for every other alert.",
       "title": "Conn Id"
     },
     "contract": {
@@ -78,7 +78,7 @@
       "type": "string"
     },
     "evidence_seqs": {
-      "description": "Record seqs that are the evidence, ascending, non-empty.",
+      "description": "Record seqs that are the evidence, ascending. Non-empty, except (M3) a ``barrier.deadline`` anomaly\n(a missed barrier is a no-op and has no record) and (K6) a ``reconcile`` alert for an off-log object\nwith no recorded version (a row created by a bypass).",
       "items": {
         "maximum": 9007199254740991,
         "minimum": 1,
@@ -88,7 +88,7 @@
       "type": "array"
     },
     "evidence_versions": {
-      "description": "Object versions found bad (taint seeds), sorted by (obj, ver).",
+      "description": "Object versions found bad (taint seeds), sorted by (obj, ver). For the beneficiary alert (H4): the payee\nfield object only; the payment goes in ``evidence_seqs``.",
       "items": {
         "$ref": "#/$defs/ObjVer"
       },
@@ -96,7 +96,7 @@
       "type": "array"
     },
     "hard": {
-      "description": "Hard evidence: containment may act automatically (suspend, never revoke).",
+      "description": "Hard evidence: containment may act automatically (suspend, never revoke). Exactly the H3 hard table.",
       "title": "Hard",
       "type": "boolean"
     },
@@ -105,7 +105,7 @@
       "description": "Detector family; decides who may be named and whether ``hard`` is allowed."
     },
     "root_candidates": {
-      "description": "Ranked, most likely first. Not a verdict. Empty for signature/tamper/witness-stall alerts.",
+      "description": "Ranked, most likely first. Not a verdict (M9/H1): ``root_candidates[0]`` is the attributed agent of the\nrecord(s) that wrote ``evidence_versions`` (write_set lookup); further candidates come from backward taint\n(bounded walk), ranked. If the evidence versions have two or more distinct writers, or none, automatic\ncontainment suspends nobody. Agents reached only through reads are never auto-suspended (H2). The\n*suspect* is derived as ``root_candidates[0]`` and is never stored. Empty for signature, tamper,\nwitness-stall, reconcile and ``barrier.deadline`` alerts.",
       "items": {
         "pattern": "^[a-z][a-z0-9_]{0,31}$",
         "type": "string"

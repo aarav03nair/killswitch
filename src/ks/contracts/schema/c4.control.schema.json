@@ -12,7 +12,7 @@
       "type": "string"
     }
   },
-  "$id": "https://killswitch.local/schema/1.0.0/c4.control.schema.json",
+  "$id": "https://killswitch.local/schema/1.1.0/c4.control.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "C4 Control: one containment operation, recorded in clear on its record.",
@@ -63,8 +63,8 @@
       "title": "Epoch"
     },
     "issued_by": {
-      "description": "``ks.monitor``/``ks.gateway`` if auto; ``ks.console``/``ks.recovery`` if human-approved.",
-      "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+      "description": "``ks.monitor``/``ks.gateway`` if auto; ``ks.operator``/``ks.recovery`` if human-approved. Must equal the\nsigning envelope's ``agent_id`` (Record validator).",
+      "pattern": "^(?:ks\\.(?:gateway|monitor|operator|recovery|witness)|[a-z][a-z0-9_]{0,31})$",
       "title": "Issued By",
       "type": "string"
     },

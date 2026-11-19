@@ -3,13 +3,16 @@
 import pytest
 
 from ks.contracts import (MAX_FRAME_BYTES, NoopFrame, ReplyFrame, SignReply, SignRequest, SubmitFrame, TickFrame,
-                          canonical, decode_frame, encode_frame)
+                          ViewEntry, canonical, decode_frame, encode_frame, value_hash)
 
 import samples as S
 
 
 @pytest.mark.parametrize("frame", [
-    TickFrame(tick=3), NoopFrame(tick=3), SubmitFrame(tick=3, envelope=S.envelope()),
+    TickFrame(tick=3, epoch=0, view=()), TickFrame(tick=4, epoch=None, view=()),
+    TickFrame(tick=3, epoch=2, view=(ViewEntry(obj="suppliers:S-17", ver=4, hash=value_hash({"name": "Acme Steel"}),
+                                               value={"name": "Acme Steel"}),)),
+    NoopFrame(tick=3), SubmitFrame(tick=3, envelope=S.envelope()),
     ReplyFrame(tick=3, seq=1, record_id="r-000001", decision="exec", reason="ok", result={"ok": True},
                result_hash=S.record_exec().result_hash),
     SignRequest(header=S.envelope().header().model_copy(update={"sig": None})),

@@ -58,12 +58,10 @@ Controls: **D6** chain + signatures + witness + `verify --head`; **D7** auto-sus
 | Buggy | RT11 | False-positive suspend of an honest agent | D7; rule 10; release at a fresh epoch | tainted items stay held; FP cost scored |
 | Rogue | RT1 | Direct `state.db` bypass | Rule 1; D6 reconciliation (class-U alert) | Blocked; else flagged in ≤1 tick |
 | Rogue | RT2 | Key theft (fs, env, fds, `/proc`) | Rules 1, 2; Live setup; fresh keys | 0 key bytes reachable |
-| Rogue | RT3 | Forgery: claims X, signed by Y | Rule 4; D7 connection suspend | 0 executed; X not suspended |
-| Rogue | RT3b | `ptrace`/`pidfd_getfd` on a sibling | Per-agent uid, non-dumpable | Attach gets EPERM |
+| Rogue | RT3, RT3b, RT6 | Forgery; sibling `ptrace`/`pidfd_getfd`; own `ts`/`seq` | Rules 3, 4; D7 connection suspend; per-agent uid, non-dumpable | 0 executed; X not suspended; EPERM; gateway ordering |
 | Rogue | RT3c | Forged Control: system id, `ks.*` tool, operator socket | `c-0` reserved; scope; root-only socket + `SO_PEERCRED` | 0 forged Controls applied |
 | Rogue | RT4 | Replay (valid, expired, presigned across a release) | Rule 4 (nonce, expiry, epoch) | 0 duplicate effects |
 | Rogue | RT5 | Write flood during suspension (TOCTOU) | Rule 5 (epoch + deny-list in the write txn) | 0 culprit writes after suspension `seq` |
-| Rogue | RT6 | Supplies its own `ts`/`seq` | Rule 3 | Ordering uses gateway values |
 | Rogue | RT12 | Suspended agent retries or acts through a revoked ancestor | Rules 4, 10; deny-list | 0 effects from probe |
 | Rogue | none | Sleep, loop, fork or memory bomb | Per-tick deadline (miss = no-op, EOF after 3); rlimits | Other agents keep ticking |
 | Rogue | RT13 | Replays recorded operator decisions, or runs a rogue in repro mode | Source must pass `verify --head`, plan_hash match; both refused with `--rogue` | 0 Controls replayed; repro refused |
@@ -72,7 +70,6 @@ Controls: **D6** chain + signatures + witness + `verify --head`; **D7** auto-sus
 | Colluding | none | Splitting under thresholds | I-class invariants do not depend on rate. **No RT, no claim** | none |
 | Insider | RT7 | Edit one record or side entry | D6 chain + sigs; `verify` prints first bad seq | `verify` non-zero |
 | Insider | RT8 | Recompute the chain; swap the keyring; truncate | Witness heads; **run anchor checked by `ks verify --head`** (keyring and config hashes, head, count) | Detected against the anchor |
-| Insider | RT7/8 | Any tamper during recovery | D7: tamper alert freezes recovery, suspends nobody | Recovery frozen |
 
 RT7 boundary: marking a side-store entry `redacted` passes `verify` by design. RT8(g): a rewrite after the last witnessed head passes unanchored and is caught by the anchor. All pass values are **targets, not results** (D13); measured values appear only in the Sprint 4 red-team report.
 

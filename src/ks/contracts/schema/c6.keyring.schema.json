@@ -13,7 +13,7 @@
         },
         "principal": {
           "description": "Agent id or ``ks.*`` principal.",
-          "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+          "pattern": "^(?:ks\\.(?:gateway|monitor|operator|recovery|witness)|[a-z][a-z0-9_]{0,31})$",
           "title": "Principal",
           "type": "string"
         },
@@ -33,10 +33,10 @@
       "type": "object"
     }
   },
-  "$id": "https://killswitch.local/schema/1.0.0/c6.keyring.schema.json",
+  "$id": "https://killswitch.local/schema/1.1.0/c6.keyring.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
-  "description": "``keys.json``: public keys ``verify`` checks signatures against. Never private keys.",
+  "description": "``keys.json``: public keys ``verify`` checks signatures against. Never private keys.\n\nE3/K5: exactly one key each for ``ks.gateway``, ``ks.witness``, ``ks.monitor``, ``ks.operator``,\n``ks.recovery`` (validator) and every ``RunConfig.agents`` entry, and nothing else\n(:meth:`problems`, which ``RunDir.validate`` and verify apply; fail closed). Controls are signed by\ntheir ``issued_by`` principal. Bound to the run by ``RunAnchor.keyring_hash`` (RT8(h)).",
   "properties": {
     "contract": {
       "const": "ks.keyring/1",
