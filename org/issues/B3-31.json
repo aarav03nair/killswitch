@@ -32,6 +32,11 @@
       "t": "19 Nov 21:07",
       "who": "pmo",
       "msg": "→ todo: From kabir's B3-15 re-review (non-blocking): a skeleton-run record with a non-empty read_set or outbox_ids still verifies OK (should fail like write_set); verify never checks sidestore/ (side entries vs record hashes). Probes: scratchpad/p15b/test_probe15b.py."
+    },
+    {
+      "t": "19 Nov 21:38",
+      "who": "pmo",
+      "msg": "→ todo: PMO fixed a bug kabir found in his B3-46 review: ks verify on a RELATIVE run path failed reconcile (state.db opened via Path.as_uri on an unresolved path -> reconcile_mismatch, exit 4, on an honest run). Fix: src/ks/verify/core.py db.resolve().as_uri(). Regression test tests/runtime/test_world_runtime.py::test_verify_accepts_a_relative_run_path (fails without the fix). Kabir to glance at it when reviewing B3-31."
     }
   ]
 }

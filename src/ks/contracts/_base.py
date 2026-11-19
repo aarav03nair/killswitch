@@ -4,12 +4,35 @@ from __future__ import annotations
 
 from typing import Any, ClassVar, Self
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, SerializerFunctionWrapHandler, model_serializer
 
 from . import canonical
 from .hashing import sha256_hex
 
-__all__ = ["Value", "Document"]
+__all__ = ["Value", "Document", "OMIT_DEFAULT_KEY", "additive"]
+
+OMIT_DEFAULT_KEY = "x-ks-omit-default"
+"""JSON-schema marker of an *additive* field (see :func:`additive`). ``schema_gen`` leaves it out of ``required``."""
+
+
+def additive(default: Any, **kw: Any) -> Any:
+    """Declare a field added in a later minor version (v1.4, B3-46). The ONE additivity rule: such a field is
+    **omitted from the canonical form when it equals its default**, so every document written before the field
+    existed keeps its exact bytes, hashes and signatures (old runs still verify). A non-default value is
+    serialized and round-trips. Strict parse stays strict: an explicit default value in the bytes is not the
+    canonical form and is rejected (:class:`~ks.contracts.canonical.NonCanonicalError`)."""
+    extra = dict(kw.pop("json_schema_extra", None) or {})
+    extra[OMIT_DEFAULT_KEY] = True
+    return Field(default, json_schema_extra=extra, **kw)
+
+
+def _omit_defaults(cls: type[BaseModel]) -> tuple[tuple[str, Any], ...]:
+    cached = cls.__dict__.get("__ks_omit__")
+    if cached is None:
+        cached = tuple((n, f.default) for n, f in cls.model_fields.items()
+                       if isinstance(f.json_schema_extra, dict) and f.json_schema_extra.get(OMIT_DEFAULT_KEY))
+        setattr(cls, "__ks_omit__", cached)
+    return cached
 
 
 class Value(BaseModel):
@@ -18,8 +41,17 @@ class Value(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid", use_attribute_docstrings=True,
                               validate_default=True, str_strip_whitespace=False)
 
+    @model_serializer(mode="wrap")
+    def _ks_ser(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        out = handler(self)
+        for name, default in _omit_defaults(type(self)):
+            if getattr(self, name) == default:
+                out.pop(name, None)
+        return out
+
     def to_obj(self) -> dict[str, Any]:
-        """JSON-ready dict (every field present, ``None`` as null)."""
+        """JSON-ready dict: every field present (``None`` as null), except :func:`additive` fields at their
+        default, which are omitted (applies to nested values too)."""
         return self.model_dump(mode="json")
 
     def __ks_canonical__(self) -> dict[str, Any]:

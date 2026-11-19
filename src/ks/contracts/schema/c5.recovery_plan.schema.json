@@ -342,8 +342,15 @@
           "type": "string"
         },
         "to": {
-          "$ref": "#/$defs/VersionRef",
-          "description": "Pre-taint version whose value is re-written (value from the side store)."
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VersionRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Pre-taint version whose value is re-written (value from the side store). v1.4 (B3-46): ``None`` = the\nculprit **created** the object (no pre-taint version), so the restore writes a tombstone (delete, value\n``null``, ``TOMBSTONE_HASH``) as a new version. Replaces the 1.3 planner marker\n``to=VersionRef(ver=expect.ver, hash=TOMBSTONE_HASH)``."
         }
       },
       "required": [
@@ -421,7 +428,7 @@
       "type": "object"
     }
   },
-  "$id": "https://killswitch.local/schema/1.3.0/c5.recovery_plan.schema.json",
+  "$id": "https://killswitch.local/schema/1.4.0/c5.recovery_plan.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "C5 plan, written to ``plans/<plan_id>.json``; approved by content hash.",
@@ -505,11 +512,26 @@
       "type": "array"
     },
     "t0_seq_est": {
-      "description": "Estimated first tainted seq (A2, X3): the earliest write by ``culprit`` in the bounded backward closure\nof the alerts' ``evidence_versions``. An estimate from the record only; the planner never reads\n``RunConfig.fault_tick`` (scorer-only). Taint seed (A8): every culprit write in [t0_seq_est, suspend].",
+      "description": "Estimated first tainted seq (A2, X3): the earliest write by ``culprit`` in the bounded backward closure\nof the alerts' ``evidence_versions``. An estimate from the record only; the planner never reads\n``RunConfig.fault_tick`` (scorer-only). Taint seed (A8): every culprit write in [t0_seq_est, suspend]. The walk\nfollows the culprit's reads of its own versions only through ``tool`` read entries (B3-45 option C, v1.4).",
       "maximum": 9007199254740991,
       "minimum": 1,
       "title": "T0 Seq Est",
       "type": "integer"
+    },
+    "t0_seq_est_literal": {
+      "anyOf": [
+        {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "v1.4 (B3-46, replaces the planner-side ``Planned.t0_delta``): t0 of the literal ADR-05 §4 walk, which also\nfollows the culprit's ``view`` self-reads. ``<= t0_seq_est``; the dry-run reports the difference (suspect\nwrites the seed leaves out). ``None`` = not computed.",
+      "title": "T0 Seq Est Literal"
     },
     "taint_set": {
       "$ref": "#/$defs/TaintSet",

@@ -1,19 +1,21 @@
-# Handoff: where work stopped (19 Nov 2026, night IST)
+# Handoff: where work stopped (20 Nov 2026, early IST)
 
-Running in **Claude Code in IntelliJ** on Aarav's Mac. Wave 4 checkpoint committed. Tests: `.venv/bin/python -m pytest -q` gives 716 passed, 8 skipped; container 724 passed (create the venv with `uv venv -p 3.13 .venv && uv pip install -p .venv -e . pytest jsonschema`; Homebrew python3.15 has no pytest). Native macOS runs in degraded mode (attribution VOID); per-agent uids need Docker (OrbStack installed, `~/.orbstack/bin/docker`). Linux-root tests: `docker build -t killswitch:<name> . && docker run --rm --network none killswitch:<name> python -m pytest -q` (one tag per agent).
+Running in **Claude Code in IntelliJ** on Aarav's Mac. All work committed; agents were stopped mid-task on Aarav's request. Tests at this commit: `.venv/bin/python -m pytest -q` gives 820 passed, 8 skipped, 1 xfailed (container suite not re-run at this commit; last container run 815 passed). Venv: `uv venv -p 3.13 .venv && uv pip install -p .venv -e . pytest jsonschema`. Native macOS = degraded isolation (attribution VOID); per-agent uids need Docker (OrbStack, `~/.orbstack/bin/docker`; one image tag per agent).
 
 ## Status
-- **Sprints 0–2: done.** Design frozen in Call #2 (amended: G1-a `ks.seed`, D-15). Build plan in Call #3.
-- **Sprint 3 done so far:** B3-01..12, B3-14..18, B3-36..40, B3-42..44, SKEL-01. Wave 4 closed this session: B3-11 gateway pipeline · B3-12 CLI + `RunOptions` · B3-14 policy · B3-15 verify rules · B3-16 aggregate reads · B3-17 inject · B3-18 taint · B3-42 witness/signer follow-ups · B3-43 contracts 1.3 (`ks.seed`, `tool_error`) · B3-44 world matches CALL-02 B2/B3 (triage view tickets-only; `reports:` table).
-- **In review:** B3-41 gateway set authority + runtime wiring (nisha → panel; includes the tool-read vs view-version decision) · B3-21 recovery planner (vikram → maya; **uncommitted**, in src/ks/recovery + tests/recovery).
-- **Decisions by Aarav this session:** D-15 add `ks.seed` · B3-45 option C (read entries tagged view|tool; built as B3-46 after B3-41).
+- **Done this session (Sprint 3):** B3-04..12, B3-14..18, B3-21, B3-22 oracle, B3-26 score, B3-36..46 (incl. contracts 1.3 `ks.seed` and 1.4 read tags view|tool, additive). Decisions by Aarav: D-15 (`ks.seed`), B3-45 option C.
+- **Stopped mid-task (uncommitted work is IN this commit, unreviewed):**
+  - **B3-24 re-run simulation (vikram, critical path, slip rule 24 Nov 18:00):** hero dry-run passes on world F2+ records, but maya's review found the in-process driver (tests/recovery/world.py) skips the outbox release phase and the taint/sensitive holds. vikram was rewriting the driver over the real `ks.gateway.Gateway` when stopped.
+  - **B3-23 outbox (nisha):** kabir's blocker: release phase must check each item against its creating record (outbox_ids + write_set ver/hash) and HOLD on failure. Probe: scratchpad test_zz_kabir_probe.py (outside repo). Partially done when stopped.
+  - **B3-13 c-0 + operator socket (maya):** in progress, operator socket module not finished.
+  - **B3-28 console (ishaan):** built, in review; maya to review (run it on vikram's real plan; decide ADR-07 `--pace` amendment).
+- PMO fix: `ks verify` on a relative run path failed reconcile; fixed in src/ks/verify/core.py with a regression test (logged on B3-31).
 - Board: `python3 board/render.py` then open `board/index.html`.
 
-## Next, in order (dependency graph in `python3 org/issue.py list --sprint 3`)
-1. Close B3-41 and B3-21 reviews; commit recovery.
-2. **B3-24 re-run simulation (vikram, critical path; slip rule: green by 24 Nov 18:00 IST, else maya pairs with him and B3-29 moves to Sprint 4).** Also ready: B3-13 c-0 + operator socket (maya), B3-23 outbox/holds (nisha), B3-22 oracle (tara), B3-46 (maya, after B3-41), B3-32 F8 (nisha), B3-28 console (ishaan).
-3. → B3-19 containment, B3-26 score → **B3-27 hero end-to-end (target 24 Nov)** → apply/bench/console/red-team → **code freeze 26 Nov 18:00 IST**.
-4. Sprint 4: 20-seed bench, red team RT1–RT13, Panel jury dry run, finale rehearsal (`board/demo-sim.html`).
+## Next, in order
+1. Resume B3-24 (vikram), B3-23 (nisha), B3-13 (maya); review B3-28 (maya). Re-run the container suite.
+2. → B3-19 containment, B3-30 apply (notes logged) → **B3-27 hero end-to-end (target 24 Nov)** → bench/console/red-team → **code freeze 26 Nov 18:00 IST**.
+3. Sprint 4: 20-seed bench, red team RT1–RT13, Panel jury dry run, finale rehearsal (`board/demo-sim.html`).
 
 ## Waiting on Aarav
 - ⚑ D-02 headline · ⚑ D-10 hero field objects · ⚑ D-11 D13 target wording.

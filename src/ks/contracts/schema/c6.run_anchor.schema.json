@@ -1,5 +1,5 @@
 {
-  "$id": "https://killswitch.local/schema/1.3.0/c6.run_anchor.schema.json",
+  "$id": "https://killswitch.local/schema/1.4.0/c6.run_anchor.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "F1/K1: the run's external anchor, one canonical line. The console prints ``keyring_hash`` and\n``config_hash`` at start and the whole anchor at the end; ``ks verify --head <line>`` checks both hashes\nbefore any signature, then the chain against ``(seq, head, count)``. Swapping ``keys.json`` and re-signing\neverything (RT8(h)) gives ``keyring_mismatch`` -> WITNESS.",

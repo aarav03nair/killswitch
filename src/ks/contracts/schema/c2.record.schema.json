@@ -294,6 +294,16 @@
           "title": "Obj",
           "type": "string"
         },
+        "source": {
+          "default": "tool",
+          "description": "v1.4 (B3-46): ``view`` (delivered in the tick's view) or ``tool`` (read by the adapter). Set by the gateway,\nnever by the agent. The default ``tool`` is the conservative reading of an untagged entry: the t0 walk\n(ADR-05 §4) follows a suspect's self-reads only through ``tool`` entries.",
+          "enum": [
+            "view",
+            "tool"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
         "ver": {
           "description": "Version read.",
           "maximum": 9007199254740991,
@@ -395,7 +405,7 @@
       "type": "object"
     }
   },
-  "$id": "https://killswitch.local/schema/1.3.0/c2.record.schema.json",
+  "$id": "https://killswitch.local/schema/1.4.0/c2.record.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "C2 Record. Field docs give the OTel mapping (span name ``execute_tool {tool}``).",
@@ -497,7 +507,7 @@
       "type": "string"
     },
     "read_set": {
-      "description": "Versions the adapter read **plus every ``TickFrame.view`` entry delivered to the agent this tick** (I1),\nsorted by obj (``ks.read_set``). Field objects per C3 X2. Empty on deny.",
+      "description": "Versions the adapter read **plus every ``TickFrame.view`` entry delivered to the agent this tick** (I1),\nsorted by (obj, ver) (``ks.read_set``). Field objects per C3 X2. Empty on deny. v1.4 (B3-46): each entry is\ntagged ``source`` view|tool; one object may appear twice (a view version and a different tool version), see\n:func:`~ks.contracts.state.check_read_set`.",
       "items": {
         "$ref": "#/$defs/ReadEntry"
       },

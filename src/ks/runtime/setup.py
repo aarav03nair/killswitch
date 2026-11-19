@@ -22,7 +22,7 @@ from typing import Any
 
 
 __all__ = ["SCENARIOS", "Scenario", "scenario", "default_run_id", "default_out", "hero_tick", "isolation_problems",
-           "refuse_existing", "IsolationError", "WORLD_TICKS_UNTIL_STATE"]
+           "refuse_existing", "IsolationError", "check_run_id", "WORLD_TICKS_UNTIL_STATE"]
 
 SCENARIOS = ("skeleton", "world")
 
@@ -75,6 +75,12 @@ def scenario(name: str, *, agents: int | None, seed: int, ticks: int) -> Scenari
         return Scenario("world", AGENT_IDS, SENSITIVE_FIELDS, "ks.world.agents",
                         ("--hero-tick", str(hero_tick(seed, ticks))))
     raise ValueError(f"unknown scenario {name!r} (one of {', '.join(SCENARIOS)})")
+
+
+def check_run_id(run_id: str | None) -> None:
+    """``.`` and ``..`` match the RunConfig run_id pattern but name a directory, not a run (kabir, B3-10)."""
+    if run_id is not None and run_id.strip(".") == "":
+        raise ValueError(f"run_id {run_id!r} is not a run name")
 
 
 def default_run_id(scenario_name: str, seed: int) -> str:

@@ -27,6 +27,11 @@
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 21:40",
+      "who": "pmo",
+      "msg": "→ todo: From anaya's B3-26 review (non-blocking, tara): a revoked honest agent adds no stall_ticks (should count toward collateral stall); add a repo test that a valid ks.monitor alert blaming the wrong agent counts in false_accusations, sets t_alert and is excluded from tti_attribute."
     }
   ]
 }

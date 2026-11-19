@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "TTI from chained ks.alert records only, TTC, R, C, residual, invariants_ok per ADR-06-metrics",
   "acceptance": [
     "test_score_schema_golden; tti computed from chained ks.alert records, never alerts.jsonl (test_tti_from_chained_alerts)",
@@ -18,13 +18,48 @@
     "B3-22"
   ],
   "deliverable": "src/ks/score/",
-  "summary": "",
-  "review": "",
+  "summary": "Review fixes: damage_in_window uses first effect at tick>=t0 (hero-key test); alerts need sig_ok + agent ks.monitor + C4 Alert parse; fixtures rebuilt to C4; forged-alert test; honest_suspensions counts revokes. 27 tests pass.",
+  "review": "[anaya · changes] [Fact] 25 pass; names match ADR-06/TERMS; clean never true; ks.score imported nowhere in TCB. Changes: (1) damage_in_window takes each B key's first effect at any tick: S-17.iban and S-22.price have tick-0 seed effects, so the hero keys drop out. Use first effect with tick >= t0; add test. (2) Alerts accepted from any exec ks.alert record: require sig_ok and agent_id ks.monitor; parse body with the C4 Alert model. Synthetic bodies lack 6 required C4 fields (conn_id, detector, evidence_versions, hard, kind, seq): build them via the model. [Our view] honest_suspensions should count revokes too. ADR-06-metrics §3 wording fixed (tti_attribute uses evidence_seqs; damage_in_window >= t0).\n\n[anaya · done] [Fact] 27 pass. Matches amended ADR-06-metrics §3: damage_in_window counts first effect at tick>=t0 (hero-key test); tti_attribute uses evidence_seqs; alerts need sig_ok, ks.monitor, C4 parse; forged test covers all three. Revokes in honest_suspensions was my note; I amended §3 fp_cost to 'suspended or revoked'. Checked: valid ks.monitor alert naming triage counts in false_accusations, sets t_alert, excluded from tti_attribute. [Our view] Follow-ups: revoked honest agents add no stall_ticks; add a wrong-agent test.",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 21:36",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 21:36",
+      "who": "tara",
+      "msg": "→ in_review: ready for anaya"
+    },
+    {
+      "t": "19 Nov 21:38",
+      "who": "anaya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 21:38",
+      "who": "pmo",
+      "msg": "→ changes: Note for zoya (TERMS owner) from anaya's review: TERMS 'collateral stall' should name S0, not 'unmirrored S*'."
+    },
+    {
+      "t": "19 Nov 21:39",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 21:39",
+      "who": "tara",
+      "msg": "→ in_review: Anaya changes addressed"
+    },
+    {
+      "t": "19 Nov 21:40",
+      "who": "anaya",
+      "msg": "review: done"
     }
   ]
 }

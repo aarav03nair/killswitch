@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "maya",
-  "status": "todo",
+  "status": "changes",
   "outcome": "Readers of reverted versions re-run against restored state inside a savepoint; changed payloads re-held",
   "acceptance": [
     "Hero: billing and reporter re-run, payment cancelled, 0 re-emitted effects (test)",
@@ -20,13 +20,38 @@
     "B3-05"
   ],
   "deliverable": "src/ks/recovery/rerun.py",
-  "summary": "",
-  "review": "",
+  "summary": "src/ks/recovery/rerun.py: ToolRerunner(dispatcher, args_of) re-executes the original tool+args (M14) with the original agent_id/action_id in a GatewayTxn inside dry_run's simulate(); args from the side store (args_from_sidestore, re-hashed) or a mapping; recovery never imports ks.world (A3 guard), the caller injects WorldDispatcher. Effects: same outbox:<id> v+1 held (as B3-23 Outbox.create), dispatched -> nothing emitted, flag(dispatched_tainted) dropped iff the payload hash is equal; new/dropped/missing dispositions; DryRun.reemitted, reheld. dry_run: on_stale='halt' stops at the first stale restore or re-run (hold/stale_plan, M8) and reports it; 'raise' raises StaleRerun (a StaleExpect). Redacted args -> flag(redacted_args), their readers ride. Tests tests/recovery/test_rerun.py on real ks.world F2+ records (tests/recovery/world.py): hero 0 flags/cancels/replans, reemitted 0, payments same id v+1 held, simulated state == S* for every object and every re-held payload == S* payload, live digest unchanged, two runs byte-identical plan. Also folded in: maya B3-21 changes, contracts 1.4 (RestoreStep.to=None, RecoveryPlan.t0_seq_est_literal), B3-23 real outbox status (missing object -> flag(outbox_missing)). Native 790 passed/8 skipped; container 800 passed. Notes for others: native ks run --fault is not served yet (RunOptions), so the end-to-end test uses the in-process world loop; Outbox.create raises on a dispatched re-run, so B3-30 apply must skip create for dispatched items; a re-run whose value equals the head writes nothing, so the tainted (obj,ver) stays head (B3-30 must record that repair); ADR-05 M14 says 'queued' with a fresh release_tick but B2 and B3-23 use 'held': followed held, ADR-05 M14 wording needs a fix (maya).",
+  "review": "[maya · changes] Core accepted: ToolRerunner re-runs the original tool, args, agent and action in a savepoint. Keys match Outbox.create. Halt at the first stale step is tested (re-run and restore, hold/stale_plan, nothing simulated after the halt, digest unchanged). Recovery never reads InjectSpec, culprit or S*. Native 796/8 skipped; container 812. Ruling: B2 wins, so the item is held. I amended ADR-05 M14 (held, release_tick unchanged). Fidelity of tests/recovery/world.py: it uses the same agents, WorldDispatcher, sorted admission and visible_to = first seq of the tick. But it has no outbox release phase, so every item stays queued forever (ob-7..30 are due before tick 35). It has no TaintView hold, uses a flat release_tick (no G3), and builds the read set from a dict instead of merge_read_set. So '0 flags' does not yet prove that the tainted payment and email are held rather than dispatched. Changes: (1) world.py creates items via ks.gateway.outbox.Outbox and runs the due/hold_reason release phase every tick, with a TaintView that turns on at containment. Re-assert the hero, and report any tainted dispatch as R>0. (2) Use merge_read_set. (3) Document that re-run lineage = tool reads only (the live lineage is view+tool) for B3-30.",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 21:17",
+      "who": "vikram",
+      "msg": "→ in_progress: started: tool re-run in simulate() on top of B3-21 dry_run"
+    },
+    {
+      "t": "19 Nov 21:33",
+      "who": "vikram",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 21:33",
+      "who": "vikram",
+      "msg": "→ in_review: hero dry-run green on world F2+ records; state == S*; native 790 / container 800 passed"
+    },
+    {
+      "t": "19 Nov 21:38",
+      "who": "maya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 21:38",
+      "who": "maya",
+      "msg": "→ changes: world.py needs the real outbox release phase before the hero claim holds"
     }
   ]
 }

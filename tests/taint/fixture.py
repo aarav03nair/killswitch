@@ -31,9 +31,9 @@ class Book:
     def next_seq(self) -> int:
         return len(self.records) + 1
 
-    def read(self, obj: str) -> ReadEntry:
+    def read(self, obj: str, source: str = "tool") -> ReadEntry:
         v, h = self.head[obj]
-        return ReadEntry(obj=obj, ver=v, hash=h)
+        return ReadEntry(obj=obj, ver=v, hash=h, source=source)
 
     def _writes(self, writes):
         ws = []
@@ -53,7 +53,7 @@ class Book:
                         ts_us=1_000_000 * tick + seq, record_id=f"r-{seq:06d}", conn_id=conn,
                         envelope=env.header(), envelope_hash=env.content_hash(), sig_ok=True, decision=decision,
                         reason=reason, policy_rule=rule, action_class=cls,
-                        read_set=tuple(sorted(reads, key=lambda e: e.obj)), write_set=writes,
+                        read_set=tuple(sorted(reads, key=lambda e: (e.obj, e.ver))), write_set=writes,
                         outbox_ids=tuple(outbox), result_hash=None, control=control, reexec_of=None)
         self.records.append(r)
         return r
@@ -76,8 +76,12 @@ class Book:
         env = self._env("ks.gateway", tool, {"seed": True}, 0, act_id="seed")
         return self._seal(tick=0, env=env, conn="c-0", writes=self._writes(objs))
 
-    def act(self, agent, tick, *, reads=(), writes=None, outbox=0, tool=None, cls=ActionClass.R) -> Record:
+    def act(self, agent, tick, *, reads=(), writes=None, outbox=0, tool=None, cls=ActionClass.R, view=()) -> Record:
+        """``reads`` are tool reads (``source="tool"``, the 1.4 default); ``view`` names objects delivered in the
+        tick's view (``source="view"``, B3-46). An object in both keeps one entry, tagged tool."""
         rs = [self.read(o) if isinstance(o, str) else o for o in reads]
+        tool_objs = {e.obj for e in rs}
+        rs += [self.read(o, "view") for o in view if o not in tool_objs]
         ws = self._writes(writes)
         obs = []
         for _ in range(outbox):
@@ -137,17 +141,19 @@ def f2plus() -> tuple[Book, dict]:
                  "docs:D-0000": {"title": "handbook"}})
     n = {"seed": b.seed(seed)}
     # honest history: crm edits S-31 terms at tick 3 (crm's view then holds its own S-31 v2: a self-read)
-    n["crm_honest"] = b.act("crm", 3, reads=["suppliers:S-31", "suppliers:S-31.iban", "customers:C-01"],
+    n["crm_honest"] = b.act("crm", 3, reads=["suppliers:S-31", "suppliers:S-31.iban"], view=["customers:C-01"],
                             writes={"suppliers:S-31": {"name": "S-31", "price": 100, "terms": 21, "risk_note": ""}})
     n["intake"] = b.act("intake", 5, reads=["tickets:T-0000"], writes={"tickets:T-0005": {"p": "low"}})
     n["inv1"] = b.act("inventory", 6, reads=["stock:SKU-1"], writes={"stock:SKU-1": {"qty": 99}})
     # h: the fault. crm's tick read set = adapter (S-17 row + iban) + view (supplier rows, customers)
-    n["crm_iban"] = b.act("crm", H, reads=[*_sup_rows(), "suppliers:S-17.iban", "customers:C-01"],
+    n["crm_iban"] = b.act("crm", H, reads=["suppliers:S-17", "suppliers:S-17.iban"],
+                          view=[*_sup_rows(), "customers:C-01"],
                           writes={"suppliers:S-17.iban": "DE99ATTACKER"}, tool="crm.update_supplier")
     # h+1: billing drafts the S-17 invoice (sees iban v2); crm writes S-22 price x10
     n["bill_inv17"] = b.act("billing", H + 1, reads=[*_sup_all(), "customers:C-01"],
                             writes={"invoices:INV-0011": {"supplier": "S-17"}}, tool="billing.draft_invoice")
-    n["crm_s22"] = b.act("crm", H + 1, reads=[*_sup_rows(), "suppliers:S-22.iban", "customers:C-01"],
+    n["crm_s22"] = b.act("crm", H + 1, reads=["suppliers:S-22", "suppliers:S-22.iban"],
+                         view=[*_sup_rows(), "customers:C-01"],
                          writes={"suppliers:S-22": {"name": "S-22", "price": 1000, "terms": 30, "risk_note": ""}},
                          tool="crm.update_supplier")
     # h+2: ledger, payment (held), remittance email, triage edits S-17 risk_note (clean row only), docs

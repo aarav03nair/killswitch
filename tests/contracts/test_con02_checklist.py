@@ -81,7 +81,8 @@ def test_transport_tickframe_epoch_and_view():
     assert {"epoch", "view"} <= set(TickFrame.model_fields)
     t = TickFrame(tick=1, epoch=3, view=(_view("tickets:T-3", 1), _view()))
     assert [v.obj for v in t.view] == ["suppliers:S-17", "tickets:T-3"]          # sorted
-    assert t.view[0].read_entry() == ReadEntry(obj="suppliers:S-17", ver=4, hash=value_hash({"name": "Acme Steel"}))
+    assert t.view[0].read_entry() == ReadEntry(obj="suppliers:S-17", ver=4, hash=value_hash({"name": "Acme Steel"}),
+                                                 source="view")  # v1.4 (B3-46)
     with pytest.raises(ValueError):
         ViewEntry(obj="suppliers:S-17", ver=4, hash=S.H_OLD, value={"name": "x"})  # hash checked
     with pytest.raises(ValueError):

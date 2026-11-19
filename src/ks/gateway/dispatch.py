@@ -7,10 +7,9 @@
 
 Who owns read/write sets: the gateway, never the tool. ``txn`` is the gateway's state transaction (``ks.state``,
 ADR-05). A dispatcher reads and writes only through it, and once it is wired the gateway takes ``read_set`` and
-``write_set`` from the txn and refuses an ``Execution`` whose sets disagree (``Gateway._sets``). Until then
+``write_set`` from the txn and refuses an ``Execution`` whose sets disagree (``Gateway._sets``). Without a store
 (``txn is None``, skeleton tools touch no state) the gateway accepts the dispatcher's sets and they must be
-empty for a write. The gateway now passes a ``GatewayTxn`` (store inside ``BEGIN IMMEDIATE`` + seq) when it has
-a store. TODO(B3-41): take the sets from the store (``ks.gateway.txn.writes_at``) and deny on disagreement.
+empty for a write. With a store it passes a ``GatewayTxn`` (store inside ``BEGIN IMMEDIATE`` + seq).
 
 ``Execution.outbox`` carries I1/I2 effect *requests*; the gateway (outbox owner) assigns ids, hashes the payload,
 attaches lineage from the record's read set and creates the ``OutboxItem``s. A tool never sends an effect itself.

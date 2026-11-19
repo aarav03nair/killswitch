@@ -1,4 +1,4 @@
-"""ks.contracts: frozen contracts C1-C6 (CON-01, v1.1 CON-02, v1.2 B3-01, v1.3 B3-43). Import from here, not from submodules.
+"""ks.contracts: frozen contracts C1-C6 (CON-01, v1.1 CON-02, v1.2 B3-01, v1.3 B3-43, v1.4 B3-46). Import from here, not from submodules.
 
 C1 Envelope · C2 Record + WitnessCheckpoint · C3 State API + values + side store ·
 C4 Alert + Control · C5 RecoveryPlan · C6 RunConfig + Keyring + RunDir + verify Exit · transport frames.
@@ -21,18 +21,21 @@ from .recovery import (APPROVE_TOOL, ActionRef, Approval, CancelOutboxStep, Comp
 from .rundir import (BASELINES_DIR, DETERMINISTIC_FILES, PROJECTED_FILES, SCORER_ONLY_FIELDS, VERIFY_REASONS,
                      WITNESS_HEADS_DIR, Exit, Isolation, KeyEntry, Keyring, RunAnchor, RunConfig, RunDir,
                      VerifyReport, anchor_status, sidestore_relpath)
-from .state import (HistoryEntry, ObjVer, OutboxItem, OutboxStatus, ReadEntry, SideDomain, SideEntry, SideStore,
-                    StateRead, StateView, StateWriter, VersionRef, ViewEntry, WriteEntry, field_obj_id,
-                    idempotency_key, is_field_obj, make_obj_id, row_obj_id, split_obj_id, state_digest)
+from .state import (READ_SOURCES, HistoryEntry, ObjVer, OutboxItem, OutboxStatus, ReadEntry, ReadSource, SideDomain,
+                    SideEntry, SideStore, StateRead, StateView, StateWriter, VersionRef, ViewEntry, WriteEntry,
+                    check_read_set, field_obj_id, idempotency_key, is_field_obj, make_obj_id, merge_read_set,
+                    row_obj_id, split_obj_id, state_digest)
 from .transport import (MAX_FRAME_BYTES, MAX_SIGN_PER_TICK, MAX_VIEW_ENTRIES, SIGN_REFUSAL_REASONS,
                         WITNESS_FILES_FDS, NoopFrame, ReplyFrame, SignRefusal, SignReply, SignRequest, SubmitFrame,
                         TickFrame, WitnessClose, WitnessFiles, WitnessHead, WitnessInit, WitnessPub, WitnessReady,
                         decode_frame, decode_witness_frame, encode_frame, signer_refusal)
 
-CONTRACTS_VERSION = "1.3.0"
+CONTRACTS_VERSION = "1.4.0"
 """Contract version. 1.1.0 = CON-02 design freeze (CALL-02); 1.2.0 = B3-01, additive (witness link frames,
 SignRefusal, RunConfig.isolation/decisions_from, VerifyReport.isolation, reexec_invalid); 1.3.0 = B3-43, additive
-(``ks.seed`` system tool per D-15, deny reason ``tool_error``, verify reason ``seed_invalid``); see README changelog. Any change to fields,
+(``ks.seed`` system tool per D-15, deny reason ``tool_error``, verify reason ``seed_invalid``); 1.4.0 = B3-46,
+additive (``ReadEntry.source`` view|tool, read_set keyed by (obj, ver), ``RestoreStep.to`` may be ``None``,
+``RecoveryPlan.t0_seq_est_literal``); see README changelog. Any change to fields,
 patterns, canonical rules or domain tags bumps it, regenerates ``schema/`` and re-pins golden hashes."""
 
 DOCUMENTS = {
@@ -63,6 +66,7 @@ __all__ = [
     "ObjVer", "VersionRef", "ReadEntry", "ViewEntry", "WriteEntry", "StateRead", "HistoryEntry", "OutboxItem",
     "OutboxStatus", "SideEntry", "SideDomain", "StateView", "StateWriter", "SideStore", "make_obj_id",
     "field_obj_id", "row_obj_id", "split_obj_id", "is_field_obj", "state_digest", "idempotency_key",
+    "ReadSource", "READ_SOURCES", "check_read_set", "merge_read_set",
     # C4
     "Alert", "AlertKind", "HARD_ALLOWED", "HARD_DETECTORS", "DETECTOR_KIND", "Detector", "Control", "ControlOp",
     "TargetKind", "make_target", "parse_target", "CONTROL_TOOL", "EpochFold",

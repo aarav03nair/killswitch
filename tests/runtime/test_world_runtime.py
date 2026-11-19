@@ -238,3 +238,14 @@ def test_existing_run_dir_refuses_before_spawn(base):
     assert sorted(os.listdir(out)) == ["keep"]  # nothing written into it
     if LINUX_ROOT:
         assert pids_with_uids(WORLD_UIDS) == []
+
+
+def test_verify_accepts_a_relative_run_path(base, monkeypatch):
+    """A jury types `ks verify runs/x`: reconcile must open state.db from a relative path, not fail as tamper."""
+    from ks.verify import verify
+    out = base / "relpath"
+    p = world_run(out, ticks=12)
+    assert p.returncode == 0, p.stderr + p.stdout
+    monkeypatch.chdir(base)
+    rep = verify(Path("relpath"), log=lambda s: None)
+    assert rep.exit == Exit.OK and rep.reason == "ok", rep

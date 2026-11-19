@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "done",
   "outcome": "Closes the self-chained-write under-taint gap while keeping the B2 hero result (Aarav's B3-45 decision C)",
   "acceptance": [
     "Contract: each read-set entry carries source view|tool (additive, contracts 1.4); gateway tags view deliveries vs adapter reads (with B3-41)",
@@ -19,13 +19,58 @@
     "B3-41"
   ],
   "deliverable": "src/ks/contracts/",
-  "summary": "",
-  "review": "",
+  "summary": "Contracts 1.4.0 (additive, fixed per kabir's blocker): ReadEntry.source view|tool (default tool); read_set/lineage keyed (obj,ver) + one per (obj,source); merge_read_set(view, tool) re-tags by position; RestoreStep.to may be None (to_absent); RecoveryPlan.t0_seq_est_literal + t0_delta. ADDITIVITY FIX: one rule in ks.contracts._base: fields declared additive(default) are omitted from the canonical form when equal to their default (wrap model_serializer on Value, applies nested); schema_gen marks them optional. source='view' and integer t0_seq_est_literal serialize and round-trip; explicit default bytes are rejected as NonCanonicalError. Goldens: 7 reverted to 1.3 values; only doc:run_config moved (version string). Regression: tests/contracts/test_additive_13_run.py verifies a checked-in 1.3 world run (tests/contracts/fixtures/run-1.3-world-s0, built from 5c711d3, ticks 8 seed 0, 23 non-empty read_sets) under 1.4: exit 0; fails if omission is disabled. Kabir's 40-tick repro run from 5c711d3 also verifies exit 0 under 1.4. ks.taint t0 walk follows suspect self-reads via tool entries only (self-chain seeds W1; hero seed unchanged {S-17.iban v2, S-22 v2}). RESIDUAL for kabir to record in THREAT-MODEL.md / RT: a rogue can steer into the view-only residual by computing W2 from its view instead of a tool read; a self-read seen only via the view is not followed by the t0 walk, so those earlier writes fall outside the seed; only t0_delta (t0_seq_est - t0_seq_est_literal) reports it. Host suite 789 passed, 8 skipped.",
+  "review": "[kabir · changes] BLOCKER (not additive): 1.4 changes the canonical bytes of existing documents. Value.to_obj dumps every field, so ReadEntry.source=\"tool\" (default) and RecoveryPlan.t0_seq_est_literal=null are now serialized into every read_set, lineage and plan. 7 of the 8 re-pinned goldens moved for that reason: record_exec/control/forged/garbage (read_set + prev_hash chain), witness (chains record hash), outbox_item (lineage), plan (new null field). Only run_config (contracts_version string) is a legitimate change, as in 1.3. Repro: a world run built with HEAD 1.3 in a git worktree (ks run --scenario world --ticks 40 --seed 0) verifies exit 0 under 1.3 and fails under the 1.4 tree: exit 2 parse_error \"Record: bytes are not this object's canonical form\", first_bad=2. Skeleton runs pass only because their read_sets are empty. Fix: leave default-valued new fields (source==\"tool\", t0_seq_est_literal None) out of the canonical form, make them optional in the schemas, revert those 7 goldens to the 1.3 hashes, and add a test that verifies a committed 1.3 world run dir. Otherwise do a real major bump with a migration note. Attacks found no other problem: source is assigned by the gateway, since merge_read_set re-tags by position and ignores what the dispatcher says; a tool read of the same (obj,ver) as a view entry collapses to tool, so it cannot hide as view; a duplicate tool obj is denied as tool_error. The self-chain fixture really does seed W1 via a tool read. The hero seed is {S-17.iban v2, S-22 v2} on the world-agents test (merge_read_set mimics the gateway); there is no real F2+ gateway run yet because the runtime does not serve faults. Residual to record in THREAT-MODEL/RT: a rogue can choose to compute W2 from its view and not by a tool read, so it picks the view-only residual; only t0_delta reports it. Tested in a copy of the working tree with nisha's B3-23 stub.py indent fixed: 781 passed, 8 skipped.\n\n[kabir · done] PASS. Blocker fixed. (1) Fixture genuine: regenerated world s0 t8 from git archive HEAD (1.3); same record shape as the fixture modulo keys/sigs; HEAD 1.3 runs (t8 s0, t40 s1) and the fixture verify exit 0 under the 1.4 tree; schema c2 validates them. Disabling the omission fails both additive tests. (2) No producer emits an explicit default: every read entry/plan goes through Value.to_obj (wrap serializer); 1.4 world run t40 s0 verifies exit 0 (197 source:view, 0 source:tool in bytes); explicit source:tool rejected NonCanonicalError. Recovery/oracle use to_obj/model_validate. (3) No hand-built canonical contract dicts found (oracle ledger, timing, store values are not contracts). Not end-to-end: inject/recover CLI not implemented yet. Pre-existing, not B3-46: ks verify with a relative run path gives reconcile_mismatch (state.db file URI). THREAT-MODEL errata: view-only self-read residual + B3-41 unreported raw-SQL read limit added. Host 792 passed/8 skipped; container 804 passed.",
   "log": [
     {
       "t": "19 Nov 18:45",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 21:13",
+      "who": "pmo",
+      "msg": "→ todo: Panel ruling (B3-41 review): when a tool read and a view entry name the same object at different versions, keep BOTH. read_set allows one entry per object, so this lands here with contracts 1.4; until then tool-read-wins stays."
+    },
+    {
+      "t": "19 Nov 21:15",
+      "who": "pmo",
+      "msg": "→ todo: From maya's B3-21 review: contracts 1.4 also carries (a) RestoreStep.to able to express a culprit-created object (replace vikram's tombstone marker) and (b) a t0-literal field on the plan (replace Planned.t0_delta) for B3-45's dry-run delta."
+    },
+    {
+      "t": "19 Nov 21:15",
+      "who": "maya",
+      "msg": "→ in_progress: starting contracts 1.4"
+    },
+    {
+      "t": "19 Nov 21:24",
+      "who": "maya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 21:24",
+      "who": "maya",
+      "msg": "→ in_review: contracts 1.4 + taint option C + gateway tagging landed; host 763 passed, container 785 passed"
+    },
+    {
+      "t": "19 Nov 21:27",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 21:31",
+      "who": "maya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 21:31",
+      "who": "maya",
+      "msg": "→ in_review: Additivity fixed: default-valued additive fields omitted from canonical form; 7 goldens reverted; 1.3 world-run fixture verifies under 1.4."
+    },
+    {
+      "t": "19 Nov 21:37",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

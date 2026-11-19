@@ -1,4 +1,4 @@
-# ks.contracts: C1–C6 reference (CON-01 → CON-02 → B3-01 → B3-43, contracts **1.3.0**, frozen 22 Nov)
+# ks.contracts: C1–C6 reference (CON-01 → CON-02 → B3-01 → B3-43 → B3-46, contracts **1.4.0**, frozen 22 Nov)
 
 Import from `ks.contracts`, never from submodules. Every type is a frozen pydantic model that rejects unknown
 fields. Each one has `to_canonical()` / `from_canonical()` (strict: the bytes must already be canonical) and
@@ -10,9 +10,9 @@ fields. Each one has `to_canonical()` / `from_canonical()` (strict: the bytes mu
 |---|---|---|
 | C1 Envelope | `Envelope` (on the socket, raw `args`), `EnvelopeHeader` (signed + recorded, `args_hash`), `ActLink`; `MAX_EXPIRY_TICKS`, `expiry_ok()` | in `record.jsonl` |
 | C2 Record | `Record` (+`reexec_of`), `WitnessCheckpoint` (+`count`), `Decision` exec/deny/hold, `Reason`, `ActionClass` R/C/I1/I2/U; `determinism_view()`, `witness_chain_problems()` | `record.jsonl`, `witness.jsonl` |
-| C3 State | `StateView`/`StateWriter`/`SideStore` protocols; `ObjVer`, `VersionRef`, `ReadEntry`, `ViewEntry`, `WriteEntry`, `StateRead`, `HistoryEntry`, `OutboxItem`, `SideEntry`; `make_obj_id`/`field_obj_id`/`row_obj_id`/`split_obj_id`; `idempotency_key()` | `sidestore/xx/<hash>.json` |
+| C3 State | `StateView`/`StateWriter`/`SideStore` protocols; `ObjVer`, `VersionRef`, `ReadEntry` (+`source` view|tool), `ViewEntry`, `WriteEntry`, `StateRead`, `HistoryEntry`, `OutboxItem`, `SideEntry`; `make_obj_id`/`field_obj_id`/`row_obj_id`/`split_obj_id`; `idempotency_key()`; `check_read_set()`, `merge_read_set()` | `sidestore/xx/<hash>.json` |
 | C4 | `Alert` (`root_candidates` ranked; no `suspect`; H3 hard table), `Control` (target `agent:`/`conn:`/`action:`/`outbox:`), `EpochFold` | `alerts.jsonl` (copy); Alerts and Controls inside records |
-| C5 | `RecoveryPlan` (`t0_seq_est`), `TaintSet`, steps `restore`/`rerun`/`replan`/`cancel_outbox`/`compensate`/`flag`, `DiffEntry`; `Approval`, `RecoverArgs` | `plans/<plan_id>.json` |
+| C5 | `RecoveryPlan` (`t0_seq_est`, `t0_seq_est_literal`), `TaintSet`, steps `restore`/`rerun`/`replan`/`cancel_outbox`/`compensate`/`flag`, `DiffEntry`; `Approval`, `RecoverArgs` | `plans/<plan_id>.json` |
 | C6 | `RunConfig` (seed, `fault_tick`, `key_mode`, `decision_latency_ticks`, `hold_window_ticks`, `sensitive_fields`, agents, `isolation`, `decisions_from`; `tcb_view()`), `Keyring`, `RunAnchor`, `RunDir`, `Exit`, `VerifyReport` (+`anchored`, `isolation`) | `config.json`, `keys.json` |
 | Transport | `TickFrame` (+`epoch`, `view`), `SubmitFrame`, `NoopFrame`, `ReplyFrame`, `SignRequest`, `SignReply`, `SignRefusal`; witness link `WitnessInit/Pub/Files/Ready/Head/Close` (`decode_witness_frame`); `MAX_VIEW_ENTRIES`, `MAX_SIGN_PER_TICK`, `SIGN_REFUSAL_REASONS`, `signer_refusal()` | JSON lines over Unix sockets |
 
@@ -78,6 +78,7 @@ rec = rec.with_gw_sig(gw_key.sign(rec.signing_bytes()))
 - **Write-write conflict rule.** `RestoreStep.expect` is the culprit's after-version and must still be the head, or the step fails closed (`hold/stale_plan`). No restore over a tainted head (B6). A *taint-scoped revert* is the set of `restore` steps in a plan.
 - **Field objects (B1, X1, X2).** Each `sensitive_fields` entry is its own object `table:pk.field`; a pk never contains `.` (validator on every `ObjId`; `OBJ_ID_RE` unchanged). `RunConfig.check_obj` requires a `.suffix` to name a sensitive field of that table. A whole-row read lists the row and its field objects (`RunConfig.field_objs_of`); a projection without the field lists only the row; field-only edits do not bump the row. Aggregates enumerate rows.
 - **View (I1).** `TickFrame.view` (≤ 64 `ViewEntry`, value hash checked) joins the read_set of that tick's submission. `TickFrame.epoch` is `None` while suspended/revoked.
+- **Read sources (1.4, B3-46).** Each read-set entry is tagged `source`: `view` (delivered) or `tool` (adapter read); the gateway sets it via `merge_read_set(view, tool)`. A read set is sorted by `(obj, ver)`, unique per `(obj, ver)` and per `(obj, source)`: one object appears twice only when the view and the tool saw different versions (both kept). Same rule for `OutboxItem.lineage`.
 - **Approval binding (G6).** `ks.approve` args = `plan.approval()` (`plan_hash` = `content_hash()`); each `ks.recover.<op>` carries `plan.recover_args(n)`.
 - **Ground truth (A3).** `fault`, `culprit`, `fault_tick` are scorer-only; the TCB gets `RunConfig.tcb_view()`.
 
@@ -119,6 +120,31 @@ Each is a recorded envelope on `c-0`. Every outbox status change carries a `writ
 Metric and score keys and the `effects.jsonl` schema (tara, ADR-06); policy rule ids (nisha, ADR-03); the store implementation (vikram, ADR-05); side-store and verify internals (arjun, ADR-02).
 
 ## Changelog
+
+### 1.4.0 (B3-46, 19 Nov; B3-45 option C) — additive only
+Nothing renamed or removed. Tests: `tests/contracts/test_contracts_14.py`, `tests/gateway/test_b346.py`.
+
+- **C3:** `ReadEntry.source: "view" | "tool" = "tool"` (`ReadSource`, `READ_SOURCES`). `ViewEntry.read_entry()`
+  tags `view`. `check_read_set()` is the rule for `Record.read_set` and `OutboxItem.lineage`: sorted by `(obj, ver)`,
+  unique `(obj, ver)` and `(obj, source)`. So the same object at two versions (view vs tool) keeps both (Panel,
+  B3-41 review). `merge_read_set(view, tool)` builds it and re-tags by position; the same version in both = one
+  `tool` entry. A 1.3 read set (one entry per obj) sorts the same.
+- **C5:** `RestoreStep.to: VersionRef | None`; `None` = the culprit created the object, restore to absent (tombstone);
+  `RestoreStep.to_absent`. `RecoveryPlan.t0_seq_est_literal: Seq | None = None` (literal-walk t0, `<= t0_seq_est`),
+  `RecoveryPlan.t0_delta`. Replace the planner's tombstone marker and `Planned.t0_delta`.
+- **ks.taint:** the t0 walk follows the suspect's self-reads only through `tool` entries (ADR-05 §4, CALL-02 A8-a).
+- **Schemas:** regenerated (version string; optional `source` on read entries, nullable `to`, optional
+  `t0_seq_est_literal`).
+
+- **Additivity rule (canonical form, `_base.additive`).** A field added in a minor version is declared with
+  `additive(default)` and is **omitted from the canonical form when it equals its default** (nested values too):
+  `source == "tool"` and `t0_seq_est_literal is None` are not written, so every 1.3 document keeps its bytes, hashes
+  and signatures, and 1.3 runs still verify (`tests/contracts/test_additive_13_run.py`, a checked-in 1.3 world run).
+  Non-default values (`source: "view"`, an integer literal t0) are written and round-trip. Strict parse is unchanged:
+  an explicit default in the bytes is not canonical (`NonCanonicalError`). Schemas list these fields as optional.
+
+**Golden hashes.** Only `doc:run_config` moved (`contracts_version` = 1.4.0). All other documents are byte-identical
+to 1.3.
 
 ### 1.3.0 (B3-43, 19 Nov; D-15) — additive only
 Nothing renamed or removed. Tests: `tests/contracts/test_contracts_13.py`.

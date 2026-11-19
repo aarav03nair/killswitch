@@ -88,11 +88,12 @@ def _evidence_writers(ix: RecordIndex, evidence: Iterable[ObjVer]) -> list[Recor
     return [ix.writer(e.obj, e.ver) for e in evidence]
 
 
-def _walk(ix: RecordIndex, start: Iterable[Record], *, skip_self_reads_of: str | None = None,
+def _walk(ix: RecordIndex, start: Iterable[Record], *, skip_self_view_reads_of: str | None = None,
           max_hops: int = MAX_HOPS) -> tuple[dict[int, int], dict[int, set[int]]]:
     """Bounded backward walk through read sets. Returns ``seq -> hop`` (start records at hop 0) and the subgraph
     edges ``seq -> parent seqs`` (writers of what it read). Stops at seed versions (D-SEQ1) and unknown writers.
-    ``skip_self_reads_of``: do not follow an edge from a record of that agent to a version that agent wrote."""
+    ``skip_self_view_reads_of``: do not follow an edge from a record of that agent to a version that agent wrote
+    when the read entry is ``source="view"`` (B3-45 option C, contracts 1.4); its ``tool`` self-reads are followed."""
     dist: dict[int, int] = {}
     parents: dict[int, set[int]] = {}
     frontier = []
@@ -108,8 +109,9 @@ def _walk(ix: RecordIndex, start: Iterable[Record], *, skip_self_reads_of: str |
                 w = ix.writer(e.obj, e.ver)
                 if w is None or w is ix.seed or w.seq >= r.seq:
                     continue
-                if skip_self_reads_of is not None and r.attributed_agent == skip_self_reads_of \
-                        and w.attributed_agent == skip_self_reads_of:
+                if skip_self_view_reads_of is not None and e.source == "view" \
+                        and r.attributed_agent == skip_self_view_reads_of \
+                        and w.attributed_agent == skip_self_view_reads_of:
                     continue
                 ps.add(w.seq)
                 if w.seq not in dist:
@@ -176,16 +178,18 @@ def t0_seq_est(records: RecordIndex | Iterable[Record], evidence: Iterable[ObjVe
     """A2/X3: the earliest write by ``suspect`` in the bounded backward closure of ``evidence`` (all alerts'
     ``evidence_versions``). ``None`` if ``suspect`` wrote nothing there.
 
-    ``follow_self_reads=False`` (default) does not follow the suspect's reads of its own earlier versions. Under
-    the I1 read rule every view row is a read, so an agent always "reads" its own recent writes and the literal
-    walk would pull t0 back to the suspect's first write in scope (in the world: crm's tick-3 ``S-31`` edit),
-    seeding honest work. Laundering through another agent is still followed. ``True`` is the literal ADR-05 §4
-    walk (more conservative); :class:`Taint` carries both so the planner reports the delta. Decided B3-45 (option C,
-    built as B3-46: tag reads view|tool, follow self-reads through tool reads only); this default is the interim.
-    Known gap pinned in tests: a self-chain (bad W1, suspect reads W1, writes W2, alert on W2) seeds W2 only."""
+    Self-reads (B3-45 option C, decided by Aarav 19 Nov; built in B3-46 on contracts 1.4). Under the I1 read rule
+    every view row is a read, so an agent always "reads" its own recent writes and the literal walk pulls t0 back
+    to the suspect's first write in scope (in the world: crm's tick-3 ``S-31`` edit), seeding honest work. So by
+    default (``follow_self_reads=False``) the walk follows the suspect's reads of its own earlier versions only
+    through ``source="tool"`` entries (what its tool actually read to compute the write) and skips ``view`` ones.
+    A self-chain (bad W1, the suspect's tool reads W1, writes W2, alert on W2) therefore seeds W1. Laundering
+    through another agent is followed whatever the source. ``True`` is the literal ADR-05 §4 walk (follows every
+    self-read); :class:`Taint` carries both t0s so the dry-run reports the delta. Residual, reported not hidden:
+    a self-read that reached the suspect only through its view is not followed."""
     ix = RecordIndex.of(records)
     start = [w for w in _evidence_writers(ix, evidence) if w is not None]
-    dist, _ = _walk(ix, start, skip_self_reads_of=None if follow_self_reads else suspect)
+    dist, _ = _walk(ix, start, skip_self_view_reads_of=None if follow_self_reads else suspect)
     seqs = [s for s in dist if ix.by_seq[s].attributed_agent == suspect and ix.by_seq[s].write_set]
     return min(seqs) if seqs else None
 
@@ -223,9 +227,10 @@ def seed_versions(records: RecordIndex | Iterable[Record], suspect: str, t0: int
 class Taint:
     """Result of :func:`closure`. ``versions`` includes the seed. ``actions`` are tainted exec records (seed writers
     and readers), seq order. ``via[seq]`` = the tainted versions that record read (empty for seed writers and
-    sticky-only taint), for the console's "why". ``t0_seq_est`` is the t0 actually used (default walk, skips the
-    suspect's self-reads); ``t0_seq_est_literal`` is the literal ADR-05 §4 walk's t0 (follows self-reads), carried
-    so the dry-run can report the delta (B3-45: interim option B; B3-46 will follow self-reads via tool reads)."""
+    sticky-only taint), for the console's "why". ``t0_seq_est`` is the t0 actually used (default walk: follows the
+    suspect's self-reads through ``tool`` read entries only, B3-45 option C); ``t0_seq_est_literal`` is the literal
+    ADR-05 §4 walk's t0 (follows every self-read, view ones too), carried so the plan can report the delta
+    (``RecoveryPlan.t0_seq_est_literal``, contracts 1.4)."""
 
     suspect: str | None
     t0_seq_est: int | None
@@ -241,8 +246,8 @@ class Taint:
 
     @property
     def t0_delta(self) -> int | None:
-        """``t0_seq_est - t0_seq_est_literal`` (>= 0; > 0 means the literal walk reaches earlier suspect writes the
-        seed leaves out). ``None`` when either is unknown."""
+        """``t0_seq_est - t0_seq_est_literal`` (>= 0; > 0 means the literal walk, through view self-reads, reaches
+        earlier suspect writes the seed leaves out). ``None`` when either is unknown."""
         if self.t0_seq_est is None or self.t0_seq_est_literal is None:
             return None
         return self.t0_seq_est - self.t0_seq_est_literal

@@ -33,20 +33,21 @@ Records carry only (obj, ver, hash); raw values live in the side store, keyed by
 from __future__ import annotations
 
 import re
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterable, Mapping, Sequence
 from enum import StrEnum
 from typing import Annotated, Any, Literal, Protocol, runtime_checkable
 
 from pydantic import AfterValidator, Field, JsonValue, Strict, StringConstraints, field_validator, model_validator
 
-from ._base import Document, Value
+from ._base import Document, Value, additive
 from .canonical import MAX_SAFE_INT
 from .hashing import Domain, raw_hash, tagged_hash, value_hash
 from .ids import ActionId, Hash, PrincipalId, Seq, Token
 
 __all__ = [
     "OBJ_ID_RE", "PK_RE", "FIELD_RE", "ObjId", "Version", "make_obj_id", "field_obj_id", "row_obj_id",
-    "split_obj_id", "is_field_obj", "ViewEntry", "ObjVer", "VersionRef", "ReadEntry",
+    "split_obj_id", "is_field_obj", "ViewEntry", "ObjVer", "VersionRef", "ReadEntry", "ReadSource",
+    "READ_SOURCES", "merge_read_set", "check_read_set",
     "WriteEntry", "StateRead", "HistoryEntry", "OutboxStatus", "OutboxItem", "SideDomain", "SideEntry",
     "StateView", "StateWriter", "SideStore", "state_digest", "idempotency_key", "OutboxClass",
 ]
@@ -129,6 +130,12 @@ class VersionRef(Value):
     """``value_hash(value)`` of that version; the value itself is in the side store."""
 
 
+ReadSource = Literal["view", "tool"]
+"""v1.4 (B3-46, B3-45 option C): how a read reached the agent. ``view`` = delivered in ``TickFrame.view`` (I1);
+``tool`` = read by the tool adapter inside the action's state txn."""
+READ_SOURCES: tuple[str, ...] = ("view", "tool")
+
+
 class ReadEntry(Value):
     """One entry of a read set: what an adapter observed, captured by the gateway (OTel ``ks.read_set``)."""
 
@@ -138,6 +145,10 @@ class ReadEntry(Value):
     """Version read."""
     hash: Hash
     """Value hash of the version read."""
+    source: ReadSource = additive("tool")
+    """v1.4 (B3-46): ``view`` (delivered in the tick's view) or ``tool`` (read by the adapter). Set by the gateway,
+    never by the agent. The default ``tool`` is the conservative reading of an untagged entry: the t0 walk
+    (ADR-05 §4) follows a suspect's self-reads only through ``tool`` entries."""
 
 
 class ViewEntry(Value):
@@ -161,7 +172,8 @@ class ViewEntry(Value):
         return self
 
     def read_entry(self) -> ReadEntry:
-        return ReadEntry(obj=self.obj, ver=self.ver, hash=self.hash)
+        """The read-set entry for this delivery, tagged ``source="view"`` (v1.4)."""
+        return ReadEntry(obj=self.obj, ver=self.ver, hash=self.hash, source="view")
 
 
 class WriteEntry(Value):
@@ -188,6 +200,37 @@ def _sorted_unique(items: tuple, key, what: str) -> tuple:
     if len(set(keys)) != len(keys):
         raise ValueError(f"duplicate {what}")
     return out
+
+
+def _read_key(e: ReadEntry) -> tuple[str, int]:
+    return (e.obj, e.ver)
+
+
+def check_read_set(entries: tuple[ReadEntry, ...], what: str = "read_set") -> tuple[ReadEntry, ...]:
+    """v1.4 read-set rule (B3-46; Panel ruling on B3-41): sorted by ``(obj, ver)``, unique per ``(obj, ver)``, and
+    at most one entry per ``(obj, source)``. So one object appears at most twice, at two different versions, once
+    as ``view`` and once as ``tool`` (the view showed one version, the tool read another; both are kept). Before
+    1.4 an object appeared once; that set still passes and sorts the same."""
+    out = _sorted_unique(entries, _read_key, f"{what} (obj, ver)")
+    if len({(e.obj, e.source) for e in out}) != len(out):
+        raise ValueError(f"duplicate {what} (obj, source)")
+    return out
+
+
+def merge_read_set(view: Iterable[ReadEntry], tool: Iterable[ReadEntry]) -> tuple[ReadEntry, ...]:
+    """The record's read set from the tick's view deliveries and the adapter's reads (I1, B3-46). Each input is
+    re-tagged by position (``view`` / ``tool``), so a mis-tagged entry cannot pass as the other kind. The same
+    ``(obj, ver)`` in both is one ``tool`` entry; the same obj at different versions keeps both. Raises
+    ``ValueError`` if one side names an object twice."""
+    by: dict[tuple[str, int], ReadEntry] = {}
+    for src, es in (("view", view), ("tool", tool)):
+        seen: set[str] = set()
+        for e in es:
+            if e.obj in seen:
+                raise ValueError(f"{e.obj} appears twice in the {src} reads")
+            seen.add(e.obj)
+            by[(e.obj, e.ver)] = ReadEntry(obj=e.obj, ver=e.ver, hash=e.hash, source=src)
+    return check_read_set(tuple(by.values()))
 
 
 class StateRead(Value):
@@ -268,7 +311,8 @@ class OutboxItem(Document):
     idempotency_key: Hash
     """Dedupe key from :func:`idempotency_key`; re-runs dedupe on this, never on nonce."""
     lineage: tuple[ReadEntry, ...]
-    """Read set of the creating action (from the record, never agent-declared); drives lineage hold."""
+    """Read set of the creating action (from the record, never agent-declared); drives lineage hold. Same rule as
+    ``Record.read_set`` (v1.4: :func:`check_read_set`)."""
     status: OutboxStatus
     """Lifecycle state."""
     release_tick: Annotated[int, Strict(), Field(ge=0, le=MAX_SAFE_INT)]
@@ -281,7 +325,7 @@ class OutboxItem(Document):
     @field_validator("lineage")
     @classmethod
     def _lin(cls, v):
-        return _sorted_unique(v, lambda e: e.obj, "lineage obj")
+        return check_read_set(v, "lineage")
 
     @model_validator(mode="after")
     def _disp(self) -> OutboxItem:

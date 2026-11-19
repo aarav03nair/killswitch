@@ -248,7 +248,7 @@ def _reconcile_pass(run: Path, writes: list) -> None:
         return
     import sqlite3
     try:
-        conn = sqlite3.connect(f"{db.as_uri()}?mode=ro", uri=True, isolation_level=None)
+        conn = sqlite3.connect(f"{db.resolve().as_uri()}?mode=ro", uri=True, isolation_level=None)
         try:
             live = Store(conn).state_digest()
             bad = _value_problems(conn)

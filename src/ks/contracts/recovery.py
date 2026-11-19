@@ -27,7 +27,7 @@ from pydantic import Field, StringConstraints, field_validator, model_validator
 
 from .ids import RECOVER_TOOL_PREFIX
 
-from ._base import Document, Value
+from ._base import Document, Value, additive
 from .hashing import Domain
 from .ids import ActionId, AgentId, Hash, PrincipalId, Seq, Token
 from .state import ObjId, ObjVer, VersionRef, _sorted_unique
@@ -81,8 +81,16 @@ class RestoreStep(_Step):
     expect: VersionRef
     """The culprit's after-version (B6). Must still be the head, otherwise the step fails closed
     (``hold/stale_plan``); an honest later write makes it a ``flag`` at plan time instead."""
-    to: VersionRef
-    """Pre-taint version whose value is re-written (value from the side store)."""
+    to: VersionRef | None
+    """Pre-taint version whose value is re-written (value from the side store). v1.4 (B3-46): ``None`` = the
+    culprit **created** the object (no pre-taint version), so the restore writes a tombstone (delete, value
+    ``null``, ``TOMBSTONE_HASH``) as a new version. Replaces the 1.3 planner marker
+    ``to=VersionRef(ver=expect.ver, hash=TOMBSTONE_HASH)``."""
+
+    @property
+    def to_absent(self) -> bool:
+        """True iff this restore deletes a culprit-created object (``to is None``)."""
+        return self.to is None
 
 
 class RerunStep(_Step):
@@ -197,7 +205,12 @@ class RecoveryPlan(Document):
     t0_seq_est: Seq
     """Estimated first tainted seq (A2, X3): the earliest write by ``culprit`` in the bounded backward closure
     of the alerts' ``evidence_versions``. An estimate from the record only; the planner never reads
-    ``RunConfig.fault_tick`` (scorer-only). Taint seed (A8): every culprit write in [t0_seq_est, suspend]."""
+    ``RunConfig.fault_tick`` (scorer-only). Taint seed (A8): every culprit write in [t0_seq_est, suspend]. The walk
+    follows the culprit's reads of its own versions only through ``tool`` read entries (B3-45 option C, v1.4)."""
+    t0_seq_est_literal: Seq | None = additive(None)
+    """v1.4 (B3-46, replaces the planner-side ``Planned.t0_delta``): t0 of the literal ADR-05 §4 walk, which also
+    follows the culprit's ``view`` self-reads. ``<= t0_seq_est``; the dry-run reports the difference (suspect
+    writes the seed leaves out). ``None`` = not computed."""
     as_of_seq: Seq
     """Plan computed against state at this record seq; stale plans must be recomputed."""
     taint_set: TaintSet
@@ -218,7 +231,14 @@ class RecoveryPlan(Document):
             raise ValueError("step n must equal its position")
         if self.t0_seq_est > self.as_of_seq:
             raise ValueError("t0_seq_est must be <= as_of_seq")
+        if self.t0_seq_est_literal is not None and self.t0_seq_est_literal > self.t0_seq_est:
+            raise ValueError("t0_seq_est_literal must be <= t0_seq_est (the literal walk follows more reads)")
         return self
+
+    @property
+    def t0_delta(self) -> int | None:
+        """``t0_seq_est - t0_seq_est_literal`` (>= 0), or ``None`` when the literal t0 is not set."""
+        return None if self.t0_seq_est_literal is None else self.t0_seq_est - self.t0_seq_est_literal
 
     def approval(self, steps: tuple[int, ...] | None = None) -> Approval:
         """The ``ks.approve`` args binding this plan (all steps by default)."""

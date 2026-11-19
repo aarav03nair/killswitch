@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "Oracle per A1: same seed and config, fault disabled, TCB off; ledger per (table, pk, field)",
   "acceptance": [
     "test_oracle_self (B empty on S* vs S*) and test_t0_ge_inject pass",
@@ -18,13 +18,73 @@
     "B3-17"
   ],
   "deliverable": "src/ks/oracle/",
-  "summary": "",
-  "review": "",
+  "summary": "Round 4: real_ledger counts a version as recorded only if the record at that seq lists THIS obj with matching after ver+hash (spoof fix). New tests: bypass on other object copying a real (seq,agent,action_id) stays in B; real-run bypass at L then honest write at L+1 still in B. Corrected earlier false claim (store refuses only seq<last_seq, so this IS possible on a real run); docstring fixed. Value==S* bypass forgiven (accepted). 43 passed.",
+  "review": "[anaya · changes] Algebra matches ADR-06-metrics s1-2 [Fact]: B/G per (table,pk,field), equal() on value_hash+delivery, t0>=t_inject, X3a suspend_tick, no oracle import outside ks.oracle/score, import lint, bypass enters B by value (seq null cannot forgive). 33 passed. Changes: (1) ADR s2 says S* outbox dispatches at release_tick; run_pure dispatches at creation, with no H parameter. With H>0, honest queued items land in B at t_rec and inflate R/C. Take hold_window_ticks from RunConfig and add a test. (2) T2: the prefix tests compare pure against pure (run_pure faulty, inject run_world), never the gateway/runtime faulty ledger. Add a test that fails if S* differs from a real ks.runtime faulty run before t_inject. (3) Pin the outbox ledger key (outbox:<idem_key>, not ob-NNNNNN) for the system-side ledger. Minor [Our view]: a bypass that reuses a recorded seq is labelled recorded; check the author/action too.\n\n[anaya · changes] Re-review. [Fact] (1) H/G3 in S* match gateway Outbox.release_tick; test pins min dispatch tick 12 at H=6, fails if items dispatch at creation. Its last assert (fold_upto t_first-1) is vacuous; minor. (3) outbox_key pinned on both sides. (4) mark_recorded(seq,author,action_id) test fails under seq-only matching. (2) The real-run test only covers H=0 with no holds: ks.runtime hardcodes hold_window_ticks=0 and has no taint view, so 'in full' equality says nothing about H>0, G3 or holds. Add an H=6 real-run check once runtime takes RunOptions.hold. sensitive_moved gap: not blocking. [Fact] In fault-off schedules no agent writes a sensitive field after tick 0 (only crm under f2/f2plus writes iban), so the gate never fires in an honest run and S* equals an honest gateway run. In a faulty run, honest payments held because the IBAN moved differ from S* and enter B. That is the intended counterfactual (ADR-06-metrics s2: S* has no fault, so nothing moved). Release-and-dispatch scores them restored; staying held counts in R, as it should. [Our view] Add a guard test that the oracle schedule makes no sensitive write after tick 0, so this stays true. BLOCKING (new): real_ledger gives a version whose seq is not in record.jsonl tick 0 and keeps its seq. A colliding seq takes that record's tick and is labelled recorded, the same flaw as (4). A bypass is then folded before later recorded versions and hidden from B, which breaks ADR s1 (bypass in ledger, seq null). Fix: match (seq, agent, action_id) against the record, null the seq on a miss and never give it tick 0; or make real_ledger test-only, documented as not the scorer ledger. Add a bypass test on the real-run side. Note: gateway/stub.py has an IndentationError mid-edit (nisha, B3-23), so tests/oracle cannot import right now. Earlier run: 37 passed.\n\n[anaya · changes] Round 3. 41 passed. [Fact] Fixed: miss gets seq null and prev-version tick; b_set keeps overwritten bypasses; H=6 S* test, sensitive guard, hold assert. Forgiving a bypass whose value equals S* is acceptable [Our view]: B compares world state with S* (ADR-06-metrics s1), so it leaves no divergence; detection is scored separately. outbox_key still lines up with B3-23: real_ledger keys by idempotency_key, not the outbox:ob-N obj. Note: ADR s1 still says outbox:<id>; align the text. BLOCKING: (1) Spoof. prov matches (seq, agent, action_id) only. A bypass on another object that copies a recorded action's fields is labelled recorded, so a later overwrite hides it from B. Also match obj and after ver/hash against record write_set. Add a test. (2) Claim false [Fact]: on a real run the store accepted rogue seq=L then honest seq=L+1 on customers:C-01 (put refuses only seq < last_seq). Fix the docstring and add a real-run bypass-then-honest test.\n\n[anaya · done] Round 4. [Fact] 43 passed (tests/oracle tests/inject). Own probes on real runs: round-3 spoof (C-03, copied seq/agent/action_id) -> seq null, in B; bypass at L then honest L+1 -> rogue seq null, in B; same obj+same after ver (reports:RPT-0049 v1) with different hash at the recorded seq -> seq null, in B. Side-table value swap under the same hash raises SideEntry hash mismatch (fails closed, not silently recorded). [Our view] Both round-3 facts resolved; done.",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 21:18",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 21:18",
+      "who": "tara",
+      "msg": "→ in_review: ready for review"
+    },
+    {
+      "t": "19 Nov 21:20",
+      "who": "anaya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 21:24",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 21:24",
+      "who": "tara",
+      "msg": "→ in_review: review fixes"
+    },
+    {
+      "t": "19 Nov 21:26",
+      "who": "anaya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 21:29",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 21:29",
+      "who": "tara",
+      "msg": "→ in_review: round 3 fixes"
+    },
+    {
+      "t": "19 Nov 21:30",
+      "who": "anaya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 21:31",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 21:31",
+      "who": "tara",
+      "msg": "→ in_review: round 4"
+    },
+    {
+      "t": "19 Nov 21:33",
+      "who": "anaya",
+      "msg": "review: done"
     }
   ]
 }

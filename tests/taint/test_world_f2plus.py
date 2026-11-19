@@ -6,7 +6,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from ks.contracts import ObjVer, ReadEntry
+from ks.contracts import ObjVer, ReadEntry, merge_read_set
 from ks.taint import t0_seq_est, taint_from_alerts
 from ks.world.agents import AGENT_IDS, Schedule, step
 from ks.world.scenario import build_view, open_world_store, seed_state
@@ -41,12 +41,11 @@ def world(tmp_path_factory):
             with store.txn():
                 ex = disp.execute(SimpleNamespace(agent_id=a, action_id=act.action_id, tool=act.tool,
                                                   args=act.args), WorldTxn(store, seq))
-            rs = {e.obj: ReadEntry(obj=e.obj, ver=e.ver, hash=e.hash) for e in view}
-            rs.update({e.obj: e for e in ex.read_set})
+            rs = merge_read_set([ReadEntry(obj=e.obj, ver=e.ver, hash=e.hash) for e in view], ex.read_set)
             for w in ex.write_set:
                 b.head[w.obj] = (w.after.ver, w.after.hash)
             log[(t, a)] = b._seal(tick=t, env=b._env(a, act.tool, act.args, t, act_id=act.action_id), conn="c-1",
-                                  reads=list(rs.values()), writes=ex.write_set,
+                                  reads=list(rs), writes=ex.write_set,
                                   outbox=[f"ob-{seq:06d}"] if ex.outbox else [])
     ev = ObjVer(obj=IBAN, ver=store.history(IBAN)[-1].ver)
     return b, log, ev, taint_from_alerts(b.records, [alert([ev])])
@@ -61,7 +60,8 @@ def test_world_hero_seed(world):
 
 
 def test_world_literal_walk_pulls_t0_back(world):
-    """Decision raised (B3-18): the literal ADR-05 §4 walk follows crm's view-reads of its own earlier writes."""
+    """B3-45: the literal ADR-05 §4 walk follows crm's view-reads of its own earlier writes; the option C default
+    (B3-46) does not, and crm's tool reads at h touch no earlier crm version."""
     b, log, ev, t = world
     assert t0_seq_est(b.records, [ev], "crm", follow_self_reads=True) < log[(H, "crm")].seq
 

@@ -1,7 +1,7 @@
 """Generate the JSON Schema files in ``schema/`` from the models (``python -m ks.contracts.schema_gen``).
 
 Post-processing: draft 2020-12, ``$id``, and every property is ``required`` (canonical output always
-contains every field, nulls included). tests/contracts/test_schema.py fails if the files drift.
+contains every field, nulls included) except v1.4 ``additive`` fields, omitted at their default. tests/contracts/test_schema.py fails if the files drift.
 """
 
 from __future__ import annotations
@@ -16,7 +16,10 @@ SCHEMA_DIR = Path(__file__).with_name("schema")
 def _require_all(node: Any) -> None:
     if isinstance(node, dict):
         if node.get("type") == "object" and "properties" in node:
-            node["required"] = sorted(node["properties"])
+            from ._base import OMIT_DEFAULT_KEY
+            props = node["properties"]
+            node["required"] = sorted(k for k, v in props.items()
+                                      if not (isinstance(v, dict) and v.pop(OMIT_DEFAULT_KEY, False)))
         for v in node.values():
             _require_all(v)
     elif isinstance(node, list):

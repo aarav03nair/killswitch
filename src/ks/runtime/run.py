@@ -13,15 +13,19 @@ from pathlib import Path
 from ks.contracts import (CONTRACTS_VERSION, SYSTEM_PRINCIPALS, RunAnchor, RunConfig, RunDir, canonical)
 from ks.contracts.rundir import STATE_DB, TIMING, WITNESS, WITNESS_HEADS_DIR
 from ks.gateway import Gateway
+from ks.gateway.control import FoldedControl
+from ks.gateway.system import SystemQueue
 from ks.identity import KeyStore, SignerService, derive_key_bytes, load_repro_secret
 from ks.recorder import Recorder
 from ks.witness import WitnessLink, open_witness_fds
 
 from .barrier import AgentConn, TickBarrier
+from .operator import OperatorServer
 from .options import RunOptions
 from .spawn import (WITNESS_UID, agent_uid, kill_uids, pids_with_uids, plan_agent_uids, proc_uid, set_nondumpable,
                     set_oom_score_adj, spawn_child)
-from .setup import IsolationError, default_run_id, isolation_problems, refuse_existing, scenario as _scenario
+from .setup import (IsolationError, check_run_id, default_run_id, isolation_problems, refuse_existing,
+                    scenario as _scenario)
 
 __all__ = ["Isolation", "RunResult", "run", "agent_ids", "STARTUP_GRACE_S"]
 
@@ -99,6 +103,7 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
     sc = _scenario(scenario, agents=agents, seed=seed, ticks=ticks)
     ids = sc.agent_ids
     agents = len(ids)
+    check_run_id(run_id)
     out = Path(out)
     refuse_existing(out)  # before anything is spawned
     secret = None
@@ -133,9 +138,11 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
 
     keys = KeyStore.create(sorted((SYSTEM_PRINCIPALS - {"ks.witness"}) | set(ids)), key_mode=key_mode, seed=seed,
                            secret=secret)
-    epochs: dict[str, int | None] = {a: 0 for a in ids}
+    control = FoldedControl(ids)  # B3-13: epochs and deny-lists are the fold of executed ks.control records
+    system = SystemQueue({p: keys.signer(p) for p in ("ks.gateway", "ks.monitor", "ks.operator", "ks.recovery")})
     conns: list[AgentConn] = []
     store = None
+    operator: OperatorServer | None = None
     witness: WitnessLink | None = None
     iso = Isolation(separate_uids=separate)
     try:
@@ -154,11 +161,13 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
                            witness_gid=WITNESS_UID if separate else None)
         wfd, hfd = open_witness_fds(rd.path / WITNESS, rd.path / WITNESS_HEADS_DIR)
         witness.attach(wfd, hfd)  # closes both of the gateway's descriptors
+        operator = OperatorServer(rd.path, system, ids).start()  # J1; before any agent exists
 
         say(f"ks run: run_id={config.run_id} seed={seed} agents={agents} ticks={ticks} key_mode={key_mode}")
         if key_mode == "repro":
             say("NOT A SECURITY RUN: repro keys (never anchored)")
         say(f"keyring_hash={keyring.content_hash()} config_hash={config.content_hash()}")
+        say(f"operator socket: {operator.path} (peer uid {operator.allowed_uid} only)")
 
         for i, a in enumerate(ids):
             g_parent, g_child = socket.socketpair()
@@ -188,8 +197,9 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
             store = open_world_store(rd.path / STATE_DB)
             gkw = dict(store=store, seed=lambda s, q: seed_state(s, seq=q), sign=keys.signer("ks.gateway"),
                        policy=WorldPolicy())
-        gateway = Gateway(config, keyring, recorder, epochs.get, dispatcher=sc.dispatcher(), **gkw)
-        signer = SignerService({a: keys.private(a) for a in ids}, epochs.get)
+        gateway = Gateway(config, keyring, recorder, control=control, system=system, dispatcher=sc.dispatcher(),
+                          **gkw)
+        signer = SignerService({a: keys.private(a) for a in ids}, control.epoch_of)
         barrier = TickBarrier(conns, gateway, signer, witness, tick_deadline_ms / 1000)
         timing, stalls, misses = [], 0, 0
         for t in range(ticks):
@@ -200,6 +210,8 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
                                                 "witness_ack": o.checkpoint is not None}))
         rd.write(TIMING, b"".join(timing))
     finally:
+        if operator is not None:
+            operator.close()  # first: no operator request is admitted after the last tick
         _teardown(conns, witness, our_uids)
         if store is not None:
             store.close()

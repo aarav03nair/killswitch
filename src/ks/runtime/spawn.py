@@ -96,11 +96,13 @@ def spawn_child(module: str, args: Iterable[str], *, uid: int | None, pass_socks
 
 
 def proc_uid(pid: int) -> int | None:
-    """Real uid of a live process, read from /proc (``None`` if it is gone)."""
+    """uid of a live process, read from /proc: the real uid if real, effective, saved and fs uid all agree
+    (kabir, B3-10), else ``None`` (gone, or ids that disagree: not the uid we asked for, so never trusted)."""
     try:
         for line in Path(f"/proc/{pid}/status").read_text().splitlines():
             if line.startswith("Uid:"):
-                return int(line.split()[1])
+                ids = [int(x) for x in line.split()[1:5]]
+                return ids[0] if len(ids) == 4 and len(set(ids)) == 1 else None
     except (OSError, ValueError, IndexError):
         pass
     return None

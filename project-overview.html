@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Project Kill Switch: Overview and Plan</title>
+<style>
+  :root { --bg:#0f1420; --card:#171e2e; --ink:#e8ecf4; --mute:#9aa6bd; --acc:#ff5d5d; --ok:#4cd39b; --warn:#f5b84c; --line:#27314a; }
+  * { box-sizing:border-box; }
+  body { margin:0; font:16px/1.6 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; background:var(--bg); color:var(--ink); }
+  header { padding:64px 24px 40px; text-align:center; border-bottom:1px solid var(--line); background:linear-gradient(180deg,#1a2238,var(--bg)); }
+  header h1 { margin:0 0 8px; font-size:2.4rem; }
+  header h1 span { color:var(--acc); }
+  header p { margin:0 auto; max-width:720px; color:var(--mute); font-size:1.1rem; }
+  main { max-width:960px; margin:0 auto; padding:24px; }
+  section { margin:48px 0; }
+  h2 { font-size:1.5rem; border-left:4px solid var(--acc); padding-left:12px; }
+  h3 { margin:0 0 6px; font-size:1.05rem; }
+  .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:18px; }
+  .card p { margin:0; color:var(--mute); font-size:.95rem; }
+  .big { font-size:1.15rem; background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px; }
+  .flow { display:flex; flex-wrap:wrap; gap:8px; align-items:stretch; }
+  .step { flex:1 1 130px; background:var(--card); border:1px solid var(--line); border-radius:10px; padding:12px; text-align:center; position:relative; }
+  .step b { display:block; color:var(--acc); font-size:.8rem; letter-spacing:.08em; text-transform:uppercase; }
+  .step small { color:var(--mute); }
+  table { width:100%; border-collapse:collapse; background:var(--card); border-radius:12px; overflow:hidden; }
+  th, td { text-align:left; padding:10px 14px; border-bottom:1px solid var(--line); vertical-align:top; font-size:.95rem; }
+  th { background:#1d2640; }
+  tr:last-child td { border-bottom:none; }
+  .tag { display:inline-block; padding:1px 9px; border-radius:99px; font-size:.78rem; font-weight:600; }
+  .done { background:rgba(76,211,155,.15); color:var(--ok); }
+  .wip  { background:rgba(245,184,76,.15); color:var(--warn); }
+  .todo { background:rgba(255,93,93,.15); color:var(--acc); }
+  .scenario { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+  @media (max-width:640px){ .scenario{grid-template-columns:1fr;} header h1{font-size:1.8rem;} }
+  .bad { border-color:#5a2a2e; } .good { border-color:#245a47; }
+  code { background:#0b101b; padding:1px 6px; border-radius:5px; font-size:.88em; }
+  ul { margin:6px 0 0; padding-left:20px; color:var(--mute); }
+  footer { text-align:center; color:var(--mute); padding:32px; border-top:1px solid var(--line); font-size:.9rem; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Project <span>Kill Switch</span></h1>
+  <p>A black box and an off switch for networks of AI agents: find out what broke, who broke it, contain it, and undo only that damage.</p>
+  <p style="margin-top:10px;font-size:.9rem">SEED Hackathon 2026 &middot; Sub-theme 03 &ldquo;The Kill Switch&rdquo; (Agent Safety)</p>
+</header>
+<main>
+
+<section>
+  <h2>1. The problem</h2>
+  <div class="big">&ldquo;Ten agents are working. One just broke something.&rdquo;<br>
+  <span style="color:var(--mute);font-size:.95rem">You need to know <b style="color:var(--ink)">what changed</b>, <b style="color:var(--ink)">who changed it</b>, and <b style="color:var(--ink)">how fast it can be undone</b>, without throwing away everyone else&rsquo;s good work.</span></div>
+  <div class="grid" style="margin-top:16px">
+    <div class="card"><h3>Logs are testimony</h3><p>An agent&rsquo;s own log is self-reported. It can be wrong, incomplete or forged.</p></div>
+    <div class="card"><h3>Kill switches are blunt</h3><p>Existing controls stop one agent or all of them. They don&rsquo;t repair work already done.</p></div>
+    <div class="card"><h3>Undo is a dependency problem</h3><p>Once other agents have read a bad write, restoring a snapshot erases their valid work too.</p></div>
+  </div>
+</section>
+
+<section>
+  <h2>2. What we are building</h2>
+  <p>A <b>gateway</b> that sits between agents and shared state. Agents can only act through it. It turns every action into signed, tamper-evident evidence, and uses that evidence to identify, contain and recover.</p>
+  <div class="scenario">
+    <div class="card bad"><h3>Without it</h3><ul><li>Bad write lands; nobody knows which agent</li><li>Others read it and build on it</li><li>Fix = restore a snapshot, losing good work</li></ul></div>
+    <div class="card good"><h3>With it</h3><ul><li>Every action is signed with the agent&rsquo;s identity</li><li>Read and write sets show exactly who touched what</li><li>Only the culprit&rsquo;s damage and its downstream readers are reverted</li></ul></div>
+  </div>
+</section>
+
+<section>
+  <h2>3. How it works</h2>
+  <div class="flow">
+    <div class="step"><b>1 Identity</b><small>Every action signed per agent</small></div>
+    <div class="step"><b>2 Gateway</b><small>Single mediated path to state</small></div>
+    <div class="step"><b>3 Record</b><small>Hash-chained, read/write sets</small></div>
+    <div class="step"><b>4 Witness</b><small>Separate process checkpoints the chain</small></div>
+    <div class="step"><b>5 Monitor</b><small>Detect via data invariants, attribute by lookup</small></div>
+    <div class="step"><b>6 Contain</b><small>Suspend agent, hold tainted outputs</small></div>
+    <div class="step"><b>7 Recover</b><small>Taint-scoped revert, re-run or flag</small></div>
+    <div class="step"><b>8 Verify</b><small><code>ks verify</code> checks it offline</small></div>
+  </div>
+  <p style="color:var(--mute)">Each agent runs under its own OS user id inside a Docker container, so agents can&rsquo;t read each other&rsquo;s memory or touch the witness. The whole run is deterministic from a seed, so results can be replayed and audited.</p>
+</section>
+
+<section>
+  <h2>4. How we map to the judging criteria</h2>
+  <table>
+    <tr><th>Judges look at</th><th>Our answer</th></tr>
+    <tr><td><b>Time to identify</b><br><small style="color:var(--mute)">How fast can we say what broke and which agent did it?</small></td>
+      <td>Every action an agent takes goes through our gateway, which stamps it with that agent&rsquo;s signature and writes down exactly what it read and what it changed. When something goes wrong, finding the culprit is just a search through that record. We never ask an AI to guess, and we never trust what an agent says about itself. Research shows AI guessing the guilty agent is right only about half the time.</td></tr>
+    <tr><td><b>Time to contain</b><br><small style="color:var(--mute)">How fast can we stop the damage from spreading?</small></td>
+      <td>A monitor watches the data for things that should never happen (for example, a payment going to an account that doesn&rsquo;t match). When it fires, we stop only the bad agent, in steps: pause it, then fully cut off its access. Any outgoing action that depends on its bad data, like an email or a payment, is held until a person checks it. The other nine agents keep working the whole time.</td></tr>
+    <tr><td><b>Clean recovery</b><br><small style="color:var(--mute)">Can we undo the damage without losing good work?</small></td>
+      <td>We follow the trail: which data did the bad agent write, and which other agents read it afterwards? Only that chain of affected work is rolled back or redone. Everything else stays untouched. We then score the result against a known &ldquo;correct&rdquo; outcome with two numbers: how much damage we fixed, and how much good work we accidentally lost. We compare that with simply restoring a backup, which throws away everyone&rsquo;s work.</td></tr>
+    <tr><td><b>Auditable, not just demoed</b><br><small style="color:var(--mute)">Would it still hold up if someone tries to break it?</small></td>
+      <td>The record is a chain where every entry locks in the one before it, so editing history leaves visible damage. A separate witness program keeps its own copy of the latest checkpoint, so even a cheating agent can&rsquo;t quietly rewrite the past. Anyone can run <code>ks verify</code> afterwards, offline, to check the record is intact. We also wrote down the attacks we expect and plan to try them ourselves before the jury does.</td></tr>
+    <tr><td><b>Framing</b><br><small style="color:var(--mute)">How we explain the problem to the jury.</small></td>
+      <td>We start from one idea: <i>every change has an author, and every read has a source</i>. Once you record that, the three hard questions (who did it, how do we stop it, how do we undo it) become three simple look-ups on the same record. That gives the jury one clear story instead of three separate tools.</td></tr>
+  </table>
+</section>
+
+<section>
+  <h2>5. Code map</h2>
+  <div class="grid">
+    <div class="card"><h3><code>src/ks/contracts</code></h3><p>The shared rulebook. It defines what every message, record and report looks like, and writes data in one fixed format so that the same input always produces the same fingerprint. Every other part depends on it.</p></div>
+    <div class="card"><h3><code>gateway</code> and <code>runtime</code></h3><p><b>Gateway:</b> the security guard. Every agent action must pass through it to be checked and carried out. <b>Runtime:</b> the engine room. It starts each agent as a separate process under its own user, and moves everyone forward one step at a time so runs are repeatable.</p></div>
+    <div class="card"><h3><code>identity</code>, <code>recorder</code>, <code>witness</code></h3><p><b>Identity:</b> creates keys and signs actions, so agents never hold their own keys. <b>Recorder:</b> the logbook, with each entry locked to the one before it. <b>Witness:</b> a separate program that keeps its own checkpoints, so the logbook can&rsquo;t be quietly rewritten.</p></div>
+    <div class="card"><h3><code>state</code> and <code>taint</code></h3><p><b>State:</b> the shared data the agents work on. It keeps every old version, which is what makes undo possible. <b>Taint:</b> works out the blast radius. Starting from a bad write, it finds every later piece of work that depended on it.</p></div>
+    <div class="card"><h3><code>monitor</code>, <code>policy</code>, <code>inject</code></h3><p><b>Monitor:</b> watches for data that breaks the rules, names the agent responsible and raises alerts. <b>Policy:</b> the rules for what agents may do. <b>Inject:</b> deliberately causes a failure so we can test that the system catches it.</p></div>
+    <div class="card"><h3><code>world</code>, <code>verify</code>, <code>cli</code></h3><p><b>World:</b> the pretend company with 10 agents that we test on. <b>Verify:</b> the auditor. It re-checks a finished run for tampering without needing the system to be running. <b>CLI:</b> the <code>ks</code> command you type to run and verify.</p></div>
+  </div>
+  <p style="color:var(--mute)">Also: <code>tests/</code> (per-module tests and a red-team spec), <code>org/</code> (charter, design decisions, threat model, issues), <code>research/</code>, <code>abstract/</code> (submission support kit).</p>
+</section>
+
+<section>
+  <h2>6. Plan and status</h2>
+  <table>
+    <tr><th>Workstream</th><th>Status</th><th>Notes</th></tr>
+    <tr><td>Contracts, identity, recorder, witness, verify</td><td><span class="tag done">Built</span></td><td>Tamper-evident record with offline verification; smoke test passes in a container.</td></tr>
+    <tr><td>Gateway, state store, 10-agent world, runtime</td><td><span class="tag done">Built</span></td><td>Per-agent uids and a tick barrier are working.</td></tr>
+    <tr><td>Monitor, detectors, attribution, taint closure</td><td><span class="tag wip">In progress</span></td><td>Modules and tests exist; end-to-end wiring is being finished.</td></tr>
+    <tr><td>Hero demo: fault, identify, contain, scoped revert</td><td><span class="tag todo">Next</span></td><td>Currently the demo runs a 2-agent skeleton; the fault-injection path is the next milestone.</td></tr>
+    <tr><td>Measurements: time-to-identify, time-to-contain, recovery vs. baseline</td><td><span class="tag todo">Next</span></td><td>Shown on screen next to a snapshot-restore baseline.</td></tr>
+    <tr><td>Red-team rehearsal (tamper and forge attempts)</td><td><span class="tag todo">Planned</span></td><td>Prove the audit holds against the audited agent.</td></tr>
+    <tr><td>Abstract (under 1,000 words)</td><td><span class="tag todo">Due 22 Nov</span></td><td>Written by Aarav in his own words.</td></tr>
+  </table>
+  <div class="flow" style="margin-top:16px">
+    <div class="step"><b>22 Nov</b><small>Abstract due</small></div>
+    <div class="step"><b>24 Nov</b><small>Shortlist</small></div>
+    <div class="step"><b>25 Nov &ndash; 2 Dec</b><small>Prototyping</small></div>
+    <div class="step"><b>3 &ndash; 7 Dec</b><small>Mentorship</small></div>
+    <div class="step"><b>9 Dec</b><small>Finale</small></div>
+  </div>
+</section>
+
+<section>
+  <h2>7. Beyond the hackathon</h2>
+  <p>The core is domain-neutral: the gateway calls a pluggable tool-dispatcher interface, and the record, witness, verify and taint modules know nothing about banking. As a product it is a <b>flight recorder and selective undo layer for any team running multiple agents on shared systems</b>, which matters most in regulated industries that need audit trails (EU AI Act Art 12/14, RBI FREE-AI).</p>
+  <p style="color:var(--mute)">Honest limits: we do not reverse irreversible external effects such as sent emails or payments (they are compensated or reported), we make no &ldquo;tamper-proof&rdquo; claim (the record is tamper-evident), and strong isolation requires the Docker container.</p>
+</section>
+
+</main>
+<footer>Project Kill Switch &middot; overview generated from the repository state, 19 Nov 2026</footer>
+</body>
+</html>

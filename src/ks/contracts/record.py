@@ -31,7 +31,7 @@ from .envelope import MAX_EXPIRY_TICKS, EnvelopeHeader
 from .hashing import Domain, GENESIS_HASH, args_hash
 from .ids import (RECOVER_TOOL_PREFIX, SYSTEM_CONN, SYSTEM_PRINCIPALS, ConnId, Hash, LogicalUs, PrincipalId,
                   RecordId, SEED_TOOL, Seq, Sig, Tick, Token, record_id_for, system_tool_signers)
-from .state import ReadEntry, WriteEntry, _sorted_unique
+from .state import ReadEntry, WriteEntry, _sorted_unique, check_read_set
 
 __all__ = ["Decision", "ActionClass", "Reason", "REASONS_FOR", "Record", "WitnessCheckpoint", "GENESIS_HASH",
            "RECORD_KEY_FIELDS", "WITNESS_KEY_FIELDS", "determinism_view", "witness_chain_problems"]
@@ -131,7 +131,9 @@ class Record(Document):
     """R | C | I1 | I2 | U, assigned before execution (``ks.action.class``)."""
     read_set: tuple[ReadEntry, ...]
     """Versions the adapter read **plus every ``TickFrame.view`` entry delivered to the agent this tick** (I1),
-    sorted by obj (``ks.read_set``). Field objects per C3 X2. Empty on deny."""
+    sorted by (obj, ver) (``ks.read_set``). Field objects per C3 X2. Empty on deny. v1.4 (B3-46): each entry is
+    tagged ``source`` view|tool; one object may appear twice (a view version and a different tool version), see
+    :func:`~ks.contracts.state.check_read_set`."""
     write_set: tuple[WriteEntry, ...]
     """Versions written, before/after ver+hash, sorted by obj (``ks.write_set``). Empty unless exec."""
     outbox_ids: tuple[OutboxId, ...]
@@ -153,7 +155,7 @@ class Record(Document):
     @field_validator("read_set")
     @classmethod
     def _rs(cls, v):
-        return _sorted_unique(v, lambda e: e.obj, "read_set obj")
+        return check_read_set(v)
 
     @field_validator("write_set")
     @classmethod

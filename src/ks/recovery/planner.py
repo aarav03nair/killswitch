@@ -1,0 +1,299 @@
+"""Recovery planner (ADR-05 §6, C5): taint set in, ordered steps out. Records and hashes only.
+
+Inputs are the chained C2 records (via :class:`~ks.taint.RecordIndex`), a :class:`~ks.taint.Taint` from
+``taint_from_alerts`` and, optionally, the live :class:`~ks.state.Store` (used only to ask whether a restore
+source is redacted and what status an outbox item has). The planner never imports ``RunConfig`` and never reads
+``fault``/``culprit``/``fault_tick`` (A3; AST guard in ``tests/recovery``): the culprit is ``Taint.suspect``.
+
+Per object (ADR-05 §6.2, B6). For every object the suspect wrote in its seed window:
+
+* head = the suspect's latest window version -> ``restore`` with ``expect`` = that version and ``to`` = the
+  last untainted earlier version (a redacted ``to`` gives ``flag(redacted_restore_source)``);
+* head = a later **tainted** version by someone else -> ``flag(write_write_conflict)``, no restore (B5, F2+x);
+* head = a later **untainted** version (an honest blind write) -> no step, the object is *kept*;
+* the suspect **created** the object (no earlier version) -> a tombstone restore (B3-03 note): C5 1.4
+  ``RestoreStep.to = None`` (``to_absent``); :func:`apply_restore` writes ``put(None)``.
+  :func:`restores_to_absent` also accepts the 1.3 marker ``to = VersionRef(ver=expect.ver, hash=TOMBSTONE_HASH)``.
+
+Per tainted action, seq order (§6.3-6.6): the suspect's own window records are never re-run (their writes are
+the seed). An honest deterministic action is ``rerun`` when every tainted version it read is repaired by then
+(a seed version of a restored or kept object, or a version written by an earlier re-run); otherwise it *rides*
+with the flag that blocks it (no step of its own, reported in :attr:`Planned.riders`). LLM agents
+(``llm_agents``) get ``replan``. Class C gets ``compensate`` when a compensator is registered for its tool, else
+``flag(no_compensator)``. Tainted I2 gets ``flag(tainted_i2)``.
+
+Outbox (§6.1, M14; B3-23). Every outbox id in a record is a real ``outbox:<id>`` object (C3 ``OutboxItem``)
+written in the creating record; the planner reads its status from ``state``. Dispatched is irreversible: always
+``flag(dispatched_tainted)``, never cancel; for a re-run action the dry-run (B3-24) drops that flag when the
+simulated payload hash equals the dispatched one. Item of a re-run action otherwise: no step (the re-run writes v+1
+of the same ``outbox:<id>``, back on hold). Item of an action that is not re-run: queued/held/released ->
+``cancel_outbox``. An id with no readable object (record and store disagree, or no ``state`` given) fails closed:
+``flag(outbox_missing)``, scored in R.
+
+Step order: cancel_outbox (by id), restore (by obj), rerun (by seq), compensate, replan (by seq), flag.
+The plan diff is filled by :mod:`ks.recovery.dryrun` (simulation in a rolled-back savepoint, §7).
+"""
+
+from __future__ import annotations
+
+from collections.abc import Iterable, Mapping
+from dataclasses import dataclass, field
+from typing import Any
+
+from ks.contracts import TOMBSTONE_HASH, OutboxItem, OutboxStatus, VersionRef, WriteEntry, row_obj_id
+from ks.contracts.ids import SYSTEM_PRINCIPALS
+from ks.contracts.record import ActionClass, Decision, Record
+from ks.contracts.recovery import (ActionRef, CancelOutboxStep, CompensateStep, DiffEntry, FlagStep, RecoveryPlan,
+                                   ReplanStep, RerunStep, RestoreStep)
+from ks.taint import RecordIndex, Taint
+
+__all__ = ["NoPlan", "Kept", "Rider", "Planned", "plan_recovery", "restores_to_absent", "apply_restore",
+           "action_ref", "default_plan_id", "with_diff"]
+
+RECOVERY_AUTHOR = "ks.recovery"
+
+
+class NoPlan(ValueError):
+    """No suspended suspect, no t0 or no seed: "no suspended suspect gives no seed and no plan" (ADR-05 §4)."""
+
+
+@dataclass(frozen=True)
+class Kept:
+    """An untainted honest write after t0 on a row the plan touches (B3 *kept* lane): no step."""
+
+    obj: str
+    ver: int
+    hash: str
+    author: str
+    seq: int
+
+
+@dataclass(frozen=True)
+class Rider:
+    """A tainted action with no step of its own: it read a version no step repairs (rides with the flag)."""
+
+    action: ActionRef
+    blocked_by: tuple[tuple[str, int], ...]
+
+
+@dataclass(frozen=True)
+class Planned:
+    """Planner output: the C5 plan (diff empty until the dry-run) plus the console lanes and t0 report."""
+
+    plan: RecoveryPlan
+    kept: tuple[Kept, ...]
+    independent: tuple[str, ...]
+    riders: tuple[Rider, ...]
+    rerun_records: Mapping[int, Record]
+    notes: tuple[str, ...] = field(default=())
+
+
+def action_ref(r: Record) -> ActionRef:
+    return ActionRef(seq=r.seq, agent_id=r.envelope.agent_id, action_id=r.envelope.action_id)
+
+
+def default_plan_id(as_of_seq: int) -> str:
+    """Deterministic plan id from the record position: ``p-<as_of_seq:06d>``."""
+    return f"p-{as_of_seq:06d}"
+
+
+def restores_to_absent(step: RestoreStep) -> bool:
+    """A tombstone restore of an object the suspect created: ``to is None`` (C5 1.4), or the 1.3 marker."""
+    return step.to_absent or (step.to.hash == TOMBSTONE_HASH and step.to.ver == step.expect.ver)
+
+
+def apply_restore(store: Any, step: RestoreStep, *, seq: int, action_id: str,
+                  author: str = RECOVERY_AUTHOR) -> WriteEntry:
+    """Execute one restore on a :class:`~ks.state.Store` inside the caller's transaction or savepoint (dry-run
+    here; apply is B3-30 through the gateway). Fails closed with ``StaleExpect`` if ``expect`` moved."""
+    from ks.state import StaleExpect
+
+    if restores_to_absent(step):
+        head = store.get(step.obj)
+        if head is None or head.ver != step.expect.ver or head.hash != step.expect.hash:
+            raise StaleExpect(f"{step.obj}: head is {None if head is None else head.ver}, plan expected "
+                              f"v{step.expect.ver}")
+        return store.put(step.obj, None, author=author, seq=seq, action_id=action_id)
+    head = store.get(step.obj)
+    if head is not None and head.ver == step.expect.ver and head.hash != step.expect.hash:
+        raise StaleExpect(f"{step.obj} v{head.ver}: hash differs from the plan's expect")
+    return store.restore(step.obj, step.to.ver, expect=step.expect.ver, seq=seq, action_id=action_id,
+                         author=author)
+
+
+def _outbox_status(state: Any, oid: str) -> OutboxStatus | None:
+    """Status of the real ``outbox:<id>`` object (B3-23); ``None`` if there is none or it is unreadable."""
+    if state is None:
+        return None
+    try:
+        cur = state.get(f"outbox:{oid}")
+    except Exception:  # RedactedValue: status unknown, fail closed
+        return None
+    if cur is None or cur.value is None:
+        return None
+    return OutboxItem.model_validate(cur.value).status
+
+
+def _redacted(state: Any, obj: str, ver: int) -> bool:
+    if state is None:
+        return False
+    from ks.state import RedactedValue
+
+    try:
+        state.value_at(obj, ver)
+    except RedactedValue:
+        return True
+    return False
+
+
+def plan_recovery(records: RecordIndex | Iterable[Record], taint: Taint | None, *, alert_id: str,
+                  plan_id: str | None = None, state: Any = None, llm_agents: Iterable[str] = (),
+                  compensators: Mapping[str, str] | None = None) -> Planned:
+    """Build the plan (steps, taint set; ``diff=()``) for ``taint``. Pure in records + ``taint`` (+ redaction and
+    outbox status read from ``state``), so the same record gives a byte-identical plan.
+
+    CALL-02 B2/M14: actions that created outbox items are re-run like any other deterministic reader and their
+    items re-held as v+1 of the same ``outbox:<id>`` (no switch: B2 is binding, maya B3-21 review)."""
+    if taint is None or taint.suspect is None or taint.t0_seq_est is None or not taint.seed:
+        raise NoPlan("no suspended suspect: no seed and no plan")
+    ix = RecordIndex.of(records)
+    as_of = taint.as_of_seq
+    culprit = taint.suspect
+    t0 = taint.t0_seq_est
+    llm = set(llm_agents)
+    comps = dict(compensators or {})
+    live = [r for r in ix.records if r.seq <= as_of and r.decision == Decision.EXEC]
+
+    heads: dict[str, VersionRef] = {}
+    vhash: dict[tuple[str, int], str] = {}
+    for r in live:
+        for w in r.write_set:
+            heads[w.obj] = w.after
+            vhash[(w.obj, w.after.ver)] = w.after.hash
+
+    seed_by_obj: dict[str, list[int]] = {}
+    for v in taint.seed:
+        seed_by_obj.setdefault(v.obj, []).append(v.ver)
+
+    restores: list[RestoreStep] = []
+    flags: list[tuple[str, str | None, ActionRef | None]] = []
+    repaired_objs: set[str] = set()      # restored or kept-by-blind-write: re-runs read a clean value
+    touched_rows: set[str] = set()
+    notes: list[str] = []
+    for obj in sorted(seed_by_obj):
+        cver = max(seed_by_obj[obj])
+        head = heads[obj]
+        touched_rows.add(row_obj_id(obj))
+        if head.ver == cver:
+            expect = VersionRef(ver=cver, hash=vhash[(obj, cver)])
+            prior = [v for v in range(cver - 1, 0, -1) if not taint.is_tainted(obj, v)]
+            if not prior:
+                restores.append(RestoreStep(n=0, reason="tainted_create", obj=obj, expect=expect, to=None))
+                repaired_objs.add(obj)
+                continue
+            to_ver = prior[0]
+            if _redacted(state, obj, to_ver):
+                flags.append(("redacted_restore_source", obj, None))
+                continue
+            restores.append(RestoreStep(n=0, reason="tainted_write", obj=obj, expect=expect,
+                                        to=VersionRef(ver=to_ver, hash=vhash[(obj, to_ver)])))
+            repaired_objs.add(obj)
+        elif head.ver > cver:
+            if taint.is_tainted(obj, head.ver):
+                w = ix.writer(obj, head.ver)
+                flags.append(("write_write_conflict", obj, None if w is None else action_ref(w)))
+            else:
+                repaired_objs.add(obj)  # honest blind write is the head: kept, no step
+        else:  # pragma: no cover - a seed version above the head means the record does not fold
+            raise ValueError(f"{obj}: seed v{cver} above head v{head.ver}")
+
+    seed_keys = {(v.obj, v.ver) for v in taint.seed}
+    rerun_written: set[tuple[str, int]] = set()
+    reruns: list[RerunStep] = []
+    rerun_records: dict[int, Record] = {}
+    replans: list[ReplanStep] = []
+    compensates: list[CompensateStep] = []
+    riders: list[Rider] = []
+
+    def repaired(o: str, v: int) -> bool:
+        return ((o, v) in seed_keys and o in repaired_objs) or (o, v) in rerun_written
+
+    for r in taint.actions:
+        agent = r.attributed_agent
+        if r.seq > as_of or agent == culprit or agent in SYSTEM_PRINCIPALS:
+            continue
+        ref = action_ref(r)
+        if agent in llm:
+            replans.append(ReplanStep(n=0, reason="tainted_llm", action=ref))
+            continue
+        if r.action_class == ActionClass.I2:
+            flags.append(("tainted_i2", None, ref))
+            continue
+        if r.action_class == ActionClass.C:
+            comp = comps.get(r.envelope.tool)
+            if comp is None:
+                flags.append(("no_compensator", None, ref))
+            else:
+                compensates.append(CompensateStep(n=0, reason="tainted_effect", action=ref, compensator=comp))
+            continue
+        blocked = tuple((h.obj, h.ver) for h in taint.via.get(r.seq, ()) if not repaired(h.obj, h.ver))
+        if blocked or not taint.via.get(r.seq):
+            # not taint.via: sticky-only taint (no tainted read) cannot be repaired by re-running either
+            riders.append(Rider(action=ref, blocked_by=blocked))
+            continue
+        reruns.append(RerunStep(n=0, reason="tainted_read", action=ref))
+        rerun_records[r.seq] = r
+        rerun_written.update((w.obj, w.after.ver) for w in r.write_set)
+
+    creator: dict[str, Record] = {}
+    for r in live:
+        for oid in r.outbox_ids:
+            creator.setdefault(oid, r)
+    cancels: list[CancelOutboxStep] = []
+    for oid in sorted(taint.outbox_ids):
+        c = creator.get(oid)
+        status = _outbox_status(state, oid)
+        if status is None:
+            flags.append(("outbox_missing", f"outbox:{oid}", None if c is None else action_ref(c)))
+            continue
+        if status == OutboxStatus.CANCELLED:
+            continue
+        if status == OutboxStatus.DISPATCHED:
+            flags.append(("dispatched_tainted", f"outbox:{oid}", None if c is None else action_ref(c)))
+            continue
+        if c is not None and c.seq in rerun_records:
+            continue  # M14: the re-run updates the same outbox:<id> (v+1, back on hold)
+        cancels.append(CancelOutboxStep(n=0, reason="tainted_effect", outbox_id=oid))
+
+    flag_steps = [FlagStep(n=0, reason=reason, obj=obj, action=act)
+                  for reason, obj, act in sorted(flags, key=lambda f: (f[0], f[1] or "",
+                                                                       f[2].seq if f[2] else 0))]
+    ordered = [*cancels, *restores, *reruns, *compensates, *replans, *flag_steps]
+    steps = tuple(s.model_copy(update={"n": i}) for i, s in enumerate(ordered))
+
+    # B3 lanes: kept = untainted honest heads written at/after t0 on any row the plan touches
+    tainted_agents = set(taint.agents)
+    kept: list[Kept] = []
+    for obj, ref in heads.items():
+        if row_obj_id(obj) not in touched_rows or taint.is_tainted(obj, ref.ver):
+            continue
+        w = ix.writer(obj, ref.ver)
+        if w is None or w.seq < t0 or w is ix.seed or w.attributed_agent in (culprit, *SYSTEM_PRINCIPALS):
+            continue
+        kept.append(Kept(obj=obj, ver=ref.ver, hash=ref.hash, author=w.attributed_agent, seq=w.seq))
+    kept.sort(key=lambda k: (k.obj, k.ver))
+    kept_agents = {k.author for k in kept}
+    independent = sorted({r.attributed_agent for r in live
+                          if r.seq >= t0 and r.write_set and r is not ix.seed and r.attributed_agent
+                          and r.attributed_agent not in SYSTEM_PRINCIPALS and r.attributed_agent != culprit
+                          and r.attributed_agent not in tainted_agents and r.attributed_agent not in kept_agents})
+
+    plan = RecoveryPlan(plan_id=plan_id or default_plan_id(as_of), alert_id=alert_id, culprit=culprit,
+                        t0_seq_est=t0, t0_seq_est_literal=taint.t0_seq_est_literal, as_of_seq=as_of, taint_set=taint.taint_set(), steps=steps, diff=())
+    return Planned(plan=plan, kept=tuple(kept), independent=tuple(independent), riders=tuple(riders),
+                   rerun_records=rerun_records, notes=tuple(notes))
+
+
+def with_diff(plan: RecoveryPlan, diff: Iterable[DiffEntry]) -> RecoveryPlan:
+    """The same plan with its dry-run diff (re-validated, so ``diff`` is sorted and unique)."""
+    return RecoveryPlan.model_validate({**plan.to_obj(), "diff": [d.to_obj() for d in diff]})

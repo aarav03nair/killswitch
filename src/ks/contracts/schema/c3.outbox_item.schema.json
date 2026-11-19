@@ -28,6 +28,16 @@
           "title": "Obj",
           "type": "string"
         },
+        "source": {
+          "default": "tool",
+          "description": "v1.4 (B3-46): ``view`` (delivered in the tick's view) or ``tool`` (read by the adapter). Set by the gateway,\nnever by the agent. The default ``tool`` is the conservative reading of an untagged entry: the t0 walk\n(ADR-05 §4) follows a suspect's self-reads only through ``tool`` entries.",
+          "enum": [
+            "view",
+            "tool"
+          ],
+          "title": "Source",
+          "type": "string"
+        },
         "ver": {
           "description": "Version read.",
           "maximum": 9007199254740991,
@@ -45,7 +55,7 @@
       "type": "object"
     }
   },
-  "$id": "https://killswitch.local/schema/1.3.0/c3.outbox_item.schema.json",
+  "$id": "https://killswitch.local/schema/1.4.0/c3.outbox_item.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "C3 value of an ``outbox:<id>`` object: an irreversible effect waiting to leave.",
@@ -106,7 +116,7 @@
       "type": "string"
     },
     "lineage": {
-      "description": "Read set of the creating action (from the record, never agent-declared); drives lineage hold.",
+      "description": "Read set of the creating action (from the record, never agent-declared); drives lineage hold. Same rule as\n``Record.read_set`` (v1.4: :func:`check_read_set`).",
       "items": {
         "$ref": "#/$defs/ReadEntry"
       },

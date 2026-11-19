@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "changes",
   "outcome": "I1 outbox with hold window, lineage-based early hold and the ks.dispatch record",
   "acceptance": [
     "release_tick = max(tick+H, v+2H) when lineage holds a sensitive field written at v; H=0 disables it (test)",
@@ -18,13 +18,58 @@
     "B3-14"
   ],
   "deliverable": "src/ks/gateway/outbox.py",
-  "summary": "",
-  "review": "",
+  "summary": "Rework: gateway denies (tool_error) any tool write to outbox:*; creation-time taint hold now a ks.control hold/lineage_hold record (item created queued, held by record); tick of a sensitive-field version derived from durable records (loud LookupError otherwise). 4 new tests (forge create, held->queued flip, creation hold record, restart).",
+  "review": "[kabir · changes] Attacked: G4 pure (ks.dispatch only in _release_due; agent-submitted ks.dispatch -> deny/out_of_scope). Idempotency key is tagged_hash(agent,action,sink,n): collision-proof; re-run reuses outbox:<id> at v+1 HELD. Lineage = gateway-merged read set, not agent-declared. H=0 keeps the lineage hold. iban move after creation -> ks.control hold/sensitive_field, recorded. No unhold path = fail-closed. Native 787 passed; container 797 passed, 1 failed (tests/recovery/test_rerun.py, not B3-23). CHANGES: (1) BLOCKING bypass, proven by probe: a tool write_set entry on outbox:ob-N (status queued, release_tick 0, lineage ()) is accepted as exec and dispatched next tick at H=6, skipping hold window and lineage; it could also flip held->queued (unhold bypass). Gateway must refuse any tool write to outbox:* (deny/tool_error), and the release phase should check that the item's created_seq record lists it in outbox_ids. (2) Hold at creation is an exec record with a HELD item, not the ADR-03 p.lineage_hold / ADR-04 s5 hold/lineage_hold record. Emit the hold/lineage_hold decision or a ks.control hold, or raise a decision. (3) _seq_tick is in-memory: after restart or for a version with no known tick, G3 silently falls back to t+H. Derive the tick from the record, or fail loudly. Note for unhold issue: hold action_id hold-<oid>-<why> repeats after unhold+rehold; the re-run test calls Outbox.create directly, not through the gateway (replay check).\n\n[kabir · changes] Re-review. Fixed: (1) tool write to outbox:* -> deny/tool_error, re-probed: forged item and held->queued flip never dispatch. (2) creation-time taint hold is a ks.control hold/lineage_hold record. (3) early-hold tick from durable record; restart test OK. Native 805 passed, container 815 passed. BLOCKING (b), proven by probe (scratchpad test_zz_kabir_probe.py): an outbox item no record created is dispatched. (i) off-log store.put of a queued outbox:ob-000099 (release_tick 0, lineage ()) -> signed ks.dispatch next tick; (ii) raw SQL UPDATE objects.head_value of a HELD item to queued with lineage [] -> dispatched (store.get does not re-check head hash vs versions). This is the RT1 'else' branch: D6 reconcile flags it after the fact but the effect has already left, and our own ks.dispatch signs it. Fix in _release_due before dispatch, fail closed (ks.control hold, a recorded refusal): the head (ver, hash) must equal value_hash(head_value) and the versions row; that version's seq must be a record whose write_set has (outbox:<id>, ver, hash) and whose author is the item author or ks.gateway; the created_seq record must list the id in outbox_ids, have the same agent/action_id and read_set == item.lineage. Add tests for (i) and (ii). (a) NON-BLOCKING, B3-30 follow-up: a re-run item re-held without a hold record breaks ADR-03 s7 ('holds and unholds are Controls') the same way as finding 2, and console/score would not show B2 'back on hold' (score.py says real_ledger emits no held items). Today it only happens in the rolled-back dry-run and in Outbox.create's existing-key branch, which the gateway cannot reach (action replay deny). B3-30 apply must emit a ks.control hold per re-held item (or the ks.recover write_set must be counted by verify/console/score as the hold); also make the gateway post-create loop record a hold for any item that is HELD at creation, not only QUEUED+reason.",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 21:13",
+      "who": "pmo",
+      "msg": "→ todo: From panel's B3-41 review: remove the stale TODO(B3-41) comments in src/ks/gateway/dispatch.py and stub.py. Known limit for kabir to add to THREAT-MODEL.md: the gateway checks only that reported reads exist; an adapter reading via raw txn.store.conn SQL and not reporting it is caught only by rule 7 + the AST check over src/ks/world."
+    },
+    {
+      "t": "19 Nov 21:13",
+      "who": "nisha",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "19 Nov 21:27",
+      "who": "nisha",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 21:27",
+      "who": "nisha",
+      "msg": "→ in_review: ready for kabir"
+    },
+    {
+      "t": "19 Nov 21:32",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 21:36",
+      "who": "nisha",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 21:36",
+      "who": "nisha",
+      "msg": "→ in_review: kabir changes addressed"
+    },
+    {
+      "t": "19 Nov 21:41",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 21:41",
+      "who": "kabir",
+      "msg": "→ changes: release-phase provenance check missing: off-log item dispatched"
     }
   ]
 }

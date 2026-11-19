@@ -90,6 +90,7 @@ def _parser() -> argparse.ArgumentParser:
     cg.add_argument("--html", metavar="OUT")
     cg.add_argument("--live", action="store_true")
     co.add_argument("--once", action="store_true")
+    co.add_argument("--pace", action="store_true", help="with --live: stop at each of the 5 beats until Enter")
     return ap
 
 
@@ -280,7 +281,21 @@ def _bench(args) -> int:
 def _console(args) -> int:
     if args.once and not args.live:
         return _usage("console", "--once needs --live")
-    return _need_run("console", args.run) or _not_yet("console", "ks.console is B3 console work")
+    if args.pace and not args.live:
+        return _usage("console", "--pace needs --live")
+    if (err := _need_run("console", args.run)) is not None:
+        return err
+    from ks.console import run_live, write_html
+    try:
+        if args.html:
+            write_html(args.run, args.html)
+            return Exit.OK
+        return run_live(args.run, once=args.once, pace=args.pace)
+    except KeyboardInterrupt:
+        return Exit.OK
+    except (OSError, ValueError, KeyError) as e:  # not a run dir, unreadable or malformed file
+        print(f"ks console: {e}", file=sys.stderr)
+        return Exit.IO
 
 
 def _repro(args) -> int:

@@ -56,10 +56,11 @@ def _tool_error(**over) -> Record:
 
 # --- version, catalogue ---------------------------------------------------------------------------
 def test_version_is_1_3_0():
-    assert C.CONTRACTS_VERSION == "1.3.0"
+    # 1.4.0 (B3-46) is additive on 1.3.0: pin the floor, not the minor
+    assert tuple(map(int, C.CONTRACTS_VERSION.split("."))) >= (1, 3, 0)
     readme = (SRC / "contracts" / "README.md").read_text(encoding="utf-8")
     assert "### 1.3.0" in readme and "`ks.seed`" in readme and "`tool_error`" in readme
-    assert S.run_config().contracts_version == "1.3.0"
+    assert S.run_config().contracts_version == C.CONTRACTS_VERSION
 
 
 def test_ks_seed_is_a_gateway_only_system_tool():

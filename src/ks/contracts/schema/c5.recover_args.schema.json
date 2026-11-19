@@ -281,8 +281,15 @@
           "type": "string"
         },
         "to": {
-          "$ref": "#/$defs/VersionRef",
-          "description": "Pre-taint version whose value is re-written (value from the side store)."
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VersionRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Pre-taint version whose value is re-written (value from the side store). v1.4 (B3-46): ``None`` = the\nculprit **created** the object (no pre-taint version), so the restore writes a tombstone (delete, value\n``null``, ``TOMBSTONE_HASH``) as a new version. Replaces the 1.3 planner marker\n``to=VersionRef(ver=expect.ver, hash=TOMBSTONE_HASH)``."
         }
       },
       "required": [
@@ -322,7 +329,7 @@
       "type": "object"
     }
   },
-  "$id": "https://killswitch.local/schema/1.3.0/c5.recover_args.schema.json",
+  "$id": "https://killswitch.local/schema/1.4.0/c5.recover_args.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Args of a ``ks.recover.<op>`` envelope: one step of an approved plan (G6).",

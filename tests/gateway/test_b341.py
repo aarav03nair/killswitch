@@ -93,7 +93,7 @@ def test_dispatcher_side_commit_is_refused(tmp_path):
     _clean(g, keys, store)  # nothing landed behind the deny
 
 
-def test_nonempty_outbox_before_b323_is_a_recorded_deny(tmp_path):
+def test_bad_outbox_request_is_a_recorded_deny(tmp_path):
     g, keys, ctl, store, _ = build(tmp_path)
     g.open(1, AGENT_IDS)
     from ks.gateway import Execution as E
@@ -102,7 +102,7 @@ def test_nonempty_outbox_before_b323_is_a_recorded_deny(tmp_path):
 
     class Emits(WorldDispatcher):
         def execute(self, env, txn):
-            return E(None, outbox=(OutboxRequest("email", ActionClass.I1, {"to": "x"}),))
+            return E(None, outbox=(OutboxRequest("email", ActionClass.C, {"to": "x"}),))  # not an I-class effect
 
     g.dispatcher = Emits()
     _deny(g, keys)

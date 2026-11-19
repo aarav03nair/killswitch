@@ -45,7 +45,7 @@ def test_validation_usage_without_exit(tmp_path):
 def test_unbuilt_commands_say_not_yet(tmp_path, capsys):
     for argv in (["blame", str(tmp_path)], ["contain", "suspend", "agent:crm", str(tmp_path)],
                  ["recover", str(tmp_path), "--dry-run"], ["score", str(tmp_path)],
-                 ["console", str(tmp_path), "--html", "o.html"], ["bench"]):
+                 ["bench"]):
         assert main(argv) == Exit.IO
         assert "not yet implemented" in capsys.readouterr().err
     assert main(["recover", str(tmp_path / "missing"), "--dry-run"]) == Exit.IO
@@ -120,10 +120,10 @@ def test_remaining_placeholders_listed():
     from ks.runtime.options import SERVED, RunOptions
     unserved = sorted(f for f in RunOptions.__dataclass_fields__ if f not in SERVED)
     commands = ["blame (B3-14)", "contain (B3-13)", "recover (B3-18+)", "score (ks.score)",
-                "bench (ADR-06 metrics runner)", "console (console work)"]
+                "bench (ADR-06 metrics runner)"]
     print("PLACEHOLDERS runtime options:", unserved, "commands:", commands)
     assert set(unserved) | set(SERVED) == set(RunOptions.__dataclass_fields__)
-    assert len(commands) == 6  # update when one lands; delete this test when both lists are empty
+    assert len(commands) == 5  # update when one lands; delete this test when both lists are empty
 
 
 def test_repro_banner_ok_and_diverged(tmp_path, capsys):

@@ -93,30 +93,67 @@ def test_taint_carries_literal_t0_for_dry_run_delta():
     assert lit.t0_seq_est == lit.t0_seq_est_literal and lit.t0_delta == 0
 
 
-def _self_chain():
-    """bad W1 (crm), crm reads W1 and writes W2, alert evidence on W2 only."""
+def _self_chain(source="tool"):
+    """B3-18 self-chain: bad W1 (crm), crm reads W1 (by its tool, or only in its view) and writes W2, alert
+    evidence on W2 only."""
     b = Book()
     b.seed({IBAN: "DE00", "suppliers:S-22": {"price": 1}})
     w1 = b.act("crm", 1, reads=[IBAN], writes={IBAN: "DE99"})
-    w2 = b.act("crm", 2, reads=[IBAN], writes={"suppliers:S-22": {"price": 9}})
+    if source == "tool":
+        w2 = b.act("crm", 2, reads=[IBAN], writes={"suppliers:S-22": {"price": 9}})
+    else:
+        w2 = b.act("crm", 2, view=[IBAN], writes={"suppliers:S-22": {"price": 9}})
     s = b.suspend("crm", 3)
     return b, w1, w2, s
 
 
-def test_self_chain_gap_pinned():
-    """B3-45 known gap of the interim default (option B): W1 is NOT seeded by default, IS seeded by the literal
-    walk; Taint reports both t0s so the delta is visible, not silent. B3-46 (tool-read self-follow) closes it."""
-    b, w1, w2, s = _self_chain()
+def test_self_chain_through_tool_read_seeds_w1():
+    """B3-46 (B3-45 option C): the t0 walk follows the suspect's self-read through a tool read, so W1 is seeded
+    (closes the interim option-B gap). The literal walk agrees here."""
+    b, w1, w2, s = _self_chain("tool")
     ev = [ov("suppliers:S-22", 2)]
-    assert t0_seq_est(b.records, ev, "crm") == w2.seq
+    assert w2.read_set[0].source == "tool"
+    assert t0_seq_est(b.records, ev, "crm") == w1.seq
     assert t0_seq_est(b.records, ev, "crm", follow_self_reads=True) == w1.seq
     t = taint_from_alerts(b.records, [alert(ev)])
     assert t.suspect == "crm" and t.suspend_seq == s.seq
-    assert ov(IBAN, 2) not in t.seed and not t.is_tainted(IBAN, 2)
+    assert t.seed == (ov(IBAN, 2), ov("suppliers:S-22", 2)) and t.is_tainted(IBAN, 2)
+    assert t.t0_seq_est == t.t0_seq_est_literal == w1.seq and t.t0_delta == 0
+
+
+def test_self_chain_through_view_only_is_the_reported_residual():
+    """Option C residual: a self-read that reached the suspect only through its view is not followed. The literal
+    walk does follow it, so the plan carries t0_seq_est_literal and the delta shows in the dry-run."""
+    b, w1, w2, s = _self_chain("view")
+    ev = [ov("suppliers:S-22", 2)]
+    assert w2.read_set[0].source == "view"
+    assert t0_seq_est(b.records, ev, "crm") == w2.seq
+    t = taint_from_alerts(b.records, [alert(ev)])
     assert t.seed == (ov("suppliers:S-22", 2),)
     assert t.t0_seq_est_literal == w1.seq and t.t0_delta == w2.seq - w1.seq
     lit = taint_from_alerts(b.records, [alert(ev)], follow_self_reads=True)
     assert lit.seed == (ov(IBAN, 2), ov("suppliers:S-22", 2))
+
+
+def test_laundering_followed_whatever_the_source():
+    """A non-self read edge is always followed, view or tool: crm's W1 seen by billing in its view, billing writes,
+    crm tool-reads billing's write and writes W2 (alert on W2) -> t0 reaches W1."""
+    b = Book()
+    b.seed({IBAN: "DE00", "invoices:I-1": {"n": 0}, "suppliers:S-22": {"price": 1}})
+    w1 = b.act("crm", 1, reads=[IBAN], writes={IBAN: "DE99"})
+    b.act("billing", 2, view=[IBAN], writes={"invoices:I-1": {"n": 1}})
+    w2 = b.act("crm", 3, reads=["invoices:I-1"], writes={"suppliers:S-22": {"price": 9}})
+    b.suspend("crm", 4)
+    assert w2.seq > w1.seq
+    assert t0_seq_est(b.records, [ov("suppliers:S-22", 2)], "crm") == w1.seq
+
+
+def test_hero_crm_self_reads_are_view_reads():
+    """Why the hero seed holds under option C: crm's reads of its own honest S-31 v2 are view entries."""
+    b, n = f2plus()
+    for k in ("crm_iban", "crm_s22"):
+        e = {(x.obj, x.ver): x for x in n[k].read_set}[("suppliers:S-31", 2)]
+        assert e.source == "view"
 
 
 # --- field-object precision (B3-04) -------------------------------------------------------------------------------

@@ -5,10 +5,11 @@ Seams: ``Gateway.open``/``Gateway.tick`` toward ks.runtime; ``ToolDispatcher`` t
 
 from .dispatch import Execution, GatewayTxn, OutboxRequest, StateSnapshot, StateTxn, ToolDispatcher, ViewProvider
 from .control import CallableControl, ControlView, StaticControl
+from .outbox import Outbox, TaintView
 from .policy import AllowAll, Policy, Verdict
 from .txn import writes_at
 from .stub import Admission, Gateway, InFrame
 
-__all__ = ["AllowAll", "CallableControl", "ControlView", "GatewayTxn", "Policy", "StaticControl", "Verdict",
+__all__ = ["AllowAll", "Outbox", "TaintView", "CallableControl", "ControlView", "GatewayTxn", "Policy", "StaticControl", "Verdict",
            "writes_at", "Admission", "Execution", "Gateway", "InFrame", "OutboxRequest", "StateSnapshot", "StateTxn",
            "ToolDispatcher", "ViewProvider"]

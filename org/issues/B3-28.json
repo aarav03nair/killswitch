@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "ks console --live renders ticks, alerts, controls and holds, with pacing for the CALL-01/zoya section 4 beats",
   "acceptance": [
     "Live view shows per-tick records, alerts, suspend and holds from the run dir/operator socket, read-only",
@@ -18,13 +18,23 @@
     "B3-12"
   ],
   "deliverable": "console/",
-  "summary": "",
+  "summary": "ks.console (model/html/live) built; ks console RUN --html|--live [--once] [--pace]. Static single-file page, deterministic, offline, read-only, build-time verify + degraded/repro banners. 5 beats; hero beats (alert/suspend/dry-run lanes) render live when alerts/controls/plans exist, else marked PENDING from contract-shaped fixture. --pace stops per beat on Enter (300s budget). Run pacing (--pause-at/--step) still waits on RunOptions SERVED. ADR-07 amendment: --pace flag. tests/console 7 pass; test_cli placeholder list updated (console removed).",
   "review": "",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 21:45",
+      "who": "ishaan",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 21:45",
+      "who": "ishaan",
+      "msg": "→ in_review: ready for review"
     }
   ]
 }

@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "maya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "C5 RecoveryPlan from the taint set, per-object restore with expect, plan file and dry-run diff",
   "acceptance": [
     "Hero plan restores S-17.iban and S-22 to their pre-culprit versions with expect = crm's after-version, cancels held payment/email",
@@ -19,7 +19,7 @@
   ],
   "deliverable": "src/ks/recovery/planner.py",
   "summary": "src/ks/recovery (planner.py, dryrun.py), tests/recovery 18 tests. API for B3-24: plan_recovery(records, taint, alert_id=, state=store, llm_agents=(), compensators=None, rerun_effects=True) -> Planned(plan, kept, independent, riders, rerun_records{seq: Record}, t0_seq_est, t0_seq_est_literal, t0_delta, notes); dry_run(store, planned, rerunner=None) -> DryRun(plan with diff, digests, rerun_writes); Rerunner = (store, RerunStep, Record, seq) -> writes, called in seq order inside store.simulate() after restores; render(dry); write_plan(plan, dir, refuse_under=run_dir); apply_restore(store, step, seq, action_id) for B3-30. Hero: restores S-17.iban/S-22 (expect crm v2, to v1), re-runs billing x3, comms, payments, reporter, triage kept, independent docs+inventory, 0 flags; dry-run digest unchanged; t0_delta reported (render + Planned, not in C5). Decisions raised: (1) B3-21/B3-24/B3-27 wording 'cancel payment/email' contradicts CALL-02 B2/M14 (re-run payments+comms, same outbox id v+1); default follows B2, rerun_effects=False gives the issue wording (tested). (2) CR to maya: RestoreStep.to optional for culprit-created objects; interim encoding to=VersionRef(ver=expect.ver, hash=TOMBSTONE_HASH), reason tainted_create, restores_to_absent(). (3) CR: RecoveryPlan field for t0_seq_est_literal. Assumptions: outbox status from store outbox:<id> OutboxItem, else assumed held (B3-23 not built); dispatched item of a re-run action flagged conservatively until B3-24 compares payloads; released items are cancelled; redacted rerun args check left to B3-24. 'Plan file outside the run dir' read as: write_plan takes an explicit dir and refuses one under the run dir. Suite 734 passed/8 skipped; container 742 passed.",
-  "review": "",
+  "review": "[maya · changes] Core is right: plan deterministic (hash test), dry-run in simulate() with digest before/after guard, restores fail closed on expect (B6), F2+x gives one write_write_conflict (B5), lanes match B3, hero matches B2, AST guard holds. Local 734 passed/8 skipped; container 742 passed. Two small changes. (1) B2 wins. Remove rerun_effects and its test: a switch that turns off re-runs is a dead option the jury would ask about. My issue wording 'cancels held payment/email' was wrong; B3-24/B3-27 acceptance follows B2. (2) write_plan must not refuse the run dir. ADR-05 s7, C6 RunDir.PLANS_DIR/write_plan and CALL-02 C4 (plans/** is deterministic) put the plan at <run>/plans/<plan_id>.json. My 'outside the run dir' acceptance was wrong. Write through RunDir.write_plan and test that a dry-run changes nothing in the run dir except plans/. Rulings: the RestoreStep.to-optional and RecoveryPlan.t0_seq_est_literal CRs go into B3-46 (contracts 1.4, additive, maya). Keep the tombstone encoding and Planned.t0_delta until then. Accepted as interim: missing outbox:<id> counts as held until B3-23, with the note shown; a dispatched item of a re-run is flagged conservatively until B3-24 compares payload hashes (ADR-05 s6.3).\n\n[maya · done] Both changes folded in and checked: rerun_effects and its test are gone (B2 only); write_plan goes through RunDir.write_plan to <run>/plans/<plan_id>.json, and a test shows a dry-run plus write_plan changes nothing in the run dir except plans/. Contracts 1.4 adopted (RestoreStep.to=None, plan.t0_seq_est_literal). The real B3-23 outbox status is used, and a missing outbox:<id> now gives flag(outbox_missing). AST guard holds: culprit comes only from Taint.suspect. Native 796 passed/8 skipped; container 812 passed.",
   "log": [
     {
       "t": "19 Nov 11:34",
@@ -45,6 +45,26 @@
       "t": "19 Nov 21:11",
       "who": "vikram",
       "msg": "→ in_review: planner + dry-run ready for maya; 3 decisions/CRs in summary"
+    },
+    {
+      "t": "19 Nov 21:14",
+      "who": "maya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 21:16",
+      "who": "vikram",
+      "msg": "→ in_review: maya review folded in: (1) rerun_effects removed with its test (B2 only; dispatched-item test now uses an LLM comms for the cancel path); (2) write_plan(plan, rundir) writes <run>/plans/<plan_id>.json via RunDir.write_plan (duck-typed, A3 guard intact); new test: dry-run + write_plan change nothing in the run dir except plans/. tests/recovery 17 passed"
+    },
+    {
+      "t": "19 Nov 21:33",
+      "who": "vikram",
+      "msg": "→ in_review: also adopted contracts 1.4 (to=None, plan.t0_seq_est_literal) and B3-23 real outbox status (missing -> flag outbox_missing); world plan test now on tests/recovery/world.py"
+    },
+    {
+      "t": "19 Nov 21:38",
+      "who": "maya",
+      "msg": "review: done"
     }
   ]
 }

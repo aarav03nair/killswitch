@@ -7,7 +7,7 @@
   "reviewer": "panel",
   "model": "sonnet",
   "created_by": "pmo",
-  "status": "in_review",
+  "status": "done",
   "outcome": "Read/write sets come from the state txn, not tool self-reports; mismatches and refusals become recorded denials, never unrecorded raises",
   "acceptance": [
     "Gateway takes read_set/write_set from the StateTxn; an Execution whose sets disagree with the txn is a recorded deny (test with a lying adapter)",
@@ -20,7 +20,7 @@
   ],
   "deliverable": "src/ks/gateway/",
   "summary": "Done: run.py wires store (workspace/state.db), seq-1 seed, WorldPolicy; 1-tick cap lifted. Gateway takes write_set from writes_at and verifies reads vs store; lying sets, dispatcher COMMIT (authorizer + post-check), outbox before B3-23, unhashable result are recorded TOOL_ERROR denies. View joins read_set (view_reads/tool_reads kept apart; same obj twice: tool read wins). Seed db-lock releases seq 1. Policy denies '.'/':' ids (p.object_id). Spy allowlist + AST check; gateway crash test; world repro past hero_tick (40 ticks) with equal anchors. Left: gateway-built OutboxItems (B3-23). 716 local, 724 container, make smoke OK.",
-  "review": "",
+  "review": "[panel · done] PASS. Probes: adapter writing 2 rows reporting 1 -> deny/tool_error, nothing landed; raise -> recorded TOOL_ERROR; executescript COMMIT blocked by authorizer, dispatcher COMMIT refused; outbox -> deny. 40-tick world repro past hero_tick, non-empty record, equal anchors; seed lock releases seq 1; p.object_id denies '.'/':'. Local 734 passed/8 skipped, container 742 passed. FINDING (non-blocking): a reported read is checked for existence only; an adapter reading suppliers:S-17.iban via raw txn.store.conn SQL and not reporting it is EXEC ok with no iban in read_set. Runtime cannot see omitted reads; mitigated by THREAT-MODEL rule 7 (adapters emit read sets) plus the new AST guard on ks.world. Follow-up: add this as a THREAT-MODEL known limit; fix stale TODO(B3-41) lines in dispatch.py docstring and stub.py delivered comment. RULING (same obj, view vs tool at different versions): keep BOTH. Dropping the view version can lose taint (CALL-02 A8 conservative) and breaks B3-45 C. read_set is unique by obj (record.py _sorted_unique), so this needs the contracts 1.4 change: do it in B3-46, add to its acceptance with a test. Until then tool-read-wins stands, pinned by a TODO(B3-46).",
   "log": [
     {
       "t": "19 Nov 16:24",
@@ -66,6 +66,11 @@
       "t": "19 Nov 21:10",
       "who": "nisha",
       "msg": "→ in_review: ready"
+    },
+    {
+      "t": "19 Nov 21:13",
+      "who": "panel",
+      "msg": "review: done"
     }
   ]
 }

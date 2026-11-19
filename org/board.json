@@ -410,211 +410,6 @@
   ],
   "activity": [
     {
-      "t": "19 Nov 10:58",
-      "who": "kabir",
-      "msg": "reviewed ADR-01: done"
-    },
-    {
-      "t": "19 Nov 10:58",
-      "who": "kabir",
-      "msg": "reviewed ADR-02: done"
-    },
-    {
-      "t": "19 Nov 10:58",
-      "who": "kabir",
-      "msg": "reviewed ADR-03: done"
-    },
-    {
-      "t": "19 Nov 10:58",
-      "who": "zoya",
-      "msg": "reviewed ADR-07: changes"
-    },
-    {
-      "t": "19 Nov 10:58",
-      "who": "panel",
-      "msg": "reviewed ADR-00: changes"
-    },
-    {
-      "t": "19 Nov 10:59",
-      "who": "zoya",
-      "msg": "moved ABS-08 to in_progress"
-    },
-    {
-      "t": "19 Nov 10:59",
-      "who": "zoya",
-      "msg": "moved ABS-08 to in_review"
-    },
-    {
-      "t": "19 Nov 10:59",
-      "who": "zoya",
-      "msg": "moved ABS-04 to in_review"
-    },
-    {
-      "t": "19 Nov 11:00",
-      "who": "panel",
-      "msg": "reviewed ADR-00: done"
-    },
-    {
-      "t": "19 Nov 11:00",
-      "who": "maya",
-      "msg": "reviewed ADR-04: done"
-    },
-    {
-      "t": "19 Nov 11:00",
-      "who": "maya",
-      "msg": "reviewed ADR-05: done"
-    },
-    {
-      "t": "19 Nov 11:00",
-      "who": "zoya",
-      "msg": "reviewed ADR-07: done"
-    },
-    {
-      "t": "19 Nov 11:00",
-      "who": "kabir",
-      "msg": "moved SEC-02 to in_review"
-    },
-    {
-      "t": "19 Nov 11:06",
-      "who": "maya",
-      "msg": "moved CON-02 to in_review"
-    },
-    {
-      "t": "19 Nov 11:08",
-      "who": "anaya",
-      "msg": "reviewed ABS-08: done"
-    },
-    {
-      "t": "19 Nov 11:09",
-      "who": "maya",
-      "msg": "reviewed SEC-02: changes"
-    },
-    {
-      "t": "19 Nov 11:09",
-      "who": "kabir",
-      "msg": "reviewed CON-02: done"
-    },
-    {
-      "t": "19 Nov 11:09",
-      "who": "kabir",
-      "msg": "reviewed CON-01: done"
-    },
-    {
-      "t": "19 Nov 11:09",
-      "who": "kabir",
-      "msg": "moved SEC-03 to done"
-    },
-    {
-      "t": "19 Nov 11:09",
-      "who": "maya",
-      "msg": "reviewed ABS-04: done"
-    },
-    {
-      "t": "19 Nov 11:11",
-      "who": "maya",
-      "msg": "moved SKEL-01 to in_progress"
-    },
-    {
-      "t": "19 Nov 11:11",
-      "who": "kabir",
-      "msg": "moved SEC-02 to in_review"
-    },
-    {
-      "t": "19 Nov 11:13",
-      "who": "pmo",
-      "msg": "reviewed SEC-02: done"
-    },
-    {
-      "t": "19 Nov 11:26",
-      "who": "maya",
-      "msg": "moved SKEL-01 to in_review"
-    },
-    {
-      "t": "19 Nov 11:27",
-      "who": "pmo",
-      "msg": "opened ORG-05 — Call #3: Sprint 3 build kickoff"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-01 — Contracts 1.2: witness frames, SignRefusal, isolation, decisions_from, reexec_invalid"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-02 — ADR errata for the 12 SKEL-01 findings"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-03 — ks.state: versioned object store"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-04 — ks.state: read rule, field objects, state_digest, savepoints"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-05 — ks.world: 10 agents, F2+ scenario, per-agent view builder"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-06 — ks.world: catalogue tool adapters with read/write sets"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-07 — ks.monitor: detector catalogue over records (fixtures)"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-08 — ks.witness: witness-owned witness.jsonl, fd handover, 1.2 frames, per-tick idempotency"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-09 — ks.recorder: txn semantics and GatewayHooks"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-10 — ks.runtime: 10-agent world spawn, isolation pinning, run_id default"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-11 — ks.gateway: full admission pipeline"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-12 — ks.cli: command surface and exit codes"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-13 — ks.runtime: c-0 system envelopes and operator socket (R5)"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-14 — ks.policy: classes, scopes and read scope (R2)"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-15 — ks.verify: per-record rules, isolation, reconcile/no_state"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-16 — F7: aggregate reads enumerate every row (adapter test)"
-    },
-    {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened B3-17 — ks.inject: F2+, F2+c, F2+x, F3 and hero guard"
@@ -1408,6 +1203,211 @@
       "t": "19 Nov 21:11",
       "who": "vikram",
       "msg": "moved B3-21 to in_review"
+    },
+    {
+      "t": "19 Nov 21:13",
+      "who": "panel",
+      "msg": "reviewed B3-41: done"
+    },
+    {
+      "t": "19 Nov 21:13",
+      "who": "pmo",
+      "msg": "moved B3-46 to todo"
+    },
+    {
+      "t": "19 Nov 21:13",
+      "who": "pmo",
+      "msg": "moved B3-23 to todo"
+    },
+    {
+      "t": "19 Nov 21:13",
+      "who": "nisha",
+      "msg": "moved B3-23 to in_progress"
+    },
+    {
+      "t": "19 Nov 21:14",
+      "who": "maya",
+      "msg": "reviewed B3-21: changes"
+    },
+    {
+      "t": "19 Nov 21:15",
+      "who": "pmo",
+      "msg": "moved B3-46 to todo"
+    },
+    {
+      "t": "19 Nov 21:15",
+      "who": "maya",
+      "msg": "moved B3-46 to in_progress"
+    },
+    {
+      "t": "19 Nov 21:16",
+      "who": "vikram",
+      "msg": "moved B3-21 to in_review"
+    },
+    {
+      "t": "19 Nov 21:17",
+      "who": "vikram",
+      "msg": "moved B3-24 to in_progress"
+    },
+    {
+      "t": "19 Nov 21:18",
+      "who": "tara",
+      "msg": "moved B3-22 to in_review"
+    },
+    {
+      "t": "19 Nov 21:20",
+      "who": "anaya",
+      "msg": "reviewed B3-22: changes"
+    },
+    {
+      "t": "19 Nov 21:24",
+      "who": "maya",
+      "msg": "moved B3-46 to in_review"
+    },
+    {
+      "t": "19 Nov 21:24",
+      "who": "tara",
+      "msg": "moved B3-22 to in_review"
+    },
+    {
+      "t": "19 Nov 21:26",
+      "who": "anaya",
+      "msg": "reviewed B3-22: changes"
+    },
+    {
+      "t": "19 Nov 21:27",
+      "who": "kabir",
+      "msg": "reviewed B3-46: changes"
+    },
+    {
+      "t": "19 Nov 21:27",
+      "who": "nisha",
+      "msg": "moved B3-23 to in_review"
+    },
+    {
+      "t": "19 Nov 21:29",
+      "who": "tara",
+      "msg": "moved B3-22 to in_review"
+    },
+    {
+      "t": "19 Nov 21:30",
+      "who": "anaya",
+      "msg": "reviewed B3-22: changes"
+    },
+    {
+      "t": "19 Nov 21:31",
+      "who": "maya",
+      "msg": "moved B3-46 to in_review"
+    },
+    {
+      "t": "19 Nov 21:31",
+      "who": "tara",
+      "msg": "moved B3-22 to in_review"
+    },
+    {
+      "t": "19 Nov 21:32",
+      "who": "kabir",
+      "msg": "reviewed B3-23: changes"
+    },
+    {
+      "t": "19 Nov 21:33",
+      "who": "anaya",
+      "msg": "reviewed B3-22: done"
+    },
+    {
+      "t": "19 Nov 21:33",
+      "who": "vikram",
+      "msg": "moved B3-24 to in_review"
+    },
+    {
+      "t": "19 Nov 21:33",
+      "who": "vikram",
+      "msg": "moved B3-21 to in_review"
+    },
+    {
+      "t": "19 Nov 21:33",
+      "who": "pmo",
+      "msg": "moved B3-30 to todo"
+    },
+    {
+      "t": "19 Nov 21:36",
+      "who": "tara",
+      "msg": "moved B3-26 to in_review"
+    },
+    {
+      "t": "19 Nov 21:36",
+      "who": "nisha",
+      "msg": "moved B3-23 to in_review"
+    },
+    {
+      "t": "19 Nov 21:37",
+      "who": "kabir",
+      "msg": "reviewed B3-46: done"
+    },
+    {
+      "t": "19 Nov 21:38",
+      "who": "maya",
+      "msg": "reviewed B3-21: done"
+    },
+    {
+      "t": "19 Nov 21:38",
+      "who": "maya",
+      "msg": "reviewed B3-24: changes"
+    },
+    {
+      "t": "19 Nov 21:38",
+      "who": "maya",
+      "msg": "moved B3-24 to changes"
+    },
+    {
+      "t": "19 Nov 21:38",
+      "who": "anaya",
+      "msg": "reviewed B3-26: changes"
+    },
+    {
+      "t": "19 Nov 21:38",
+      "who": "pmo",
+      "msg": "moved B3-31 to todo"
+    },
+    {
+      "t": "19 Nov 21:38",
+      "who": "pmo",
+      "msg": "moved B3-26 to changes"
+    },
+    {
+      "t": "19 Nov 21:39",
+      "who": "tara",
+      "msg": "moved B3-26 to in_review"
+    },
+    {
+      "t": "19 Nov 21:40",
+      "who": "anaya",
+      "msg": "reviewed B3-26: done"
+    },
+    {
+      "t": "19 Nov 21:40",
+      "who": "pmo",
+      "msg": "moved B3-33 to todo"
+    },
+    {
+      "t": "19 Nov 21:41",
+      "who": "kabir",
+      "msg": "reviewed B3-23: changes"
+    },
+    {
+      "t": "19 Nov 21:41",
+      "who": "kabir",
+      "msg": "moved B3-23 to changes"
+    },
+    {
+      "t": "19 Nov 21:41",
+      "who": "pmo",
+      "msg": "moved B3-30 to todo"
+    },
+    {
+      "t": "19 Nov 21:45",
+      "who": "ishaan",
+      "msg": "moved B3-28 to in_review"
     }
   ]
 }

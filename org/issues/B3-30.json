@@ -26,6 +26,16 @@
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 21:33",
+      "who": "pmo",
+      "msg": "→ todo: From vikram's B3-24: apply must skip outbox create for already-dispatched items (it raises), and must record repairs when a re-run's value equals the head (no new version is written)."
+    },
+    {
+      "t": "19 Nov 21:41",
+      "who": "pmo",
+      "msg": "→ todo: From kabir's B3-23 re-review: re-run outbox items re-enter HELD via the exec record with no ks.control hold record (breaks ADR-03 §7 like B3-23 finding 2). Only reachable in the rolled-back dry-run today; apply must emit the hold record."
     }
   ]
 }
