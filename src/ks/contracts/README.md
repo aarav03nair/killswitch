@@ -68,11 +68,19 @@ rec = rec.with_gw_sig(gw_key.sign(rec.signing_bytes()))
 - **Lineage is never agent-declared.** `act_chain` is used only to deny revoked ancestors. Taint and lineage hold use the recorded `read_set` (`OutboxItem.lineage`).
 - **Write-write conflict rule.** `RestoreStep.expect` must still be the current version, or the step fails closed. A *taint-scoped revert* is the set of `restore` steps in a plan.
 
-## Key isolation (THREAT-MODEL v2)
-- The container runs as uid 0, and a `nobody` user exists. So `ks.runtime` runs each agent subprocess **under a separate unprivileged uid**.
-- Each agent holds only its gateway socket and a signer handle (`SignRequest` → `SignReply`). The signer signs only envelope headers for its own principal.
-- Keys are generated **in memory** by the gateway/signer side and never written to disk. `keys.json` holds public keys only, and `RunDir.validate()` flags any private-key material.
-- `workspace/state.db` is 0700 and owned by the gateway. So key isolation and gateway bypass are **enforced** here, not only detected. Reconciliation (`AlertKind.RECONCILE`, detector `reconcile`, class U) still catches any bypass in relaxed-permission runs (RT1b).
+## Key isolation (THREAT-MODEL v3, CALL-01)
+- **Public claim, verbatim (THREAT-MODEL C2):** key isolation is **"enforced in production (uid/container), detected here by reconciliation"**. Nothing in code, console text or docs may say more than this.
+- **Live setup (THREAT-MODEL v3, ADR-00).** The container runs as uid 0.
+  - The gateway runs as uid 0 and the witness under its own uid (60000).
+  - **Each agent runs under its own numeric uid**: 60001 + its index in `RunConfig.agents`. No passwd entry is needed.
+  - The agent template sets `PR_SET_DUMPABLE=0` before any agent code runs. The gateway, witness and signer are non-dumpable as well.
+  - Each agent gets path-less `socketpair`s (one to the gateway, one to the signer), a clean env, `close_fds` and per-uid rlimits. The signer (`SignRequest` → `SignReply`) signs only envelope headers for its own principal.
+- Keys are generated **in memory** on the gateway/signer side and are never written to disk. `keys.json` holds public keys only, and `RunDir.validate()` flags any private-key material. `workspace/` is 0700 and `state.db` is 0600, both owned by the gateway uid.
+- **When the uids separate**, the uid boundary blocks key theft (RT2), sibling hijack (RT3b) and a `state.db` bypass (RT1a) for that run. At startup the gateway checks that cross-uid `ptrace` returns EPERM, and the console prints the mode. The RTs measure this, but the public claim stays the C2 wording above.
+- **When they do not separate**, isolation is **detected only**, and the console prints the degraded mode:
+  - **Gateway uid shared with agents.** A key read from the rogue subprocess is the admitted gap. It voids C1/C4 for that run, and reconciliation does not see it (RT2).
+  - **Per-agent uids fail (shared agent uid).** **Per-agent attribution is void for that run**, because a sibling can act through an honest agent's socket and signer handle (RT3b).
+  - Reconciliation (`AlertKind.RECONCILE`, detector `reconcile`, class U) catches unmediated writes to `state.db`, both in these modes and in relaxed-permission runs (RT1b). It detects writes, not key reads.
 
 ## Left to ADR owners (not in the contract)
 Metric and score keys and the `effects.jsonl` schema (tara, ADR-06); policy rule ids (nisha, ADR-03); the store implementation (vikram, ADR-05); side-store and verify internals (arjun, ADR-02).

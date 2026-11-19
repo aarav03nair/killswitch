@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "kabir",
-  "status": "in_progress",
+  "status": "in_review",
   "outcome": "Rule-by-contract verdict table so C1-C6 freeze with no security gaps",
   "acceptance": [
     "11x6 matrix: each day-one rule (CALL-01/kabir.md s4) vs each contract C1-C6 marked pass / gap / n.a. with a one-line reason",
@@ -19,7 +19,7 @@
     "CON-01"
   ],
   "deliverable": "org/reports/SEC-03.md",
-  "summary": "",
+  "summary": "org/reports/SEC-03.md: 11x6 grid (35 pass / 16 n.a. / 15 gap cells, 12 distinct gaps), backed by 64 probes in /tmp/sec03. 4 blockers: B1 witness count plus anchoring of keys.json; B2 determinism forces seed-derived private keys; B3 release reuses the pre-suspend epoch and expiry is uncapped; B4 RecursionError on a 6 KB nested frame. 8 fix-before-S4 items (F1 run-dir perms expose the side store, F2 agent-signed ks.control validates, F3-F8) and 10 notes. Rules 4/5/6/11 checked explicitly; Q1-Q10 met except Q6 (deferred). Pseudonymised hashes accepted with conditions; global-only chain accepted. CON-01 verdict: changes (B1-B4).",
   "review": "",
   "log": [
     {
@@ -31,6 +31,16 @@
       "t": "19 Nov 06:04",
       "who": "kabir",
       "msg": "→ in_progress"
+    },
+    {
+      "t": "19 Nov 06:12",
+      "who": "kabir",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 06:12",
+      "who": "kabir",
+      "msg": "→ in_review: report posted; CON-01 marked changes with B1-B4"
     }
   ]
 }

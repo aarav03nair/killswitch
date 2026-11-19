@@ -74,7 +74,7 @@ Per D11 the **LIVE** RTs are scripted at the finale. All RTs also run as pytest 
 | RT3 | Forgery (= F5) | **LIVE** (F5) | `ks.identity`, `ks.gateway`, `ks.containment` | ADR-01, ADR-04 |
 | RT3b | Sibling hijack (ptrace/pidfd_getfd) | pytest, jury-optional | `ks.runtime` (per-agent uid, non-dumpable) | ADR-00 |
 | RT4 | Replay | pytest, jury-optional | `ks.gateway`, `ks.identity` | ADR-01, ADR-03 |
-| RT5 | TOCTOU at quarantine | pytest (needs a mid-txn hook) | `ks.gateway`, `ks.containment` | ADR-03 |
+| RT5 | TOCTOU at suspend | pytest (needs a mid-txn hook) | `ks.gateway`, `ks.containment` | ADR-03 |
 | RT6 | Clock games | pytest, jury-optional | `ks.gateway`, `ks.recorder` | ADR-01, ADR-02 |
 | RT7 | Log line edit (= F6) | **LIVE** (F6, "line edit") | `ks.verify`, `ks.recorder` | ADR-02 |
 | RT8 | Full chain rewrite (= F6) | **LIVE** (F6, "full rewrite") | `ks.verify`, `ks.witness` | ADR-02 |
@@ -208,7 +208,7 @@ and {r.reason for r in denials_of(rogue_conn)} >= {"nonce_reused", "expired", "s
 
 ---
 
-### RT5: TOCTOU at quarantine
+### RT5: TOCTOU at suspend
 
 **Setup:** seed s, rogue in slot `docs`. The harness schedules `Control{suspend, target=agent:docs}` at tick Tq. A `ks.gateway` test-only hook (`GatewayHooks.pause_in_txn`) holds a rogue write txn open while the suspend control is applied from another thread. Pytest-only for that reason.
 **Script outline**
@@ -216,7 +216,7 @@ and {r.reason for r in denials_of(rogue_conn)} >= {"nonce_reused", "expired", "s
 def on_tick(ctx, t):
     for _ in range(FLOOD): ctx.send("docs.write", rand_args())            # surplus per tick, see ADR-00 quota
     if t == Tq - 1: presigned = [ctx.sign_envelope(mk()) for _ in range(FLOOD)]
-    if t >= Tq: [ctx.raw_send(e) for e in presigned]                      # stamped with the pre-quarantine epoch
+    if t >= Tq: [ctx.raw_send(e) for e in presigned]                      # stamped with the pre-suspend epoch
     if t >= Tq: ctx.send("outbox.email", {...})                           # I-class: must not dispatch
 ```
 **Signal:** a Control record at seq `q`. Every later rogue envelope gets C2 deny `reason ∈ {suspended, stale_epoch}`. Surplus envelopes within a tick get `reason=over_quota`.
@@ -419,20 +419,23 @@ def on_tick(ctx, tick: int):
 
 ---
 
-## 4. Owner-module confirmation (maya to tick at review)
+## 4. Owner-module confirmation (maya, ticked at review 19 Nov against contracts 1.0.0 + ADR-00…06)
+
+☑ = buildable as scoped once the listed SPEC fixes land · ◐ = buildable after a named contract/ADR change · ☐ = not buildable as written. Field renames for all RTs (SEC-03 §4): `r.agent_id` → `r.attributed_agent`, `r.act_chain` → `r.envelope.act_chain[*].principal`, `Alert.suspect` → `root_candidates[0]`, `o.state` → `o.status`, `read_hashes` → `{e.hash for e in o.lineage}`, `c.kind` → `c.op` (and the seq comes from the carrying record), `expiry` → `expiry_tick`.
 
 | RT | Modules | Buildable on C1–C6 + ADR as scoped? |
 |---|---|---|
-| RT1 | ks.state, ks.monitor, ks.runtime | ☐ |
-| RT2 | ks.runtime, ks.identity | ☐ |
-| RT3 | ks.identity, ks.gateway, ks.containment | ☐ (needs Q2, Q9) |
-| RT4 | ks.gateway, ks.identity | ☐ (needs Q3) |
-| RT5 | ks.gateway, ks.containment | ☐ (needs test hook) |
-| RT6 | ks.gateway, ks.recorder | ☐ (needs Q4) |
-| RT7 | ks.verify, ks.recorder | ☐ (needs Q5, Q8) |
-| RT8 | ks.verify, ks.witness | ☐ (needs Q5) |
-| RT9 | ks.monitor, ks.taint, ks.policy | ☐ (needs ADR-06 ticket rule, Q7) |
-| RT10 | ks.gateway, ks.containment, ks.inject, ks.oracle, ks.score | ☐ (needs Q6) |
-| RT11 | ks.containment, ks.monitor, ks.score | ☐ (needs Q6, Q7) |
-| RT12 | ks.containment, ks.gateway | ☐ (needs Q1, Q9) |
-| harness | ks.bench, ks.cli | ☐ |
+| RT1 | ks.state, ks.monitor, ks.runtime | ☑ No open Q. ADR-00 per-agent uid (a), reconcile each tick (b). `customers SET iban` → `suppliers` (ADR-06). (b): assert `al.root_candidates == ()`, not `suspect` null |
+| RT2 | ks.runtime, ks.identity | ☑ ADR-00 confirms uid 60001+i, non-dumpable, in-memory keys. Must run fresh-key (live) mode: under `--repro-secret`, the secret file must be unreadable by agent uids (SEC-03 B2) |
+| RT3 | ks.identity, ks.gateway, ks.containment | ☑ Q2, Q9 done. (a) the signer refuses a foreign `agent_id` (SEC-03 N2), so accept either `signer_refused` in rogue_log or `deny/bad_sig` |
+| RT3b | ks.runtime | ☑ ADR-00 |
+| RT4 | ks.gateway, ks.identity | ◐ Q3 done. The `E_pre_suspend` → `stale_epoch` leg needs monotonic release epochs (SEC-03 B3, CON-02 M4/M5). Outbox variant tool is `comms.send_email` (ADR-03) |
+| RT5 | ks.gateway, ks.containment | ☑ `GatewayHooks.pause_in_txn` named in ADR-03. Surplus frames: ADR-00 currently says `deny/expired`, ADR-03/SPEC say `over_quota`; maya fixes ADR-00 to `over_quota` (earlier-tick frames stay `expired`) |
+| RT6 | ks.gateway, ks.recorder | ☑ Q4 = reject (`deny/schema`, `envelope=None`). Fix the pass: run A has `deny/schema` where B has `exec`, so project over `conn_id != rogue_conn` and separately assert the rogue's claim records are `schema`. One envelope per tick (spread the two sends) |
+| RT7 | ks.verify, ks.recorder | ☑ Q5, Q8 done; ADR-02 covers a–d. `--dry-run` FROZEN on a dead copy needs "verify ≠ OK ⇒ FROZEN" (CON-02 M12). Record the boundary: an attacker who sets `redacted=true` instead of editing passes verify by design |
+| RT8 | ks.verify, ks.witness | ☑ ADR-02: missing witness ⇒ `WITNESS`. Variant g needs a run killed between flush and checkpoint (ADR-00 takes a final checkpoint, so a finished run has nothing unwitnessed). Add (h) `keys.json` swap (SEC-03 B1) |
+| RT9 | ks.monitor, ks.taint, ks.policy | ◐ ADR-06 ticket rule exists, Q7 done. Needs the agent view in read sets (CON-02 M6), or crm's record never reads `tickets:T-3`. Per ADR-04 (as amended) `root_candidates[0] == "crm"` (auto-suspended, counted in `false_accusations`), `"intake" in [:3]`; fix the "needs an operator click" note accordingly. `e.beneficiary_iban` → compare `value_hash` (ADR-06 effects schema) |
+| RT10 | ks.gateway, ks.containment, ks.inject, ks.oracle, ks.score | ◐ Q6 names pending tara (ADR-06 uses `post_alert_tainted`, `irreversible_released`). comms email is I1 in ADR-03 but I2 in ADR-06. F3 variant uses `e.to`, which is not in the effects schema |
+| RT11 | ks.containment, ks.monitor, ks.score | ☐ Contradicts ADR-04: payments is **not** suspended (suspension follows the origin), `false_accusations == 0`. Rewrite as 11a (ADR-04 path: triage = `root_candidates[0]` suspended, payments' tainted payment held, its clean work flows, fp_cost recomputed) + 11b (harness/operator suspends payments, then release with fresh epoch: held items out unless tainted, lost honest effects 0, `false_accusations >= 1`). State triage's write scope on `suppliers.iban` (ADR-03/06) |
+| RT12 | ks.containment, ks.gateway | ◐ Q1, Q9 done. No delegation path exists (no `delegate` tool in ADR-03, no task hand-off in ADR-06), so the `act_chain` leg needs one. `ctx.reconnect()` is impossible with path-less socketpairs (drop it, or define it as EOF ⇒ no-op). `release_at` is not an envelope field. Effects have no `seq`/`act_chain` (ADR-06) |
+| harness | ks.bench, ks.cli | ☑ `perms="relaxed"` and the rogue template/`ctx.*` are ks.runtime (maya). `run.controls()` returns (record, Control). Flags per ADR-07 |

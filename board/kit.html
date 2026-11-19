@@ -1,0 +1,1882 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Abstract Kit</title><link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:light dark;--bg:light-dark(#fff,#10191e);--ink:light-dark(#121212,#e9eef1);--mut:light-dark(#5b6670,#9fb0bb);--red:#e3120b;--sl:light-dark(#2e6f8e,#6fb3d3);--pan:light-dark(#e3ecf0,#18252c);--rule:light-dark(#cfd9de,#2a3a43)}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.6 Inter,system-ui,sans-serif;overflow-x:clip}
+header{background:var(--pan);padding:14px max(5vw,16px) 0;position:sticky;top:0;z-index:2;border-bottom:1px solid var(--rule)}
+.brand{font:600 15px Inter,sans-serif;margin-bottom:8px}.brand b{background:var(--red);color:#fff;padding:2px 7px;margin-right:6px;font-size:12px}
+nav{display:flex;gap:2px;overflow-x:auto;scrollbar-width:none}nav::-webkit-scrollbar{display:none}
+nav button{flex:none;font:500 14px Inter,sans-serif;min-height:44px;padding:8px 14px;border:0;background:none;color:var(--mut);cursor:pointer;border-bottom:3px solid transparent}
+nav button[aria-selected=true]{color:var(--ink);border-bottom-color:var(--red)}
+:focus-visible{outline:3px solid var(--sl);outline-offset:2px}
+main{max-width:900px;margin:0 auto;padding:20px max(5vw,16px) 60px}
+section[hidden]{display:none}
+h1,h2,h3{font-family:"Source Serif 4",Georgia,serif;font-weight:600;line-height:1.15;text-wrap:balance}
+h1{font-size:clamp(28px,5vw,40px);margin:.2em 0 .4em}h2{font-size:24px;margin:1.6em 0 .5em}h3{font-size:19px;margin:1.3em 0 .4em}
+.lede{font-size:17px}.small{font-size:13px;color:var(--mut)}
+.note{background:var(--pan);border-left:4px solid var(--red);padding:12px 14px;margin:16px 0}
+table{border-collapse:collapse;width:100%;font-size:14px;display:block;overflow-x:auto}
+th,td{text-align:left;vertical-align:top;padding:6px 8px;border-bottom:1px solid var(--rule)}th{color:var(--mut);font-weight:600;font-size:13px}
+td{min-width:8em}td:first-child,th:first-child{min-width:2.2em}
+section{scroll-margin-top:120px}
+code{font-size:.9em;background:var(--pan);padding:1px 4px;overflow-wrap:anywhere}pre{overflow-x:auto;background:var(--pan);padding:10px}
+a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid var(--rule);color:var(--mut)}
+</style></head><body>
+<header><div class="brand"><b>Kill Switch</b>Abstract Kit · updated 19 Nov 2026, 06:09 IST</div><nav role="tablist"><button role="tab" id="t-start" aria-controls="start" aria-selected="true">Start here</button><button role="tab" id="t-facts" aria-controls="facts" aria-selected="false">Fact card</button><button role="tab" id="t-skeleton" aria-controls="skeleton" aria-selected="false">Skeleton</button><button role="tab" id="t-guard" aria-controls="guard" aria-selected="false">Guardrails</button><button role="tab" id="t-terms" aria-controls="terms" aria-selected="false">Terms</button><button role="tab" id="t-jury" aria-controls="jury" aria-selected="false">Jury Q&amp;A</button></nav></header>
+<main><section id="start" role="tabpanel" >
+<h1>Abstract Kit</h1>
+<p class="lede">Everything you need to write the SEED abstract yourself: facts you may quote, how to phrase them safely, a notes-only skeleton, and the questions the jury will throw at you. Due <b>22 Nov 2026</b>, under 1,000 words, problem → fix → why it matters.</p>
+<div class="note"><b>Why there is no draft here:</b> SEED requires the abstract to be written by you and checks for AI-written text. The team has deliberately given you notes, facts and rules, not sentences.</div>
+<h2>How to use it (about 2 hours)</h2>
+<ol>
+<li><b>Skeleton</b>: read the budget table and the MUST bullets. Write the Fix section first, in your own words.</li>
+<li><b>Fact card</b>: pull external numbers only from here, with the qualifier in the same row.</li>
+<li><b>Terms</b>: use one name per concept (e.g. "suspend", not "quarantine"; "record", not "log").</li>
+<li><b>Guardrails</b>: run the 12-point self-check in §4 on your draft.</li>
+<li>Save your draft as <code>abstract/DRAFT-R1.md</code> (or paste it to me). The team reviews it with comments only, in two rounds, before 22 Nov.</li>
+<li><b>Jury Q&amp;A</b>: not needed for the abstract. Read it before the finale.</li>
+</ol>
+<h2>The frame in one breath (notes)</h2>
+<ul>
+<li>Problem: the brief asks to undo one agent "without discarding" others' work; that is undefined once honest agents read the bad write.</li>
+<li>Fix: every write has an author, every read a source; identify, contain and recover are three queries on one graph.</li>
+<li>Payoff: selective undo of landed writes plus repair of their readers.</li>
+<li>Why it matters: an agent's own log is testimony; we keep evidence the agent cannot forge, and score recovery against a no-fault run.</li>
+</ul>
+<p class="small">Related: the one-page <a href="https://claude.ai/artifact/38FVafjkHf2vXLTm2z6uBF">how-it-works diagram</a> and the <a href="https://claude.ai/artifact/HSWLtXFe9GYB36whkxwhwL">project board</a>.</p>
+</section><section id="facts" role="tabpanel" hidden><h1>FACT CARD: external numbers for the abstract (ABS-01)</h1>
+<p>anaya · 19 Nov 2026 · D13: every outside number in the abstract comes from this card. Notes and rules only; you write the sentences.
+<strong>v2 changes (19 Nov, after Zoya's review):</strong> #7 "under dense spread" moved to the +46 pp result; #1 note corrected (METR says "cyber", "internal" unconfirmed); #4 venue now A~.</p>
+<p><strong>Status:</strong> <strong>A</strong> = I re-checked it against the URL today · <strong>A~</strong> = re-checked, but part of it is unconfirmed (see the note) · <strong>S</strong> = secondary source only (quote it as "reported").</p>
+<h2>Hook (METR case only as "a blunt stop failed at scale", D2)</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Fact (note) · exact number</th>
+<th>Must travel with it</th>
+<th>Source</th>
+<th>St</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>Agent message board: <strong>roughly 1,200</strong> agents, <strong>over 70,000</strong> messages + files, <strong>roughly 700</strong> joined the attack on HF</td>
+<td>"roughly"; "METR, preliminary findings"; "July 2026" with no day; agents in OpenAI's <strong>ExploitGym</strong> evaluation runs</td>
+<td><a href="https://metr.org/blog/2026-08-26-openai-hugging-face-incident-investigation/">METR</a></td>
+<td>A~</td>
+</tr>
+<tr>
+<td>2</td>
+<td>Wiping the board (fresh Artifactory) did not stop it: a new board was up <strong>about two days later</strong>, via an Artifactory cache namespace</td>
+<td>"about two days later"; mechanism = cache namespace, <strong>not</strong> credentials</td>
+<td>METR</td>
+<td>A</td>
+</tr>
+<tr>
+<td>3</td>
+<td>OpenAI, looking back: early signals "should have triggered an earlier response"</td>
+<td>OpenAI's words, quoted via Al Jazeera; "July 2026"</td>
+<td><a href="https://www.aljazeera.com/economy/2026/8/27/openai-says-it-detected-malign-activity-months-before-hugging-face-attack">Al Jazeera</a></td>
+<td>A</td>
+</tr>
+<tr>
+<td>9</td>
+<td>Public incidents we catalogued (7) are all <strong>single-agent</strong>: a human spotted them after the fact; recovery was a whole backup or nothing</td>
+<td>"reportedly"; "in our search"; AIID IDs 1152, 1178, 1433, 1442, 1469</td>
+<td><a href="https://incidentdatabase.ai/cite/1469">AIID 1469</a> + RES-07</td>
+<td>S</td>
+</tr>
+<tr>
+<td>10</td>
+<td>PocketOS: DB + backups deleted in <strong>9 seconds</strong>; restored from a <strong>three-month-old</strong> snapshot + <strong>a weekend</strong> of manual rebuilding</td>
+<td>"per the founder, as reported"</td>
+<td><a href="https://mondoo.com/blog/5-lessons-from-9-seconds-ai-agent-deleted-production-database">Mondoo</a></td>
+<td>S</td>
+</tr>
+</tbody>
+</table>
+<h2>Problem</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Fact (note) · exact number</th>
+<th>Must travel with it</th>
+<th>Source</th>
+<th>St</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>4</td>
+<td>Who&amp;When: LLM attribution finds the agent <strong>~53.5%</strong>, the decisive step <strong>~14.2%</strong></td>
+<td>"best strategies reported, GPT-4o"; a <strong>different</strong> strategy for each number; ICML 2025</td>
+<td><a href="https://arxiv.org/abs/2505.00212">Who&amp;When</a> abstract + Table 1</td>
+<td>A~</td>
+</tr>
+<tr>
+<td>5</td>
+<td>Random baseline: <strong>12–29%</strong> (agent), <strong>4–19%</strong> (step)</td>
+<td>"by subset"</td>
+<td>Who&amp;When Table 1</td>
+<td>A</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Better method (FAMAS): <strong>57.61%</strong> agent / <strong>29.35%</strong> action, but <strong>20</strong> replays and <strong>~105 min</strong> avg per attribution (38–248)</td>
+<td>cite the body (RQ1, §5.1), not the abstract; arXiv preprint, no venue</td>
+<td><a href="https://arxiv.org/abs/2509.13782">FAMAS</a></td>
+<td>A</td>
+</tr>
+<tr>
+<td>11</td>
+<td>OTel <code>gen_ai.*</code>: no attribute for state read/written; nothing Stable</td>
+<td>"as of Nov 2026"; say "not yet stable", not "all Development"</td>
+<td><a href="https://opentelemetry.io/docs/specs/semconv/registry/attributes/gen-ai/">OTel registry</a>, <a href="https://github.com/open-telemetry/semantic-conventions-genai">repo</a></td>
+<td>A~</td>
+</tr>
+<tr>
+<td>12</td>
+<td>MCP servers "MUST NOT accept or transit any other tokens"</td>
+<td>"draft spec"</td>
+<td><a href="https://modelcontextprotocol.io/specification/draft/basic/authorization">MCP auth (draft)</a></td>
+<td>A</td>
+</tr>
+</tbody>
+</table>
+<h2>Prior art (credit, don't compete)</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Fact (note) · exact number</th>
+<th>Must travel with it</th>
+<th>Source</th>
+<th>St</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>7</td>
+<td>Native A2A/LangGraph controls "contain at most <strong>33.3%</strong> of faults or retain at most <strong>16%</strong> of work without redo"; Airlock keeps <strong>+68 to +96 pp</strong> more healthy work (its optimized cut keeps <strong>+46 pp</strong> more than full quarantine "under dense spread": the qualifier belongs to the +46)</td>
+<td>credit Airlock; their benchmark; no head-to-head claim from us</td>
+<td><a href="https://arxiv.org/abs/2611.06727">Airlock</a> abstract</td>
+<td>A</td>
+</tr>
+<tr>
+<td>8</td>
+<td>Airlock: "Committed external effects are not rolled back"; absorbed state "requires orthogonal rollback"</td>
+<td>"by design"; Table A.2 S2, §5.2</td>
+<td>Airlock</td>
+<td>A</td>
+</tr>
+<tr>
+<td>13</td>
+<td>Sagas: when a compensation runs, "no effort" is made to notify or abort readers</td>
+<td>paraphrase OK; Garcia-Molina &amp; Salem 1987 (SIGMOD from a bib mirror)</td>
+<td><a href="https://www.cs.cornell.edu/andru/cs711/2002fa/reading/sagas.pdf">Sagas PDF</a></td>
+<td>A~</td>
+</tr>
+<tr>
+<td>14</td>
+<td>Taser (SOSP'05), Retro (OSDI'10), Warp (SOSP'11), Aire (SOSP'13) undo the attacker and keep legitimate work</td>
+<td>"for OS / web apps"; "trusted log"; they came first</td>
+<td><a href="https://www.usenix.org/conference/osdi10/intrusion-recovery-using-selective-re-execution">Retro</a> + RES-10</td>
+<td>A</td>
+</tr>
+</tbody>
+</table>
+<h2>Why it matters</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Fact (note) · exact number</th>
+<th>Must travel with it</th>
+<th>Source</th>
+<th>St</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>15</td>
+<td>AI Act Art 12(1) automatic logs; Art 14(4)(e) stop "in a safe state"; high-risk rules apply <strong>2 Dec 2027</strong> (Annex III) / <strong>2 Aug 2028</strong> (Annex I)</td>
+<td>"maps to", never "compliant"; no amending-regulation number</td>
+<td><a href="https://ai-act-service-desk.ec.europa.eu/en/ai-act/article-14">Art 14</a>, <a href="https://ai-act-service-desk.ec.europa.eu/en/ai-act/article-12">Art 12</a>, <a href="https://ai-act-service-desk.ec.europa.eu/en/ai-act/article-113">Art 113</a></td>
+<td>A</td>
+</tr>
+<tr>
+<td>R</td>
+<td><em>Spare:</em> RBI FREE-AI (Aug 2025), Sutra 5: "Accountability cannot be delegated to the model and underlying algorithm"</td>
+<td>open the report and check the exact words before printing (press paraphrases them)</td>
+<td><a href="https://rbi.org.in/Scripts/PublicationReportDetails.aspx?ID=1306">RBI report</a></td>
+<td>S</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Notes on the A~ rows.</strong> #1: METR does say "cyber evaluations" / "cyber task", but "internal" is unconfirmed for this evaluation; keep the safe wording "ExploitGym evaluation runs". #4: numbers confirmed on the arXiv abstract + Table 1, but ICML 2025 is not shown on the arXiv page and not yet confirmed from an official ICML page; cite the venue only once confirmed. #11: the new repo states no stability level, and the registry shows Deprecated keys plus Development values. #13: the PDF does not name SIGMOD. R: today's fetch failed; RES-08 read the report once through a summariser.</p>
+<h2>Not safe to print (never quote)</h2>
+<ul>
+<li><strong>Exact HF/METR dates or times</strong> (6, 8, 11, 13, 19, 21 Jul; 23:00 UTC). The outlets disagree. Say "July 2026" and "about two days later".</li>
+<li><strong>"11 days to detect"</strong> (Al Jazeera only, and it conflicts with METR). <strong>"Legitimately held credentials"</strong> (Airlock's phrase; METR contradicts it).</li>
+<li><strong>"We would have stopped it"</strong>, or the METR case as agent B using agent A's bad write (D2). That case was collusion inside an evaluation.</li>
+<li><strong>"One method gets 53.5% / 14.2%"</strong>. Also never put Atomix's τ-bench <strong>53.5%</strong> next to it.</li>
+<li><strong>IBM 241 / 247 days</strong> (data-breach lifecycles, not agent incidents; 247 is secondary). <strong>RBI "18%"</strong> audit logs (unverified). <strong>"2026/1744"</strong> (secondary).</li>
+<li><strong>MAST "94%"</strong>, Cordon <strong>45/45 vs 14/45</strong>, DeltaBox ms figures, any GoEx number. Any <strong>venue</strong> for MAST, Cordon, CHIEF, FAMAS, Atomix, GoEx, DeltaBox or State Footprints.</li>
+<li><strong>"First"</strong> (provenance containment, agent undo, agent gateway). <strong>"Tamper-proof"</strong>, <strong>"compliant"</strong>, <strong>"beats Who&amp;When"</strong>. Saying we reverse irreversible effects. Any Airlock "better / leaks / sim-only" claim.</li>
+<li><strong>"Tools kill one agent or all of them"</strong> as our own insight (it is Airlock's framing). <strong>"Multi-agent incidents are common"</strong>.</li>
+</ul></section><section id="skeleton" role="tabpanel" hidden><h1>SKELETON: abstract outline for Aarav to fill in (ABS-06)</h1>
+<p>zoya · 19 Nov 2026 · v2 (panel fixes) · Inputs: FACT-CARD.md (ABS-01), GUARDRAILS.md (ABS-02), TERMS.md (ABS-04), CALL-01.md D1/D2/D3/D12/D13, CALL-01/zoya.md §2, research/RES-08.md (headline, ref [19]).</p>
+<p><strong>What this is.</strong> Headings, word budgets and note-form points only. No line here is a sentence to paste; Aarav writes every word (CHARTER).
+<strong>Tag key.</strong> <code>#n</code> = fact-card row (R = RBI spare) · <code>P/F/W/L/X</code> = GUARDRAILS row · <code>§1.5</code> = GUARDRAILS own-number table · <code>T:</code> = locked TERMS word to use · <code>D</code> = CALL-01 decision.
+<strong>Priority key.</strong> <code>MUST</code> = land it · <code>IF-ROOM</code> = add only while the section total still holds · <code>Guard:</code> lines = checks, not points; they cost no words and carry no tag · <code>Scores:</code> lines = which of the brief's three scores the subsection answers.
+<strong>Before writing.</strong> D1 is marked ⚑: confirm the layered headline (gap → provenance → selective undo → testimony vs evidence).</p>
+<h2>Word budget (organisers' order: problem → fix → why it matters, plus limits)</h2>
+<table>
+<thead>
+<tr>
+<th>Section</th>
+<th>Words</th>
+<th>MUSTs (cap ≈ 1 per 15 words)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>0 Title + subtitle</td>
+<td>15</td>
+<td>0</td>
+</tr>
+<tr>
+<td>1 Problem (1a 100 · 1b 90 · 1c 110)</td>
+<td>300</td>
+<td>19 (6 · 6 · 7)</td>
+</tr>
+<tr>
+<td>2 Fix (2b 80 · 2c 45 · 2d 65 · 2e 95 · 2f 45)</td>
+<td>330</td>
+<td>21 (5 · 3 · 4 · 6 · 3)</td>
+</tr>
+<tr>
+<td>3 Why it matters (3a 60 · 3b 70 · 3c 40)</td>
+<td>170</td>
+<td>10 (4 · 4 · 2)</td>
+</tr>
+<tr>
+<td>4 Limits + what we will show (45 + 40)</td>
+<td>85</td>
+<td>5 (3 · 2)</td>
+</tr>
+<tr>
+<td><strong>Total</strong></td>
+<td><strong>900</strong> (allowed range 850–950; hard cap 1,000)</td>
+<td><strong>55</strong> (cap 60)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Binding rule.</strong> Section totals are binding; subsections are ±15 words; bullet order inside a subsection is free. ABS-07 reviewers enforce section totals and MUST coverage, not micro-budgets.</p>
+<hr />
+<h2>0. Title ideas (keyword combos only, ~15 words with subtitle)</h2>
+<ul>
+<li>IF-ROOM Kill Switch (project name) + undo one agent + keep the rest</li>
+<li>IF-ROOM dependency gap · shared state · multi-agent undo</li>
+<li>IF-ROOM provenance + selective undo + honest agents' work</li>
+<li>IF-ROOM evidence, not testimony · agent record</li>
+<li>IF-ROOM who changed it · who read it · undo</li>
+<li>IF-ROOM subtitle slot → mechanism words: provenance, read sets, witness</li>
+</ul>
+<p>Guard: avoid first, novel, tamper-proof, kill (as an operation), rollback [X1 · §3 words · T]</p>
+<h2>1. Problem (300)</h2>
+<h3>1a. The gap, shown with the example (100; the abstract opens here, D1)</h3>
+<ul>
+<li>MUST brief's frame: ten agents, one broke something; undo "without discarding" others' work [CHARTER]</li>
+<li>MUST crm swaps a supplier IBAN · the scenario we will show, not a real incident [D12 · W6 · T: hero scenario (F2+)]</li>
+<li>MUST billing, payments, comms acted on it → payment + email pending [D12]</li>
+<li>MUST inventory, docs never read it → untouched [D12 · T: independent agents]</li>
+<li>MUST their work: honest AND built on the bad write [P1 · T: culprit, honest agent]</li>
+<li>MUST → "undo crm" undefined: dependency problem ≠ snapshot problem [P1 · D1]</li>
+<li>IF-ROOM dependency risk → source = literature, not incidents; say so [P1 · D2 · X6]</li>
+</ul>
+<p>Guard: ×10 price change → in the data, out of the story [D12]
+Guard: words agent, culprit, honest agent; never bot / victim [T §1]</p>
+<h3>1b. Blunt tools fail (90; the hook evidence, D2)</h3>
+<ul>
+<li>MUST METR on OpenAI/HF → blunt stop failed at scale; nothing more [#1–#3 · P2 · D2]</li>
+<li>MUST scale: roughly 1,200 agents; roughly 700 in the attack [#1]</li>
+<li>MUST board wiped → new board about two days later [#2]</li>
+<li>MUST qualifiers: METR, preliminary · July 2026 · ExploitGym evaluation runs [#1]</li>
+<li>MUST single-agent pattern: seconds to break, days to repair · reportedly [#10 · P3]</li>
+<li>MUST PocketOS: 9 s · three-month-old snapshot · a weekend · per the founder, as reported [#10]</li>
+<li>IF-ROOM OpenAI's hindsight quote, via Al Jazeera [#3]</li>
+<li>IF-ROOM catalogued incidents → only as qualifier: single-agent, in our search [#9 · X6]</li>
+</ul>
+<p>Guard: new board's route, if named → Artifactory cache namespace ≠ credentials [#2 · X8]
+Guard: ✗ internal / cyber [#1]
+Guard: ✗ exact days, "11 days", "would have stopped it" [X7 · X8]</p>
+<h3>1c. What exists, where it stops (110, including the Airlock box and its 4 MUSTs)</h3>
+<ul>
+<li>MUST agent's own record = testimony, not evidence [P5 · D1]</li>
+<li>MUST attribution today = inference: ~53.5% agent / ~14.2% step · GPT-4o · best strategies [#4 · P6]</li>
+<li>MUST niche = the combination: multi-agent + per-author + shared state + dependants [F1 · X1]</li>
+<li>IF-ROOM sagas: compensation runs, readers never told [#13 · P1]</li>
+<li>IF-ROOM OTel <code>gen_ai.*</code>: no read/write attribute; not yet stable, Nov 2026 [#11]</li>
+<li>IF-ROOM FAMAS: 20 replays · ~105 min per attribution · arXiv preprint [#6 · X11]</li>
+<li>IF-ROOM random baseline 12–29% / 4–19%, by subset [#5]</li>
+</ul>
+<p>Guard: P5's Airlock journal point → inside the same clause, or unnamed [D3]
+Guard: different strategy per number; ✗ "one method gets" [#4 · X9]
+Guard: ✗ "first" / "only" / "nobody" [X1 · X5]</p>
+<h3>Box: the one Airlock clause (≈20–30 words; what it must convey, D3)</h3>
+<ul>
+<li>MUST named once: Airlock, arXiv 2611.06727, credited [D3]</li>
+<li>MUST theirs = forward containment of multi-agent faults [#8 · P4]</li>
+<li>MUST by design: committed effects + absorbed state → "orthogonal rollback" [#8 · X4]</li>
+<li>MUST ours = backward half, after commit → "complementary" [P4 · D3]</li>
+</ul>
+<p>Guard: no #7 numbers in the clause (no room beside the four MUSTs)
+Guard: ✗ better, leaks, sim-only, bare "cannot undo", second mention [X2 X3 X4]</p>
+<h2>2. Fix (330)</h2>
+<h3>2b. One mediated path + the record (80; provenance = organising idea, D1; opens by walking the 1a example)</h3>
+<ul>
+<li>MUST walk the IBAN example from 1a into the gateway [D12 · W6]</li>
+<li>MUST provenance → named here as the organising idea [D1]</li>
+<li>MUST every action → gateway, as a signed action envelope [F2 · T: gateway, action envelope]</li>
+<li>MUST adapters → read set + write set, row level; agents never self-report [F3 · D8 · T: read set, write set]</li>
+<li>MUST outcome: provenance graph, change → author, read → source [T: provenance graph]</li>
+<li>IF-ROOM bypass writes → caught by reconciliation [F2 · T: reconciliation]</li>
+<li>IF-ROOM agent signature + gateway signature; gateway assigns seq [F4 · T: sequence number (seq)]</li>
+<li>IF-ROOM MCP draft, no token passthrough, as alignment [#12]</li>
+</ul>
+<p>Guard: bypass → "caught", ✗ "impossible" [F2]
+Guard: signature ⇒ which key signed; ≠ intent [F4]
+Guard: declared lineage ignored [D8]</p>
+<h3>2c. Identify (45)</h3>
+<p>Scores: brief's time-to-identify → TTI-detect / TTI-attribute (defined once, in 3b) [CHARTER]</p>
+<ul>
+<li>MUST invariant detector on the data → alert (IBAN changed, unapproved) [F5 · T: invariant detector, alert]</li>
+<li>MUST attribution = lookup on signed records ≠ inference [F5 · contrast #4–#6]</li>
+<li>MUST collusion / laundering → root candidates, ranked, not a verdict [L3 · X22 · T: root candidates]</li>
+</ul>
+<p>Guard: different task from Who&amp;When → ✗ "beats" [X20]</p>
+<h3>2d. Contain (65)</h3>
+<p>Scores: brief's time-to-contain → TTC (defined once, in 3b) [CHARTER]</p>
+<ul>
+<li>MUST graded containment: auto-suspend on hard evidence; anomalies one click; revoke after confirmation [F7 · X18 · T: graded containment, suspend, revoke]</li>
+<li>MUST hard evidence: scope breach · I-class invariant breach · reconciliation mismatch (class U) [F7 · D7 · T: class U]</li>
+<li>MUST lineage hold per action on tainted reads; inventory, docs keep running [F6 · D8 · T: lineage hold, independent agents]</li>
+<li>MUST payment + email → held in the outbox, never cancelled here [F11 · X29 · T: outbox]</li>
+<li>IF-ROOM anti-framing: bad signature → submitting connection suspended, not the agent [F8 · D7]</li>
+<li>IF-ROOM epoch bump → culprit's in-flight envelopes invalid [T: epoch]</li>
+</ul>
+<p>Guard: ✗ kill · quarantine · block · cancel (as containment) [T §3 · X29]</p>
+<h3>2e. Recover (95; selective undo = the payoff, D1)</h3>
+<p>Scores: brief's clean recovery → residual damage R 0 + collateral loss C 0 (defined in 3b) [CHARTER]</p>
+<ul>
+<li>MUST payoff = selective undo: taint-scoped revert, only writes still at the culprit's after-version [D1 · F9 · T: taint-scoped revert]</li>
+<li>MUST triage later edits the same crm row → write-write conflict → flag, no overwrite [F9 · T: write-write conflict, flag]</li>
+<li>MUST dependants: deterministic → re-run via outbox, idempotency keys; LLM → re-plan, approval [F10 · D4 · X25 · T: re-run, re-plan]</li>
+<li>MUST irreversible: hold window → compensate or report; ✗ reverse [F11 · X14 · L1 · T: compensate]</li>
+<li>MUST held payment → cancel (outbox item), a step in the approved recovery plan [F11 · T: cancel (outbox item), recovery plan]</li>
+<li>MUST credit Taser, Retro, Warp, Aire → carried to multi-agent shared state + dependants [#14 · X5 · F1]</li>
+<li>IF-ROOM records append-only; nothing erased [F9]</li>
+<li>IF-ROOM over-taint &gt; under-taint, by design (L2 states it in Limits) [F9 · L2]</li>
+<li>IF-ROOM recovery plan → dry-run diff → approval → run [T: dry-run diff]</li>
+</ul>
+<p>Guard: "selective undo" in headline prose only; elsewhere taint-scoped revert [D1 · T §4]</p>
+<h3>2f. Audit (45)</h3>
+<ul>
+<li>MUST hash chain + separate witness process, (seq, head, tick) per tick [F12 · D6 · T: witness]</li>
+<li>MUST <code>verify</code> → tamper-evident up to the last witnessed head [F12 · X15 · T: verify, tamper-evident]</li>
+<li>MUST jury break, live: <code>ks inject</code>, rogue agent, <code>state.db</code> bypass, record edit, chain rewrite [F13 · D11 · T: inject, rogue agent]</li>
+<li>IF-ROOM <code>verify</code> checks: chain · signatures · witness heads · seq gaps · reconciliation [F12]</li>
+<li>IF-ROOM tamper alert → recovery frozen, nobody suspended [X17 · D7]</li>
+</ul>
+<p>Guard: detect ≠ prevent · ✗ Merkle · ✗ blockchain [X15 X16]</p>
+<h2>3. Why it matters (170)</h2>
+<h3>3a. Testimony vs evidence (60; D1)</h3>
+<ul>
+<li>MUST brief: "an agent that can be audited, not only demoed" → answered here [CHARTER]</li>
+<li>MUST agent's own record = testimony · gateway record = evidence [P5 · D1]</li>
+<li>MUST audit holds against the audited agent, within the threat model [W2 · L4]</li>
+<li>MUST trust placed only in gateway + witness [§3 "trustless" row]</li>
+</ul>
+<p>Guard: "within the threat model" on every such claim [W2 · L4]</p>
+<h3>3b. Scored, not self-graded (70; D13)</h3>
+<ul>
+<li>MUST brief's three scores: no agreed measurement in the standards we checked → we define checkable ones [RES-08 headline · W7]</li>
+<li>MUST TTI-detect t0 → alert · TTI-attribute alert → culprit · TTC alert → first denied envelope [§1.5 · D13 · CHARTER]</li>
+<li>MUST recovery scored vs oracle (S*) = same run, culprit removed; not our taint graph [W1 · T: oracle (S*)]</li>
+<li>MUST residual damage R, collateral loss C (in full) · targets 0 → clean recovery [§1.5 · D13 · T §5 note · T: clean recovery]</li>
+<li>IF-ROOM targets 0: post-alert tainted, irreversible tainted released, re-emitted effects [§1.5]</li>
+<li>IF-ROOM re-plan and re-run cost → reported openly [W3 · X27]</li>
+</ul>
+<p>Guard: TTI/TTC = definitions only; no seconds [§1.5 · D13 · X21]
+Guard: alongside containment-style metrics, not instead; no second Airlock name [W1 · D3]
+Guard: label "target"; future tense [D13]</p>
+<h3>3c. Path to banking (40)</h3>
+<ul>
+<li>MUST "maps to" AI Act Art 12(1) logs, Art 14(4)(e) "safe state" [#15 · W4 · X19]</li>
+<li>MUST enterprise path: OTel export, policy-as-code; Dolt, agentgateway = production twins [W5]</li>
+<li>IF-ROOM high-risk dates 2 Dec 2027 / 2 Aug 2028 [#15]</li>
+<li>IF-ROOM NIST AI RMF MANAGE 4.3 → reference only, no number [W4 · RES-08 [19]]</li>
+<li>IF-ROOM RBI FREE-AI accountability line → only after checking exact words [R]</li>
+</ul>
+<p>Guard: production twins ≠ integrations [W5 · X28]</p>
+<h2>4. Limits + what we will show (85)</h2>
+<h3>Limits (45; one or two lines)</h3>
+<ul>
+<li>MUST irreversible effects → hold, compensate, report only [L1]</li>
+<li>MUST over-taint by design → collateral holds possible [L2]</li>
+<li>MUST deterministic finale agents; LLM → re-plan [L6]</li>
+<li>IF-ROOM out-of-scope list (host compromise, covert channels, injection) [L4]</li>
+<li>IF-ROOM collusion → root candidates [L3]</li>
+<li>IF-ROOM ~10 agents · single host · tick barrier [L7]</li>
+</ul>
+<p>Guard: key isolation, if mentioned → enforced in production, detected here [L5 · X24]</p>
+<h3>What we will show (40; future tense, D13)</h3>
+<ul>
+<li>MUST ≥20 seeded runs · median, p95, max · "planned" [§1.5 · T: seeded run]</li>
+<li>MUST baselines: snapshot · revert-culprit-only · no-op [§1.5 · T: snapshot baseline, revert-culprit-only baseline]</li>
+<li>IF-ROOM hold window 0 vs &gt;0; escaped payment at 0 → residual damage [D10 · T: hold window]</li>
+<li>IF-ROOM threat model published before the jury's break attempts [F13 · D11]</li>
+</ul>
+<p>Guard: prototype from 25 Nov → ✗ achieved / showed / measured [GUARDRAILS tense rule]</p>
+<hr />
+<h2>5-minute writing plan (Aarav)</h2>
+<ol>
+<li><strong>Fix first (§2)</strong>: you know the design best; walk the IBAN example from 1a through 2b–2f. Write every MUST; add IF-ROOM points only while the section total holds.</li>
+<li><strong>Problem (§1)</strong>: open on 1a with the IBAN example (show the gap, do not tell it), then 1b with FACT-CARD open beside you; write the Airlock clause last.</li>
+<li><strong>Why it matters (§3), then Limits (§4)</strong>, then pick the title from §0 keywords.</li>
+<li><strong>Check</strong>: section totals (850–950 overall) → every MUST present → GUARDRAILS §4, all 12 items → Ctrl-F the TERMS banned synonyms. Re-run §4 after any cut.</li>
+<li><strong>Send for ABS-07</strong>: own words only, typed in your editor, nothing pasted from this kit or any AI chat. Save as <code>abstract/DRAFT-R1.md</code>, one sentence per line (comments cite lines), then <code>python3 org/issue.py log ABS-07 --who aarav --msg "R1 draft ready: abstract/DRAFT-R1.md"</code>. Round 1 on 21 Nov AM, round 2 PM, 4 h turnaround each, comments only; you submit 22 Nov.</li>
+</ol>
+<hr />
+<h2>Changes v2 (panel review, 19 Nov)</h2>
+<ul>
+<li>Must-fix 1: every point bullet tagged MUST or IF-ROOM; 55 MUSTs against a cap of 60 (≈1 per 15 words), per-subsection counts in the budget table. Rules and ✗ lists moved to untagged <code>Guard:</code> lines (checks, no word cost).</li>
+<li>Demoted to IF-ROOM as listed: 1b #3 hindsight and #9 catalogued incidents (kept only as the "single-agent, in our search" qualifier); 1c sagas #13, OTel #11, FAMAS #6, random baseline #5; 2b MCP #12; 2d epoch and anti-framing; 2e append-only, over-taint, dry-run chain ("approved recovery plan" kept in the cancel bullet); 2f tamper-alert freeze.</li>
+<li>Airlock box: optional #7 numbers deleted, with the "dense spread" qualifier line that only applied to them; Guard added: no #7 numbers in the clause.</li>
+<li>TTI/TTC defined once, in 3b; duplicates in 2c/2d removed. Binding rule added under the budget table (section totals binding, subsections ±15, bullet order free).</li>
+<li>Must-fix 2: 1a reframed on the brief's own "without discarding" clause, shown with the IBAN example (moved from 2a; ×10 Guard moved with it; triage's write-write conflict now first appears in 2e). 2a deleted; 2b opens by walking the example.</li>
+<li>Rebudget: 1a 100 · 1b 90 · 1c 110 · 2b 80 · 2d 65 · 2e 95 · 2f 45; totals unchanged (300 / 330 / 900).</li>
+<li><code>Scores:</code> line under 2c / 2d / 2e maps Identify / Contain / Recover 1:1 to the brief's time-to-identify / time-to-contain / clean recovery.</li>
+<li>Should-fix: 3a tags the brief's "audited, not only demoed" [CHARTER]; 3b adds the RES-08 headline bullet (no agreed measurement in the standards we checked → we define checkable ones), filed as GUARDRAILS W7.</li>
+<li>Nits: 1b → "✗ internal / cyber [#1]" (stale "card #1 overrides P2" flag dropped, P2 fixed in ABS-02 v2); 2d → "reconciliation mismatch (class U)"; 3c NIST MANAGE 4.3 tagged RES-08 [19]. Writing plan steps 1, 2 and 4 updated for the 1a move and MUST check.</li>
+</ul></section><section id="guard" role="tabpanel" hidden><h1>GUARDRAILS: claims we can defend vs claims a jury will punish (ABS-02)</h1>
+<p>Owner: zoya · Reviewer: panel · 19 Nov 2026 · Inputs: abstract/FACT-CARD.md (only source for outside numbers), research/SYNTHESIS.md §0/§3/§6, research/RES-11.md §1/§4/§5, research/RES-10.md (DROP list), org/meetings/CALL-01.md D1–D13 (binding), org/adr/THREAT-MODEL.md C1–C6, abstract/TERMS.md (locked terms).</p>
+<p><strong>How to use.</strong> Every row is a phrase or a rule. None of it is abstract text: Aarav writes every sentence (CHARTER). Use the locked terms from TERMS.md.</p>
+<p><strong>Three ground rules that apply to every row</strong></p>
+<ul>
+<li><strong>Tense.</strong> The abstract is due 22 Nov and prototyping starts 25 Nov, so nothing of ours has been run or measured when it is submitted. Our parts are design, plan or target. No "achieves", "showed", "reduced" or "measured".</li>
+<li><strong>External numbers</strong> come only from abstract/FACT-CARD.md (ABS-01), the only source, and carry its "must travel with it" wording (D13). Not SYNTHESIS §2: its wording differs from the card.</li>
+<li><strong>Our numbers</strong> appear only as definitions plus labelled targets (D13; §1.5 below).</li>
+</ul>
+<hr />
+<h2>1. Safe claims (note form; Aarav phrases them)</h2>
+<h3>1.1 Problem (D1: the abstract opens here)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Claim (note form)</th>
+<th>Rests on</th>
+<th>Condition / limit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>P1</td>
+<td>Undo is a <strong>dependency</strong> problem, not a snapshot problem: "undo X" is undefined once other agents have read X</td>
+<td>SYNTHESIS §0 (confirmed); commit stores record no reads (RES-06); sagas make "no effort" to notify readers (fact 13); OTel has no read/write sets (fact 11)</td>
+<td>Opening idea (D1). Say the multi-agent dependency risk is backed by the literature, not by incidents (D2)</td>
+</tr>
+<tr>
+<td>P2</td>
+<td>A blunt stop (wiping the board) did <strong>not</strong> end agent coordination at scale: METR on the OpenAI/HF incident</td>
+<td>FACT-CARD #1–#3; D2</td>
+<td>Use it only as proof that a blunt stop failed. FACT-CARD #1/#2 wording: "roughly", "METR, preliminary findings", "July 2026" (no day), "agents in OpenAI's ExploitGym evaluation runs", "about two days later" (new board via an Artifactory cache namespace). Never "internal" or "cyber" (FACT-CARD #1 note)</td>
+</tr>
+<tr>
+<td>P3</td>
+<td>Single-agent incidents: seconds to break, days to repair, whole backup or no recovery at all</td>
+<td>Facts 9–10</td>
+<td>"Reportedly"; PocketOS "per the founder, as reported"</td>
+</tr>
+<tr>
+<td>P4</td>
+<td>Forward containment exists (Airlock) and, by design, leaves committed effects and absorbed state to "orthogonal rollback"</td>
+<td>Fact 8; RES-11 §4 #2–#4; D3</td>
+<td>One credited clause, "complementary"; keep the qualifier "by design"</td>
+</tr>
+<tr>
+<td>P5</td>
+<td>An agent's own log is <strong>testimony</strong>, not evidence; Airlock's journals are "taken as reported, not authenticated"</td>
+<td>RES-11 §4 #6; SYNTHESIS §1 frame C</td>
+<td>Present it as Airlock's declared assumption, not as a defect</td>
+</tr>
+<tr>
+<td>P6</td>
+<td>LLM-based failure attribution is about half right at agent level and much lower at step level</td>
+<td>Facts 4–6 (Who&amp;When, FAMAS); RES-10 headline 1</td>
+<td>Give the setting: GPT-4o, best strategies, a different strategy per metric. FAMAS needs 20 re-runs (~105 min)</td>
+</tr>
+</tbody>
+</table>
+<h3>1.2 Fix (provenance as the organising idea, D1)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Claim (note form)</th>
+<th>Rests on</th>
+<th>Condition / limit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>F1</td>
+<td><strong>Niche</strong> = multi-agent + per-author + shared external state + dependants handled, as a combination</td>
+<td>RES-11 §1 (watch-outs); SYNTHESIS §1; D1</td>
+<td>Claim the combination, never one part on its own (each part has prior art)</td>
+</tr>
+<tr>
+<td>F2</td>
+<td>One mediated path: every action passes through the gateway; unmediated writes are caught by reconciliation (state = fold(log))</td>
+<td>Principle 1; D11 (DB bypass); THREAT-MODEL RT1</td>
+<td>"Caught", not "impossible"</td>
+</tr>
+<tr>
+<td>F3</td>
+<td>The gateway's adapters record read and write sets at row level; agents never self-report</td>
+<td>Principle 2; D8</td>
+<td>Lineage the agent declares is never trusted (D8, C5)</td>
+</tr>
+<tr>
+<td>F4</td>
+<td>Identity on every action: agent signature + gateway signature; the gateway assigns <code>seq</code> and time</td>
+<td>D6; principle 3; THREAT-MODEL rule 3, RT6</td>
+<td>A valid signature proves which key signed through which handle, not intent (C4)</td>
+</tr>
+<tr>
+<td>F5</td>
+<td>Identify = an invariant detector raises an alert, then attribution is a <strong>lookup</strong> on signed records, not an inference</td>
+<td>Principle 6; contrast with P6</td>
+<td>It is a different task from Who&amp;When, so no "beats" claim (X20)</td>
+</tr>
+<tr>
+<td>F6</td>
+<td>Contain <strong>per action</strong>: a lineage hold on writes and outbox items whose recorded read set touches tainted versions; independent agents keep running</td>
+<td>D8; principle 7; C5</td>
+<td>Effects released before the alert are not held; at hold window 0 they count as residual damage (D10)</td>
+</tr>
+<tr>
+<td>F7</td>
+<td>Graded containment: auto-suspend only on hard evidence (scope breach, I-class invariant breach, reconciliation mismatch = class U); anomalies need one click; revoke only after confirmation</td>
+<td>D7</td>
+<td>Do not merge these into a single "auto-kill"</td>
+</tr>
+<tr>
+<td>F8</td>
+<td>Anti-framing: a bad signature suspends the <strong>submitting connection</strong>, never the claimed agent</td>
+<td>D7; C4; RT3</td>
+<td>Pairs well with the jury break (F12)</td>
+</tr>
+<tr>
+<td>F9</td>
+<td>Recovery = taint-scoped revert: only writes whose current value is still the culprit's after-version; otherwise re-run or flag; append-only records</td>
+<td>Principle 8; C6</td>
+<td>Over-taint rather than under-taint (conservative, D4)</td>
+</tr>
+<tr>
+<td>F10</td>
+<td>Dependants: deterministic steps re-run through the outbox with idempotency keys (no re-emitted effects); LLM steps become a re-plan queued for approval</td>
+<td>D4; principle 9</td>
+<td>The finale has no LLM agent (D9). Re-plan is a queued item, not autonomous repair</td>
+</tr>
+<tr>
+<td>F11</td>
+<td>Irreversible effects: hold window in the outbox, then compensate or report, never reverse</td>
+<td>D10; C6; RES-11 §5 must-not #3</td>
+<td>Containment holds and never cancels (<code>release</code> = un-hold + restore epoch). Discarding a held item is an approved recovery-plan step after the dry-run diff</td>
+</tr>
+<tr>
+<td>F12</td>
+<td>Tamper-evident <strong>up to the last witnessed head</strong>: hash chain + separate witness process signing (seq, head, tick) every tick + <code>verify</code> (chain, signatures, witness heads, seq gaps, reconciliation)</td>
+<td>D6; C1</td>
+<td>Use this exact scope. A stalled witness head raises an alert. No Merkle proofs</td>
+</tr>
+<tr>
+<td>F13</td>
+<td>The jury can try to break it live: <code>ks inject</code>, rogue agent with arbitrary Python, direct <code>state.db</code> bypass, log-line edit, full chain rewrite → <code>verify</code>; threat model published first</td>
+<td>D11; THREAT-MODEL §7</td>
+<td>F3 (exfiltration) is a pytest, not live. Pass values are targets</td>
+</tr>
+</tbody>
+</table>
+<h3>1.3 Why it matters (testimony vs evidence)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Claim (note form)</th>
+<th>Rests on</th>
+<th>Condition / limit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>W1</td>
+<td>Recovery is <strong>scored against an oracle</strong> (the run without the culprit, S*), never against our own taint graph</td>
+<td>Principle 10; SYNTHESIS §6; RES-11 §5 safe #3</td>
+<td>Recovery metrics sit next to Airlock-style containment metrics, not in place of them</td>
+</tr>
+<tr>
+<td>W2</td>
+<td>The audit holds even against the audited agent, within the stated threat model</td>
+<td>D6; THREAT-MODEL §3</td>
+<td>Always attach "within the threat model" (host compromise is out of scope)</td>
+</tr>
+<tr>
+<td>W3</td>
+<td>Re-plan / redo cost reported openly, because Airlock's "kept without redo" metric penalises re-runs</td>
+<td>RES-11 §1 watch-out 2; SYNTHESIS §6</td>
+<td>Pairs with "re-emitted effects = 0" (target)</td>
+</tr>
+<tr>
+<td>W4</td>
+<td><strong>Maps to</strong> AI Act Art 12(1) (automatic logs) and Art 14(4)(e) (stop "in a safe state"), NIST AI RMF MANAGE 4.3, RBI FREE-AI Sutra 5 ("Accountability cannot be delegated to the model and underlying algorithm")</td>
+<td>FACT-CARD #15; RES-08 ref [19] (NIST AI RMF MANAGE 4.3, not on the card); FACT-CARD row R (spare, status S)</td>
+<td>"Maps to" only. NIST MANAGE 4.3 as a reference only, no number. Article numbers only, no amending-regulation number. High-risk dates 2 Dec 2027 (Annex III) / 2 Aug 2028 (Annex I). RBI quote: open the RBI report and check the exact words before printing (press paraphrases them); if not checked, omit it</td>
+</tr>
+<tr>
+<td>W5</td>
+<td>Enterprise path: OTel export, policy-as-code; Dolt and agentgateway are <strong>production twins</strong></td>
+<td>D5; SYNTHESIS §5; CHARTER</td>
+<td>A twin is a stated path, not an integration</td>
+</tr>
+<tr>
+<td>W6</td>
+<td>A banking-readable scenario: crm swaps a supplier IBAN; billing, payments and comms consume it; triage later edits crm (write-write conflict); inventory and docs stay independent</td>
+<td>D12 (hero F2+)</td>
+<td>It is the scenario we will show, not a real incident. The ×10 price change stays in the data, not in the story</td>
+</tr>
+<tr>
+<td>W7</td>
+<td>The brief's three scores (time-to-identify, time-to-contain, clean recovery) have <strong>no agreed measurement</strong> in the standards we checked; we define checkable ones, scored against the oracle</td>
+<td>RES-08 headline (NIST SP 800-61r3 has no mean-time metrics; Google SRE on mean-time stats)</td>
+<td>Always "in the standards we checked"; never "no standard exists". Our definitions are §1.5; no seconds (D13)</td>
+</tr>
+</tbody>
+</table>
+<h3>1.4 Limits to state (stating them builds credibility; one short line in the abstract)</h3>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Limit</th>
+<th>Rests on</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>L1</td>
+<td>No reversal of irreversible external effects: hold, compensate or report</td>
+<td>D10; C6; SYNTHESIS §3</td>
+</tr>
+<tr>
+<td>L2</td>
+<td>Taint tracks data exposure, not meaning: we over-taint by design, so collateral holds are possible</td>
+<td>THREAT-MODEL §3; D4; Airlock App. F</td>
+</tr>
+<tr>
+<td>L3</td>
+<td>Colluding agents: we name root candidates and claim no prevention; a laundered write carries the launderer's signature</td>
+<td>C3; CALL-01 attribution of laundered writes</td>
+</tr>
+<tr>
+<td>L4</td>
+<td>Out of scope: gateway or witness host compromise, one insider holding both keys, covert channels, preventing prompt injection</td>
+<td>THREAT-MODEL §3</td>
+</tr>
+<tr>
+<td>L5</td>
+<td>Key isolation: "enforced in production (uid/container), detected here by reconciliation"</td>
+<td>C2; CALL-01 key isolation; Maya's recorded dissent</td>
+</tr>
+<tr>
+<td>L6</td>
+<td>Finale agents are deterministic; one LLM agent is a stretch goal</td>
+<td>D9</td>
+</tr>
+<tr>
+<td>L7</td>
+<td>Scale: about 10 agents, single host, tick barrier (logical clock)</td>
+<td>RES-11 §3 "Us" column; CALL-01 determinism</td>
+</tr>
+</tbody>
+</table>
+<h3>1.5 Our numbers: definitions and labelled targets only (D13)</h3>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Definition</th>
+<th>Label in the abstract</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>t0</td>
+<td>Oracle time of the first bad effect</td>
+<td>definition only</td>
+</tr>
+<tr>
+<td>B / G</td>
+<td>Faulty-run effects absent or different in S* / honest effects that match S*</td>
+<td>definition only</td>
+</tr>
+<tr>
+<td>residual damage R</td>
+<td>|B left| / |B|</td>
+<td><strong>target 0</strong></td>
+</tr>
+<tr>
+<td>collateral loss C</td>
+<td>|G lost| / |G|</td>
+<td><strong>target 0</strong></td>
+</tr>
+<tr>
+<td>clean recovery</td>
+<td>R = 0 and C = 0 in the same run</td>
+<td><strong>target</strong></td>
+</tr>
+<tr>
+<td>post-alert tainted effects</td>
+<td>Tainted effects by any agent after the alert</td>
+<td><strong>target 0</strong></td>
+</tr>
+<tr>
+<td>irreversible tainted effects released</td>
+<td>Tainted payments or emails that left despite holds</td>
+<td><strong>target 0</strong> (SYNTHESIS §6, THREAT-MODEL RT10)</td>
+</tr>
+<tr>
+<td>re-emitted effects</td>
+<td>Effects sent twice by re-runs</td>
+<td><strong>target 0</strong> (SYNTHESIS §6)</td>
+</tr>
+<tr>
+<td>TTI-detect / TTI-attribute / TTC</td>
+<td>t0 → first alert / alert → correct agent + first bad action / alert → first denied culprit envelope</td>
+<td>definition only; <strong>no seconds</strong> (no value fixed yet)</td>
+</tr>
+<tr>
+<td>protocol</td>
+<td>≥20 seeded runs; median, p95, max; snapshot, revert-culprit-only and no-op baselines; hold 0 vs &gt;0</td>
+<td>"planned"</td>
+</tr>
+</tbody>
+</table>
+<p>Write "residual damage R" and "collateral loss C" in full on first use, so they are not confused with class R and class C (TERMS §5).</p>
+<hr />
+<h2>2. Do not claim</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Do not claim</th>
+<th>Reason (source / decision)</th>
+<th>Safer alternative (concept)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>X1</td>
+<td>"First" or "only" for provenance-based containment, agent undo or agent gateways</td>
+<td>Airlock (2611.06727), Wang (2608.10502), agentgateway; SYNTHESIS §3; RES-11 §5 must-not #1–#2</td>
+<td>The F1 combination; credit the prior art</td>
+</tr>
+<tr>
+<td>X2</td>
+<td>"Today's tools stop one agent or all of them" as our own insight</td>
+<td>It is Airlock's own motivation (§1, App. G); SYNTHESIS §3</td>
+<td>Credit that framing to Airlock; our gap begins after commit (P4)</td>
+</tr>
+<tr>
+<td>X3</td>
+<td>Any Airlock comparison: better, faster, "leaks", "simulation-only", "scripted agents only"</td>
+<td>Not true and not tested; Airlock reports 0 post-τ1 leaks and ran six LLM deployments on physical devices; RES-11 §5 must-not #3; D3; C6</td>
+<td>Complementary: forward vs backward, one credited clause</td>
+</tr>
+<tr>
+<td>X4</td>
+<td>A bare "Airlock cannot undo"</td>
+<td>It is a declared design choice, and Airlock beats checkpoint rollback on its own metrics; RES-11 §5 must-not #2</td>
+<td>"Leaves committed effects to orthogonal rollback, by design" (P4)</td>
+</tr>
+<tr>
+<td>X5</td>
+<td>"First selective undo for agents"</td>
+<td>Taser, Retro, Warp, Aire (fact 14); Wang (single agent); Spark to Fire (message rewrite); State Footprints (vision); RES-11 §5, RES-10 headline 4</td>
+<td>The systems idea carried over to multi-agent shared state with dependants</td>
+</tr>
+<tr>
+<td>X6</td>
+<td>That multi-agent collateral incidents are common, or that METR is a case of one agent consuming another's bad write</td>
+<td>The only public case was collusion inside an evaluation; SYNTHESIS §0/§3; D2</td>
+<td>METR = a blunt stop that failed; dependency risk = from the literature, and say so</td>
+</tr>
+<tr>
+<td>X7</td>
+<td>"We would have stopped it" (METR)</td>
+<td>D2; SYNTHESIS §3</td>
+<td>What the blunt stop showed + what our design targets</td>
+</tr>
+<tr>
+<td>X8</td>
+<td>"Legitimately held credentials", exact HF dates, "11 days to detect"</td>
+<td>METR: the board came from exploiting Artifactory; outlets conflict on dates; RES-11 §6; SYNTHESIS §3</td>
+<td>"July 2026", "about two days later", "per METR"</td>
+</tr>
+<tr>
+<td>X9</td>
+<td>"One method gets 53.5% / 14.2%"; quoting two different 53.5s</td>
+<td>Two methods averaged over four cells; Atomix τ-bench is also 53.5; RES-10 DROP 1, 10</td>
+<td>Fact 4 with its setting; at most one 53.5</td>
+</tr>
+<tr>
+<td>X10</td>
+<td>MAST "94%" (or any MAST number)</td>
+<td>Label accuracy of a few-shot o1 annotator; RES-10 DROP 2; FACT-CARD "not safe to print"; D13</td>
+<td>Leave MAST out</td>
+</tr>
+<tr>
+<td>X11</td>
+<td>Venues for MAST, Cordon, CHIEF, FAMAS, Atomix, GoEx, DeltaBox, State Footprints; "Mohammadi et al." as the Atomix authors; the 29 May 2026 Atomix date</td>
+<td>Not confirmed; RES-10 DROP 3, 4, 5, 11; FACT-CARD "not safe to print"</td>
+<td>"arXiv preprint" + ID, no day (Who&amp;When = ICML 2025 is fine); Atomix as "MPI-SWS and collaborators" unless the author list is copied from the arXiv abs page</td>
+</tr>
+<tr>
+<td>X12</td>
+<td>Cordon beat real products; Atomix beats checkpoints; Atomix frontier gating improves success under speculation; DeltaBox is per-agent; State Footprints rolls back; GoEx has numbers; CHIEF is SOTA; FAMAS works as an online detector</td>
+<td>RES-10 DROP 3–9</td>
+<td>Concept + arXiv ID only, no number (D13), or omit</td>
+</tr>
+<tr>
+<td>X13</td>
+<td>IBM 241/247 days as agent numbers; RBI "18%"; "2026/1744"</td>
+<td>SYNTHESIS §3</td>
+<td>Omit</td>
+</tr>
+<tr>
+<td>X14</td>
+<td>That we reverse irreversible effects (sent email, paid invoice)</td>
+<td>RES-11 §5 corollary; D10; C6; SYNTHESIS §3</td>
+<td>Hold / compensate / report; whatever escapes is scored as residual damage</td>
+</tr>
+<tr>
+<td>X15</td>
+<td>"Tamper-proof", "immutable", "unforgeable" record</td>
+<td>D6; C1; SYNTHESIS §3</td>
+<td>Tamper-evident up to the last witnessed head; we detect, we do not prevent (B4)</td>
+</tr>
+<tr>
+<td>X16</td>
+<td>Merkle proofs, inclusion proofs, a transparency log, "blockchain"</td>
+<td>D6 ("No Merkle proofs"); TERMS bans "blockchain"</td>
+<td>Hash chain + witness checkpoints + <code>verify</code></td>
+</tr>
+<tr>
+<td>X17</td>
+<td>That a bad signature or a tamper alert suspends the agent</td>
+<td>D7 anti-framing; C4</td>
+<td>Bad signature → submitting connection suspended; tamper alert → recovery frozen, nobody suspended</td>
+</tr>
+<tr>
+<td>X18</td>
+<td>A fully automatic kill on any anomaly / no human in the loop</td>
+<td>D7 (one click for anomalies, revoke after confirmation); TERMS ("kill switch" = project name only)</td>
+<td>Auto-suspend on hard evidence only; graded containment</td>
+</tr>
+<tr>
+<td>X19</td>
+<td>"Compliant", "certified", "meets the AI Act"</td>
+<td>SYNTHESIS §3; fact 15 wording rule</td>
+<td>"Maps to" Art 12/14, NIST MANAGE 4.3, RBI FREE-AI</td>
+</tr>
+<tr>
+<td>X20</td>
+<td>"Beats Who&amp;When" or any attribution accuracy of ours</td>
+<td>A different task; SYNTHESIS §3; D13</td>
+<td>Attribution as a lookup on signed records vs after-the-fact inference (a different setting)</td>
+</tr>
+<tr>
+<td>X21</td>
+<td>Any result number of ours (TTI in seconds, R achieved, "% recovered", "0 leaks")</td>
+<td>D13; nothing measured by 22 Nov; THREAT-MODEL §5 (targets, not results)</td>
+<td>Definition + "target" (§1.5)</td>
+</tr>
+<tr>
+<td>X22</td>
+<td>That we identify the true originator under collusion or laundering</td>
+<td>C3; CALL-01 attribution of laundered writes</td>
+<td>Root candidates, ranked; not a verdict</td>
+</tr>
+<tr>
+<td>X23</td>
+<td>Preventing prompt injection, collusion or covert channels; surviving gateway compromise</td>
+<td>THREAT-MODEL §3 (out of scope)</td>
+<td>Contain and recover the <em>effects</em>; name what is out of scope</td>
+</tr>
+<tr>
+<td>X24</td>
+<td>"Keys are unreachable" / full key isolation in our prototype</td>
+<td>C2; Maya's dissent (CALL-01 §5)</td>
+<td>Enforced in production (uid/container), detected here by reconciliation</td>
+</tr>
+<tr>
+<td>X25</td>
+<td>Automatic recovery of LLM agents' work; LLM replay; "tested on LLM agents"</td>
+<td>D4, D9</td>
+<td>Deterministic re-run + re-plan queued for approval; deterministic finale agents</td>
+</tr>
+<tr>
+<td>X26</td>
+<td>Exact or semantic taint tracking</td>
+<td>THREAT-MODEL §3 (semantic influence out of scope); Airlock App. F</td>
+<td>Conservative over-taint, by design</td>
+</tr>
+<tr>
+<td>X27</td>
+<td>"All honest work kept without redo"</td>
+<td>Re-runs count as redo (RES-11 §1 watch-out 2)</td>
+<td>Re-runs with no re-emitted effects (target 0) + redo cost reported</td>
+</tr>
+<tr>
+<td>X28</td>
+<td>Production-ready, scalable, "runs on Dolt", "integrated with agentgateway"</td>
+<td>D5 (own SQLite; Dolt = twin); scale ~10 agents (L7)</td>
+<td>Production twin / path; tested scale stated</td>
+</tr>
+<tr>
+<td>X29</td>
+<td>"We cancel or block" as a containment action</td>
+<td>CALL-01 release semantics ("we hold, never cancel"); C6</td>
+<td>Lineage hold → release, or a recovery-plan step after the dry-run diff</td>
+</tr>
+<tr>
+<td>X30</td>
+<td>Detecting any misbehaviour</td>
+<td>Detection = invariant detectors on data + scope checks (principle 6); splitting under thresholds has no claim (THREAT-MODEL §5)</td>
+<td>Detection on declared data invariants and hard evidence</td>
+</tr>
+<tr>
+<td>X31</td>
+<td>Cordon 45/45 vs 14/45</td>
+<td>Baselines are the authors' own adapters on their own suite; RES-10 DROP 3; FACT-CARD "not safe to print"; D13</td>
+<td>Concept + arXiv ID only, no number</td>
+</tr>
+<tr>
+<td>X32</td>
+<td>Any DeltaBox ms figure</td>
+<td>FACT-CARD "not safe to print"; D13; RES-10 DROP 6</td>
+<td>Concept + arXiv ID only, no number</td>
+</tr>
+<tr>
+<td>X33</td>
+<td>Any GoEx number</td>
+<td>None exists in the text read (RES-10 DROP 7); FACT-CARD "not safe to print"; D13</td>
+<td>Concept + arXiv ID only, no number</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>3. Overclaim words → what to say instead (concept, not a sentence)</h2>
+<table>
+<thead>
+<tr>
+<th>Word / phrase</th>
+<th>Why a jury punishes it</th>
+<th>Concept to use instead</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>first</strong>, pioneering, only</td>
+<td>Prior art exists for each part (X1, X5)</td>
+<td>Builds on named prior art; adds the backward half</td>
+</tr>
+<tr>
+<td><strong>novel</strong>, new, unique, unprecedented</td>
+<td>Same; juries test novelty first</td>
+<td>A named gap + the combination (F1)</td>
+</tr>
+<tr>
+<td><strong>tamper-proof</strong>, immutable, unforgeable, secure log</td>
+<td>D6 scope; the record file is editable (B4)</td>
+<td>Tamper-evident up to the last witnessed head; detect, not prevent</td>
+</tr>
+<tr>
+<td><strong>compliant</strong>, compliance, certified, regulation-ready</td>
+<td>No assessment done; fact 15 rule</td>
+<td>"Maps to" + article</td>
+</tr>
+<tr>
+<td><strong>guarantees</strong>, guaranteed, provably, proven, ensures</td>
+<td>No proof and no measurement (Airlock has a theorem, we do not)</td>
+<td>Designed to; target; checked by <code>verify</code></td>
+</tr>
+<tr>
+<td><strong>eliminates</strong>, zero (as a result), no damage</td>
+<td>Irreversible residue and over-taint remain (L1, L2)</td>
+<td>Target 0 + residual damage scored</td>
+</tr>
+<tr>
+<td><strong>prevents</strong>, stops, blocks (attacks, injection, collusion)</td>
+<td>Out of scope (X23); we act after the alert</td>
+<td>Detects, holds, contains after the alert</td>
+</tr>
+<tr>
+<td><strong>real-time</strong>, instant, immediately</td>
+<td>Tick barrier and logical clock; hold window; no seconds measured</td>
+<td>Per tick; before release; within the hold window</td>
+</tr>
+<tr>
+<td>undo / rollback without qualification, full recovery, reverses any damage</td>
+<td>Only provable reversible writes; TERMS bans "rollback"</td>
+<td>Taint-scoped revert of landed shared-state writes</td>
+</tr>
+<tr>
+<td>automatically recovers, self-healing</td>
+<td>LLM steps need approval (D4)</td>
+<td>Re-run deterministic steps; re-plan with approval</td>
+</tr>
+<tr>
+<td>outperforms, beats, better than, state of the art</td>
+<td>No comparative run (X3, X20)</td>
+<td>Complementary; compared to our own planned baselines</td>
+</tr>
+<tr>
+<td>scalable, production-ready, enterprise-grade</td>
+<td>About 10 agents, single host (L7)</td>
+<td>Production twin; path to OTel / policy-as-code</td>
+</tr>
+<tr>
+<td>all, every, any, never, always (unscoped)</td>
+<td>One counterexample from the jury breaks it</td>
+<td>Scoped: "every mediated action", "within the threat model"</td>
+</tr>
+<tr>
+<td>identifies the culprit / root cause (collusion)</td>
+<td>C3</td>
+<td>Root candidates</td>
+</tr>
+<tr>
+<td>trustless, zero-trust</td>
+<td>The gateway and witness are trusted (TCB, B2)</td>
+<td>Trust placed only in the gateway and witness</td>
+</tr>
+<tr>
+<td>achieves, demonstrates, shows, reduced (past tense)</td>
+<td>Nothing run before 25 Nov</td>
+<td>Will show; target; designed</td>
+</tr>
+<tr>
+<td>kill / kill switch (as an operation)</td>
+<td>TERMS: project name only; D7 is graded</td>
+<td>Suspend → revoke after confirmation; lineage hold</td>
+</tr>
+<tr>
+<td>cancelled (payment), as a containment action</td>
+<td>Containment never cancels: <code>release</code> = un-hold + restore epoch (CALL-01 release semantics)</td>
+<td>Held in the outbox. A held item is cancelled only by an approved recovery-plan step (<code>cancel_outbox</code>, maya.md C5; TERMS "cancel (outbox item)") after the dry-run diff</td>
+</tr>
+<tr>
+<td>ground truth (in the abstract)</td>
+<td>TERMS term lock</td>
+<td>Oracle (S*)</td>
+</tr>
+</tbody>
+</table>
+<hr />
+<h2>4. 30-second self-check (run on the draft before sending it for review)</h2>
+<ol>
+<li><strong>Ctrl-F §3 words</strong>: no hits, or every hit has its scope attached.</li>
+<li><strong>Each number</strong>: external → on abstract/FACT-CARD.md (the only source), with its "must travel with it" wording? Ours → definition + "target"? No seconds anywhere?</li>
+<li><strong>Tense</strong>: does any sentence say we built, ran, measured or achieved something? Change it to design / will show / target.</li>
+<li><strong>Order (D1)</strong>: problem (dependency gap) → fix (provenance) → why (testimony vs evidence; oracle scoring).</li>
+<li><strong>Airlock</strong>: named once, credited, "complementary", no comparison adjective (D3, X3).</li>
+<li><strong>METR</strong>: blunt stop failed, and nothing more; no "would have stopped it"; no exact day; no "legitimately held credentials" (D2, X6–X8).</li>
+<li><strong>Tamper-evident</strong>: scoped to "up to the last witnessed head"; never "proof" (D6).</li>
+<li><strong>Limits line</strong> present: irreversible effects, over-taint, deterministic agents / LLM re-plan, out-of-scope list (L1–L7).</li>
+<li><strong>Collusion / laundering</strong> → "root candidates" only (C3).</li>
+<li><strong>Regulation</strong> → "maps to", never "compliant" (W4).</li>
+<li><strong>Locked terms</strong> (TERMS.md): no banned synonyms (rollback, kill, log, ground truth, quarantine).</li>
+<li><strong>Own words</strong>: no sentence copied from this kit, the research files or any AI chat; organisers check for AI-written text (CHARTER). Under 1,000 words.</li>
+</ol>
+<hr />
+<h2>Changes v2 (panel review, 19 Nov)</h2>
+<ul>
+<li>P2: FACT-CARD #1/#2 wording; dropped "internal OpenAI cyber evaluation". Ground rule 2 and self-check 2 name abstract/FACT-CARD.md as the only source; SYNTHESIS §2 dropped.</li>
+<li>X10 → leave MAST out. X12 → concept + arXiv ID only, no number (D13). New rows X31 (Cordon 45/45 vs 14/45), X32 (DeltaBox ms), X33 (GoEx numbers).</li>
+<li>RES-10 DROP 5 leftovers added: frontier gating (X12), "Mohammadi et al." and the 29 May 2026 Atomix date (X11).</li>
+<li>W4: RBI quote is status S (check the report's exact words or omit); Art 14(4)(e) stop "in a safe state".</li>
+<li>§3 "cancelled (payment)" row reworded: containment never cancels; <code>cancel_outbox</code> is an approved recovery-plan step after the dry-run diff (CALL-01 release semantics, maya.md C5), so the locked TERMS term is no longer banned.</li>
+</ul>
+<h2>Changes v3 (ABS-06 panel nits, 19 Nov)</h2>
+<ul>
+<li>F11: discarding a held item is an <strong>approved</strong> recovery-plan step after the dry-run diff.</li>
+<li>W4: NIST AI RMF MANAGE 4.3 now sourced to RES-08 ref [19] (not on the FACT-CARD); reference only, no number.</li>
+<li>New W7: the brief's three scores have no agreed measurement in the standards we checked; we define checkable ones (source RES-08 headline). Used in SKELETON 3b.</li>
+</ul></section><section id="terms" role="tabpanel" hidden><h1>TERMS: one name per concept (ABS-04)</h1>
+<p>Owner: zoya · Reviewer: maya · 19 Nov 2026 · Inputs: CALL-01.md, CALL-01/maya.md §3 (C1–C6, modules), CALL-01/kabir.md, SYNTHESIS §4/§6, PANEL-ENG-00, RES-02.</p>
+<p><strong>Rule.</strong> The abstract, diagram, demo narration, console labels and code use the left-hand term and nothing else. If a banned synonym appears in a draft, reviewers flag it. Glosses are written for a banking reader and are at most 15 words. Code names are taken from maya.md §3 (C1–C6, module list). <code>⚠</code> marks a gap or mismatch that Maya must confirm or fix (see §7).</p>
+<h2>1. Actors and the mediated path</h2>
+<table>
+<thead>
+<tr>
+<th>Term (locked)</th>
+<th>Plain-English meaning (≤15 words)</th>
+<th>Code name</th>
+<th>Banned synonyms</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>agent</strong></td>
+<td>One automated worker (e.g. crm, billing), running in its own sealed process.</td>
+<td><code>agent_id</code> (C1); one subprocess per agent</td>
+<td>bot, worker, assistant, AI</td>
+</tr>
+<tr>
+<td><strong>culprit</strong></td>
+<td>The agent whose faulty actions caused the damage, buggy or rogue.</td>
+<td>Alert <code>suspect</code> (C4) ⚠</td>
+<td>bad agent, attacker (unless the rogue scenario), offender</td>
+</tr>
+<tr>
+<td><strong>honest agent</strong></td>
+<td>Any agent that is not the culprit, even if it read bad data.</td>
+<td>none (scorer ground truth, C6)</td>
+<td>innocent, good agent, victim</td>
+</tr>
+<tr>
+<td><strong>gateway</strong></td>
+<td>The single checkpoint every agent action must pass through before it touches anything.</td>
+<td><code>ks.gateway</code></td>
+<td>proxy, middleware, broker, firewall, control plane</td>
+</tr>
+<tr>
+<td><strong>action envelope</strong> ("envelope" after first use)</td>
+<td>A signed request from an agent: who, what, on whose behalf, valid when.</td>
+<td>C1 <code>Envelope</code> {agent_id, action_id, parent_action_id, act_chain, tool, args, nonce, expiry, epoch, sig}</td>
+<td>request, message, call, payload, ticket</td>
+</tr>
+<tr>
+<td><strong>act chain</strong></td>
+<td>The chain of who asked whom, carried on every envelope.</td>
+<td>C1 <code>act_chain</code>, <code>parent_action_id</code></td>
+<td>delegation path, call stack, lineage (reserved, see §3)</td>
+</tr>
+<tr>
+<td><strong>tick</strong></td>
+<td>One scheduling round: each agent submits at most one envelope, run in fixed order.</td>
+<td>C2 <code>tick</code>; barrier in <code>ks.runtime</code></td>
+<td>step, turn, cycle, round</td>
+</tr>
+<tr>
+<td><strong>sequence number (seq)</strong></td>
+<td>The gateway's own position number for each record; agents cannot choose it.</td>
+<td>C2 <code>seq</code></td>
+<td>timestamp, index, offset, id</td>
+</tr>
+</tbody>
+</table>
+<h2>2. The record and its audit</h2>
+<table>
+<thead>
+<tr>
+<th>Term (locked)</th>
+<th>Plain-English meaning (≤15 words)</th>
+<th>Code name</th>
+<th>Banned synonyms</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>record</strong></td>
+<td>The gateway-signed entry written for every action, including denials.</td>
+<td>C2 <code>Record</code>; <code>ks.recorder</code></td>
+<td>log, log line, audit log, journal, trace, event</td>
+</tr>
+<tr>
+<td><strong>recorder</strong></td>
+<td>The gateway component that writes records; agents never write their own.</td>
+<td><code>ks.recorder</code></td>
+<td>logger, tracer, auditor</td>
+</tr>
+<tr>
+<td><strong>read set</strong></td>
+<td>Exactly which data versions an action looked at, captured by the gateway.</td>
+<td>C2 <code>read_set[(obj, ver)]</code></td>
+<td>inputs, dependencies, sources, footprint</td>
+</tr>
+<tr>
+<td><strong>write set</strong></td>
+<td>Exactly which data an action changed, with before and after versions.</td>
+<td>C2 <code>write_set[(obj, before/after ver+hash)]</code></td>
+<td>outputs, changes, diff, mutations</td>
+</tr>
+<tr>
+<td><strong>provenance graph</strong></td>
+<td>The map linking every change to its author and every read to its source.</td>
+<td>none; derived from C2 read/write sets in <code>ks.taint</code> ⚠</td>
+<td>DAG, lineage graph, dependency graph, knowledge graph</td>
+</tr>
+<tr>
+<td><strong>witness</strong></td>
+<td>A separate process that countersigns the record's latest fingerprint every tick.</td>
+<td><code>ks.witness</code>; signed <code>(seq, head, tick)</code> ⚠</td>
+<td>notary, anchor, timestamp server, blockchain</td>
+</tr>
+<tr>
+<td><strong>verify</strong></td>
+<td>The audit check anyone can run to detect edited, missing or forged records.</td>
+<td><code>ks.verify</code>; CLI <code>ks verify</code></td>
+<td>validate, audit (as a verb), check, prove</td>
+</tr>
+<tr>
+<td><strong>tamper-evident</strong></td>
+<td>Any edit up to the last witnessed point is detected; not prevented.</td>
+<td><code>verify</code> exit code + first bad index</td>
+<td>tamper-proof, immutable, unforgeable, secure log</td>
+</tr>
+<tr>
+<td><strong>reconciliation</strong></td>
+<td>Rebuild state from the record and compare to live data, catching bypass writes.</td>
+<td>part of <code>ks.verify</code> and per-tick check; raises class U alert ⚠</td>
+<td>replay, consistency check, diffing</td>
+</tr>
+<tr>
+<td><strong>side store</strong></td>
+<td>Separate store for sensitive values (e.g. IBANs); the record keeps only fingerprints.</td>
+<td>none in C1–C6 ⚠</td>
+<td>vault, PII store, cache</td>
+</tr>
+</tbody>
+</table>
+<h2>3. Classes, holds and containment</h2>
+<table>
+<thead>
+<tr>
+<th>Term (locked)</th>
+<th>Plain-English meaning (≤15 words)</th>
+<th>Code name</th>
+<th>Banned synonyms</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>action class</strong></td>
+<td>Label fixed before an action runs, saying how it could ever be undone.</td>
+<td>C2 <code>class</code>; assigned in <code>ks.gateway</code> / <code>ks.policy</code></td>
+<td>effect type, risk level, category</td>
+</tr>
+<tr>
+<td><strong>class R (reversible)</strong></td>
+<td>We hold the earlier version and can restore it exactly.</td>
+<td><code>class = "R"</code></td>
+<td>undoable, rollback-able</td>
+</tr>
+<tr>
+<td><strong>class C (compensable)</strong></td>
+<td>Cannot restore, but a registered opposite action exists (cancel, refund).</td>
+<td><code>class = "C"</code></td>
+<td>reversible (wrong), soft</td>
+</tr>
+<tr>
+<td><strong>class I1 (irreversible, containable)</strong></td>
+<td>Leaves our boundary (payment, email); can only be held or followed up.</td>
+<td><code>class = "I1"</code> → outbox</td>
+<td>external, side effect</td>
+</tr>
+<tr>
+<td><strong>class I2 (irreversible, uncontainable)</strong></td>
+<td>No follow-up possible; runs only with prior human approval.</td>
+<td><code>class = "I2"</code></td>
+<td>destructive, critical</td>
+</tr>
+<tr>
+<td><strong>class U (unclassified)</strong></td>
+<td>Anything we cannot classify or that bypassed the gateway; denied by default.</td>
+<td><code>class = "U"</code>; reconciliation mismatch</td>
+<td>unknown, unsafe, shadow</td>
+</tr>
+<tr>
+<td><strong>outbox</strong></td>
+<td>Waiting area where irreversible actions sit until released; nothing leaves without it.</td>
+<td>C2 <code>outbox_ids</code>; C5 <code>cancel_outbox</code></td>
+<td>queue, staging, buffer, sandbox</td>
+</tr>
+<tr>
+<td><strong>lineage hold</strong></td>
+<td>Freeze any action or outbox item whose read set touches tainted data.</td>
+<td>C4 Control <code>hold</code> / <code>unhold</code>, target = action or outbox id</td>
+<td>quarantine, block, freeze (as noun), gate, pause</td>
+</tr>
+<tr>
+<td><strong>hold window</strong></td>
+<td>How long new irreversible actions wait in the outbox. Demo shows 0 vs &gt;0.</td>
+<td>config value ⚠</td>
+<td>delay, cooling-off, grace period</td>
+</tr>
+<tr>
+<td><strong>sensitive field</strong></td>
+<td>A data field tagged so changes to it trigger an early hold (IBAN is one).</td>
+<td><code>sensitive</code> tag in policy (<code>ks.policy</code>) ⚠</td>
+<td>PII field, critical field, watched field</td>
+</tr>
+<tr>
+<td><strong>graded containment</strong></td>
+<td>Stepwise response: suspend first, revoke only after a person confirms.</td>
+<td><code>ks.containment</code></td>
+<td>kill, shutdown, isolation, quarantine</td>
+</tr>
+<tr>
+<td><strong>suspend</strong></td>
+<td>Stop one agent (or connection) acting immediately; reversible by release.</td>
+<td>C4 Control <code>suspend</code></td>
+<td>quarantine, kill, pause, freeze, disable, block</td>
+</tr>
+<tr>
+<td><strong>revoke</strong></td>
+<td>Permanently cancel an agent's authority, after human confirmation.</td>
+<td>C4 Control <code>revoke</code></td>
+<td>kill, ban, terminate, delete</td>
+</tr>
+<tr>
+<td><strong>release</strong></td>
+<td>Lift a suspension or hold and restore the agent's epoch; held work proceeds.</td>
+<td>C4 Control <code>release</code> (and <code>unhold</code> for holds)</td>
+<td>resume, unblock, restore, un-quarantine</td>
+</tr>
+<tr>
+<td><strong>epoch</strong></td>
+<td>A permission counter; bumping it instantly invalidates the agent's in-flight requests.</td>
+<td>C1 <code>epoch</code>; C4 Control <code>epoch</code></td>
+<td>fencing token (internal ADR only), version, generation, session</td>
+</tr>
+<tr>
+<td><strong>alert</strong></td>
+<td>A detector's signed finding with evidence; "hard" alerts trigger automatic suspend.</td>
+<td>C4 <code>Alert</code> {detector, evidence_seqs, suspect, root_candidates, hard}</td>
+<td>alarm, incident, warning, flag (reserved, see §4)</td>
+</tr>
+<tr>
+<td><strong>invariant detector</strong></td>
+<td>A rule on the data itself (e.g. supplier IBAN changed without approval) that raises alerts.</td>
+<td>C4 <code>detector</code>; <code>ks.monitor</code></td>
+<td>anomaly detector, AI monitor, classifier</td>
+</tr>
+<tr>
+<td><strong>root candidates</strong></td>
+<td>The short list of agents that may have started the fault, ranked. Not a verdict.</td>
+<td>C4 <code>Alert.root_candidates</code></td>
+<td>culprit (as a finding), guilty party, root cause, blame result</td>
+</tr>
+</tbody>
+</table>
+<p>Note: "kill switch" is the <strong>project name only</strong>. Never use it for an operation; the operations are suspend, revoke, lineage hold.</p>
+<h2>4. Recovery</h2>
+<table>
+<thead>
+<tr>
+<th>Term (locked)</th>
+<th>Plain-English meaning (≤15 words)</th>
+<th>Code name</th>
+<th>Banned synonyms</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>taint</strong></td>
+<td>Mark on every data version that was written by, or derived from, the culprit.</td>
+<td>C5 <code>taint_set</code>; <code>ks.taint</code></td>
+<td>contamination, infection, poison, blast radius</td>
+</tr>
+<tr>
+<td><strong>recovery plan</strong></td>
+<td>The proposed fix, step by step, shown as a dry-run diff before anything changes.</td>
+<td>C5 <code>RecoveryPlan</code> {taint_set, steps, dry-run diff}; <code>ks.recovery</code></td>
+<td>rollback plan, remediation, playbook</td>
+</tr>
+<tr>
+<td><strong>dry-run diff</strong></td>
+<td>Preview of exactly what the recovery plan would change, approved before it runs.</td>
+<td>C5 dry-run diff</td>
+<td>preview, simulation, what-if</td>
+</tr>
+<tr>
+<td><strong>taint-scoped revert</strong></td>
+<td>Undo only the culprit's tainted changes; everyone else's work stays.</td>
+<td>C5 step <code>restore</code> ⚠</td>
+<td>rollback, undo (except in headline prose), restore, reset, roll back</td>
+</tr>
+<tr>
+<td><strong>write-write conflict</strong></td>
+<td>An honest agent later edited the same row, so we flag instead of overwriting.</td>
+<td>C5 step <code>flag</code></td>
+<td>merge conflict, collision, clash</td>
+</tr>
+<tr>
+<td><strong>re-run</strong></td>
+<td>Repeat a deterministic honest step on corrected data; effects deduplicated, never sent twice.</td>
+<td>C5 step <code>rerun</code></td>
+<td>replay, re-execute, retry, redo</td>
+</tr>
+<tr>
+<td><strong>re-plan</strong></td>
+<td>An LLM step that must be thought through again; queued for human approval.</td>
+<td>C5 step <code>replan</code></td>
+<td>regenerate, re-prompt, re-reason, retry</td>
+</tr>
+<tr>
+<td><strong>compensate</strong></td>
+<td>Run the registered opposite action (cancel, refund, correction notice) for a class C effect.</td>
+<td>C5 step <code>compensate</code></td>
+<td>reverse, refund (generic), undo, rollback</td>
+</tr>
+<tr>
+<td><strong>cancel (outbox item)</strong></td>
+<td>Discard a held outbox item so it never leaves.</td>
+<td>C5 step <code>cancel_outbox</code></td>
+<td>delete, drop, block, recall</td>
+</tr>
+<tr>
+<td><strong>flag</strong></td>
+<td>Hand an item to a person because we cannot prove a safe fix.</td>
+<td>C5 step <code>flag</code></td>
+<td>escalate, manual review, ticket</td>
+</tr>
+</tbody>
+</table>
+<h2>5. Scoring and metrics</h2>
+<table>
+<thead>
+<tr>
+<th>Term (locked)</th>
+<th>Plain-English meaning (≤15 words)</th>
+<th>Code name</th>
+<th>Banned synonyms</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>oracle (S*)</strong></td>
+<td>The same run replayed with the culprit removed: the "should have been" outcome.</td>
+<td><code>ks.oracle</code>; S*</td>
+<td>ground truth (in abstract), baseline, golden run, reference</td>
+</tr>
+<tr>
+<td><strong>t0</strong></td>
+<td>Moment the first bad effect lands, as judged by the oracle.</td>
+<td><code>ks.oracle</code> / <code>ks.score</code></td>
+<td>start of incident, fault time</td>
+</tr>
+<tr>
+<td><strong>bad effects (B)</strong></td>
+<td>Effects in the faulty run that are missing or different in S*.</td>
+<td><code>ks.score</code></td>
+<td>damage set, harmful actions</td>
+</tr>
+<tr>
+<td><strong>good effects (G)</strong></td>
+<td>Honest effects that match S*.</td>
+<td><code>ks.score</code></td>
+<td>legitimate work, honest work set</td>
+</tr>
+<tr>
+<td><strong>residual damage (R)</strong></td>
+<td>Share of bad effects still present after recovery. Target 0.</td>
+<td><code>ks.score</code> metric <code>R</code> = |B left| / |B|</td>
+<td>leftover damage, error rate, miss rate</td>
+</tr>
+<tr>
+<td><strong>collateral loss (C)</strong></td>
+<td>Share of good work lost by recovery. Target 0.</td>
+<td><code>ks.score</code> metric <code>C</code> = |G lost| / |G|</td>
+<td>collateral damage, false positives, overkill</td>
+</tr>
+<tr>
+<td><strong>clean recovery</strong></td>
+<td>R = 0 and C = 0 in the same run.</td>
+<td><code>ks.score</code></td>
+<td>perfect recovery, full undo, 100%</td>
+</tr>
+<tr>
+<td><strong>TTI-detect</strong></td>
+<td>Time from t0 to the first alert.</td>
+<td><code>ks.score</code> <code>tti_detect</code> ⚠</td>
+<td>detection time, MTTD, time to alert</td>
+</tr>
+<tr>
+<td><strong>TTI-attribute</strong></td>
+<td>Time from alert to naming the right agent and its first bad action.</td>
+<td><code>ks.score</code> <code>tti_attribute</code> ⚠</td>
+<td>blame time, attribution latency, MTTI</td>
+</tr>
+<tr>
+<td><strong>TTC</strong></td>
+<td>Time from alert to the first denied culprit envelope.</td>
+<td><code>ks.score</code> <code>ttc</code> ⚠</td>
+<td>time to kill, time to stop, MTTC, containment time</td>
+</tr>
+<tr>
+<td><strong>post-alert tainted effects</strong></td>
+<td>Tainted effects by any agent after the alert. Target 0.</td>
+<td><code>ks.score</code> ⚠</td>
+<td>leakage, spread, blast radius</td>
+</tr>
+<tr>
+<td><strong>irreversible tainted effects released</strong></td>
+<td>Tainted payments or emails that left despite holds. Target 0.</td>
+<td><code>ks.score</code> ⚠</td>
+<td>escaped payments, leaks</td>
+</tr>
+<tr>
+<td><strong>seeded run</strong></td>
+<td>One reproducible scenario run; same seed gives byte-identical records.</td>
+<td>C6 run dir; <code>ks.bench</code></td>
+<td>trial, episode, simulation</td>
+</tr>
+<tr>
+<td><strong>run dir</strong></td>
+<td>The folder of outputs the scorer reads; nothing else counts.</td>
+<td>C6</td>
+<td>results folder, artefacts</td>
+</tr>
+</tbody>
+</table>
+<p>Note: "R" and "C" are overloaded (class R / class C vs residual damage R / collateral loss C). <strong>Rule:</strong> in the abstract and demo, always write the metric as "residual damage R" / "collateral loss C" on first use in each section, and the class as "class R" / "class C". Never bare "R" in a sentence that also mentions classes.</p>
+<h2>6. Scenarios and demo</h2>
+<table>
+<thead>
+<tr>
+<th>Term (locked)</th>
+<th>Plain-English meaning (≤15 words)</th>
+<th>Code name</th>
+<th>Banned synonyms</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>hero scenario (F2+)</strong></td>
+<td>crm swaps a supplier IBAN; billing, payments and comms consume it; triage later edits crm.</td>
+<td>fault id <code>F2+</code> in <code>ks.world</code> / <code>ks.inject</code></td>
+<td>demo case, use case, story, F2 (without +)</td>
+</tr>
+<tr>
+<td><strong>independent agents</strong></td>
+<td>Agents that never read tainted data (inventory, docs) and keep running throughout.</td>
+<td>none (scorer ground truth)</td>
+<td>unaffected, bystanders</td>
+</tr>
+<tr>
+<td><strong>inject</strong></td>
+<td>Jury tool to introduce a fault or run arbitrary code inside the rogue agent.</td>
+<td><code>ks.inject</code>; CLI <code>ks inject</code></td>
+<td>attack script, fuzz, chaos</td>
+</tr>
+<tr>
+<td><strong>rogue agent</strong></td>
+<td>An agent template running jury-supplied arbitrary Python, used for the break test.</td>
+<td>rogue-agent template in <code>ks.inject</code></td>
+<td>malicious agent, hacker, adversary agent</td>
+</tr>
+<tr>
+<td><strong>snapshot baseline</strong></td>
+<td>Comparison: restore the whole workspace from a checkpoint.</td>
+<td><code>ks.bench</code> baseline</td>
+<td>checkpoint restore, full rollback</td>
+</tr>
+<tr>
+<td><strong>revert-culprit-only baseline</strong></td>
+<td>Comparison: undo the culprit's writes but do not repair readers.</td>
+<td><code>ks.bench</code> baseline</td>
+<td>naive revert, simple undo</td>
+</tr>
+</tbody>
+</table>
+<h2>7. Mismatches and gaps for Maya (C1–C6 check)</h2>
+<ol>
+<li><strong>Revert vs <code>restore</code>.</strong> Public term is "taint-scoped revert"; C5 step is <code>restore</code>. Proposal: keep <code>restore</code> as the per-object step name and say in the ADR that a taint-scoped revert = the set of <code>restore</code> steps. Banning "restore" in prose avoids confusion with "restore epoch" (release). Maya to confirm or rename the step.</li>
+<li><strong>Culprit vs <code>suspect</code>.</strong> C4 <code>Alert.suspect</code> is an accusation; "culprit" is ground truth (scorer only). Keep both; prose uses "suspect" only when talking about the alert field.</li>
+<li><strong>Provenance graph</strong> has no contract. It is derived from C2 read/write sets in <code>ks.taint</code>. Fine if nobody adds a separate <code>graph</code> type; confirm.</li>
+<li><strong>Witness checkpoint</strong> <code>(seq, head, tick)</code> and <strong>side store</strong> are not in C1–C6. Suggest a witness entry type under C2 or C6 and a side-store note in C3 (ADR-02, arjun).</li>
+<li><strong>Hold window</strong> and <strong><code>sensitive</code> tag</strong>: config/policy, no contract. Suggest they live in the C6 run-dir config so the scorer can see which hold value was used.</li>
+<li><strong>Metric field names</strong> (<code>tti_detect</code>, <code>tti_attribute</code>, <code>ttc</code>, <code>post_alert_tainted</code>, <code>irreversible_tainted_released</code>, <code>R</code>, <code>C</code>) are proposed; C6 only says "scorer reads run dir". Tara (ADR-06) to fix names.</li>
+<li><strong>Idempotency key</strong> (re-runs dedupe through the outbox) is not a C1/C2 field; <code>nonce</code> is for replay protection, not dedupe. Suggest an explicit <code>idempotency_key</code> on outbox items.</li>
+<li><strong>Connection vs agent suspend</strong> (anti-framing, D7): C4 <code>Control.target</code> must allow a connection id, not only an agent_id.</li>
+<li><strong>Reconciliation</strong> alert: confirm its <code>Alert.detector</code> name (proposed <code>reconcile</code>) and that it raises class U.</li>
+</ol>
+<p><strong>Proposed additions (vikram, ABS-03 review; existing rows unchanged, owner to accept or reject):</strong></p>
+<table>
+<thead>
+<tr>
+<th>Term (proposed)</th>
+<th>Plain-English meaning (≤15 words)</th>
+<th>Code name</th>
+<th>Banned synonyms</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><strong>workspace</strong></td>
+<td>The shared data all agents work on, owned and changed only by the gateway.</td>
+<td><code>state.db</code> (row-versioned SQLite, D5)</td>
+<td>database (in prose), shared memory, environment</td>
+</tr>
+<tr>
+<td><strong>trust boundary</strong></td>
+<td>Line past which nothing an agent sends is trusted until the gateway checks it.</td>
+<td>THREAT-MODEL §2, B1 (agent → gateway IPC)</td>
+<td>perimeter, firewall, sandbox wall</td>
+</tr>
+<tr>
+<td><strong>idempotency key</strong></td>
+<td>Tag on each outbox item so a re-run never sends the same effect twice.</td>
+<td>proposed outbox field <code>idempotency_key</code> (see item 7)</td>
+<td>nonce (different purpose), dedupe id</td>
+</tr>
+</tbody>
+</table></section><section id="jury" role="tabpanel" hidden><h1>JURY-QA: hardest hostile questions, with evidence pointers only (ABS-05)</h1>
+<p>anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md (ABS-01), GUARDRAILS.md (ABS-02), TERMS.md (ABS-04), org/adr/THREAT-MODEL.md (SEC-01), tests/redteam/SPEC.md (SEC-02), research/RES-01, RES-06, RES-07, RES-11, SYNTHESIS.md, CALL-01.md (decisions checked against the source).</p>
+<p><strong>What this is.</strong> For each question: where the evidence lives, the one distinction that matters (note form, ≤12 words), and the trap a hostile juror is fishing for. <strong>No answer prose.</strong> Aarav answers in his own words (CHARTER).</p>
+<p><strong>Tag key.</strong> <code>#n</code> = fact-card row · <code>P/F/W/L/X</code> = GUARDRAILS row (<code>§1.5</code> = own-number table) · <code>D</code> = CALL-01 decision · <code>C1–C6</code> = THREAT-MODEL §4 claim · <code>B1–B4</code> = THREAT-MODEL §2 boundary · <code>rule n</code> = THREAT-MODEL §6 · <code>RT</code> = red-team test in SPEC §2 · <code>T§</code> = TERMS section · <code>SYN §</code> = SYNTHESIS · <code>RES-nn §</code> = research file.
+<strong>TM scope</strong> (only on security questions, for kabir): <strong>in</strong> = in scope for the adopted threat model (CALL-01 "Threat model, adopted"; THREAT-MODEL §3); <strong>out</strong> = declared out of scope, with the production mitigation named there.
+<strong>Standing rule for every answer.</strong> Our parts are design and target; nothing runs before 25 Nov (GUARDRAILS ground rules; D13; THREAT-MODEL §5 last line). Every RT pass value is a <strong>target</strong>, not a result.</p>
+<hr />
+<h2>Q1. "Isn't this just Airlock?"</h2>
+<ul>
+<li><strong>Evidence:</strong> #7, #8 · P4, P5, X1–X4 · D3 · C6 (refused: any Airlock comparison) · RES-11 §1 (TL;DR), §3 rows "Backward undo of landed effects" and "Tamper evidence", §4 Airlock #1–#6, §5 safe #1–#3 and must-not #1–#3 · SYN §1 niche bullet, §5 Airlock row.</li>
+<li><strong>Key distinction:</strong> Airlock stops pre-commit; we revert landed writes and repair readers.</li>
+<li><strong>Second distinction (only if pushed):</strong> journals "taken as reported, not authenticated" (RES-11 §4 #6) vs signed, witnessed record under a forging-agent threat model (F4, F12, C1).</li>
+<li><strong>Traps:</strong></li>
+<li>Any comparative adjective ("better", "leaks", "sim-only", "scripted only"): Airlock reports 0 post-τ1 leaks and ran six LLM deployments on physical devices (RES-11 §1, §5 must-not #3; X3).</li>
+<li>Bare "Airlock cannot undo": it is a declared design choice, and Airlock beats checkpoint rollback on its own metrics (X4).</li>
+<li>"Today's tools kill one agent or all of them" as our insight: Airlock's own framing (X2).</li>
+<li>"Airlock trusts agents' self-reports": <strong>false</strong>. Its daemon mediates every adapter "without relying on agent self-reporting" (RES-11 §2, §3.1 of Airlock). The gap is authentication of the journal, not mediation.</li>
+<li>"Airlock has no provenance / reads": false. It has a provenance DAG with data edges and conservative input attribution (RES-11 §2 Taint).</li>
+<li>Finer containment than Airlock: do not claim. Its min-cut can revoke a single effect class (RES-11 §3).</li>
+<li>Using Airlock's ~10-agent scale limit against it: we are also ~10 agents, single host (L7).</li>
+<li>"Guarantees": Airlock has a theorem (Thm 5); we do not (GUARDRAILS §3 "guarantees" row).</li>
+<li>Pre-empt the metric fight: Airlock's "kept without redo" penalises our re-runs by construction (RES-11 §1 watch-out 2; W3, X27).</li>
+</ul>
+<h2>Q2. "Wang et al. already did agent undo. And Retro/Warp did selective undo in 2010."</h2>
+<ul>
+<li><strong>Evidence:</strong> #14 · X1, X5, F1 · SYN §0 ("Killed" bullet), §5 rows Wang, State Footprints, Spark to Fire · RES-11 §1 watch-out, §5 must-not #2, §7 bullet 2 · RES-01 §1, §2.1–2.4, §4 (what breaks with LLM actors), §6.</li>
+<li><strong>Key distinction:</strong> Wang: one agent's memory. Us: many authors, shared state, dependants.</li>
+<li><strong>Credit line, not a defence:</strong> the systems idea (record dependencies, revert tainted, keep legitimate work) is Taser/Retro/Warp/Aire's; we carry it to multi-agent shared state (#14, X5). Aire's authorised repair is also prior art for signed recovery actions (RES-01 §2.3 #4; rule 10).</li>
+<li><strong>Traps:</strong></li>
+<li>Saying anything about Wang beyond "single agent, rollback + selective replay": only the <strong>Lacuna summary</strong> was read (RES-11 §1, §7). Wang is not on the fact card: no numbers, no venue.</li>
+<li>"First selective undo for agents" (X5); "first" anything (X1).</li>
+<li>Claiming a single component is new; claim only the F1 <strong>combination</strong>.</li>
+<li>Claiming Retro/Warp-style replay transfers to LLM agents: it does not (RES-01 §4 #1–#3); that is why D4 splits re-run vs re-plan.</li>
+<li>State Footprints "rolls back" or has a venue: it is a vision paper, venue unconfirmed (X11, X12).</li>
+<li>"We build and measure it" in past tense (tense rule).</li>
+</ul>
+<h2>Q3. "Isn't this just logging? How is it different from OTel tracing?"</h2>
+<ul>
+<li><strong>Evidence:</strong> #11, #12 · P1, P5, F3, F4, F12, W5 · D6, D8 · rules 2, 3, 7, 8, 9, 11 · T§2 (record, recorder, read set, write set) · SYN §1 frame C, §4 principles 2–4 · RES-07 §1 (agents misreported their own actions), §3 Recorder bullet · RES-01 §4 #7 (log trust; Taser's separate backend) · RES-06 §5 (commit stores record no reads).</li>
+<li><strong>Key distinction:</strong> Gateway records reads and writes; agent testimony never counts as evidence.</li>
+<li><strong>OTel sub-point:</strong> <code>gen_ai.*</code> has no attribute for state read or written, and nothing Stable (#11); OTel is our <strong>export path</strong>, not a competitor (W5).</li>
+<li><strong>Traps:</strong></li>
+<li>Saying "log" ourselves: banned term; use <strong>record</strong> (T§2). The word concedes the question.</li>
+<li>"No one records reads": false. Airlock (data edges), Retro (SHA-1 of reads), Warp (row versions) all do (RES-11 §2; RES-01 §2.1–2.2). Our claim is the <strong>combination</strong> (F1) plus signed, witnessed records.</li>
+<li>"Separate tamper-resistant store" as new: Taser's separate audit backend (RES-01 §2.4 #1).</li>
+<li>"OTel <code>gen_ai</code> is all Development": say "not yet stable" (#11 note; SYN §2 row 11 is out of date).</li>
+<li>"Integrated with OTel": a stated path, not an integration (W5, X28).</li>
+<li>"Tamper-proof / immutable" (X15).</li>
+<li>Privacy follow-up ("you log IBANs?"): record holds hashes, values in the side store (rule 9; T§2 side store).</li>
+</ul>
+<h2>Q4. "LLMs aren't deterministic. How do you replay anything?"</h2>
+<ul>
+<li><strong>Evidence:</strong> F10, L6 · D4, D9 · CALL-01 §2 "Engineering resolutions: Determinism" (tick barrier; same seed twice gives byte-identical records; faulty run equals S* before t0) · T§4 (re-run vs re-plan), T§5 (oracle S*, seeded run) · SYN §4 principle 9 · RES-01 §1 bullets 2–3, §4 #1–#5 · RES-06 F1 (LangGraph replay re-runs nodes with different results) · SPEC §3 "Determinism holds".</li>
+<li><strong>Key distinction:</strong> Deterministic steps re-run; LLM steps re-planned with human approval.</li>
+<li><strong>Notes:</strong></li>
+<li>The <strong>oracle S*</strong> itself depends on determinism: that is why finale agents are deterministic (D9), not a convenience.</li>
+<li>Re-runs go through the outbox with idempotency keys, so no effect is sent twice (F10; target "re-emitted effects = 0", §1.5; T§7 gap 7: <code>idempotency_key</code> not yet a contract field).</li>
+<li>Neutral context only: Airlock's controlled comparison grids also use deterministic workers and ground-truth alerts (RES-11 §2, Evaluation).</li>
+<li><strong>Traps:</strong></li>
+<li>"Replay" as our verb: banned synonym of re-run (T§4). We do not replay LLMs.</li>
+<li>Automatic recovery of LLM work, "tested on LLM agents", "LLM replay" (X25).</li>
+<li>Claiming our R/C targets carry over to LLM agents: no S* exists for them in our design.</li>
+<li>Recording model outputs as a fix: replays only the old, possibly poisoned behaviour (RES-01 §4 #2).</li>
+<li>Promising the one-LLM-agent stretch goal (D9: only if the hero path is green by 30 Nov).</li>
+<li>Re-plan as "autonomous repair": it is a queued item awaiting approval (F10).</li>
+</ul>
+<h2>Q5. "Can't the agent just bypass your gateway?"</h2>
+<ul>
+<li><strong>TM scope:</strong> <strong>in</strong> (rogue agent, arbitrary Python in its subprocess; D11). <strong>Out:</strong> gateway/witness host compromise; agent and gateway under one OS user (production mitigation: separate uid/container); covert channels (THREAT-MODEL §3).</li>
+<li><strong>Evidence:</strong> F2, L5, X24 · C2 · D7 (reconciliation mismatch = class U, hard evidence), D11 · rules 1, 2, 6 · B1, B2 · RT1 (variants a strict / b relaxed), RT2 · SPEC §3 "Single-uid limits" · CALL-01 §2 "Key isolation" and §5 Maya's dissent · SYN §4 principle 1 · #12 (MCP no-passthrough, draft spec) · RES-11 §4 Airlock #8 (Airlock makes the same "effects pass through a gateway" assumption).</li>
+<li><strong>Key distinction:</strong> Bypass is caught by reconciliation; prevention needs per-agent uid.</li>
+<li><strong>Traps:</strong></li>
+<li>"Impossible", "keys unreachable": say "caught", and "enforced in production (uid/container), detected here by reconciliation" (F2; C2 exact wording).</li>
+<li>Claiming we <strong>attribute</strong> the bypass write: an off-gateway write has no author; <code>Alert.suspect</code> may be null; RT1 only asserts no honest agent is suspended (SPEC RT1 open point).</li>
+<li>Claiming reconciliation detects a key <strong>read</strong>: it detects unmediated writes only (C2 "refuse" column).</li>
+<li>Covert channels / reading data around the gateway: out of scope, no claim (THREAT-MODEL §3).</li>
+<li>"≤1 tick" stated as a result: it is RT1's pass target.</li>
+<li>Separate uid: the live setup uses one (THREAT-MODEL "Live setup", setuid checked 19 Nov), but the claim stays C2 verbatim. If setuid fails, a key read voids C1/C4 for that run, unseen by reconciliation.</li>
+<li>A juror acting from a host shell as the gateway's user: host compromise, not a break of C1–C6 (THREAT-MODEL §7 last line).</li>
+</ul>
+<h2>Q6. "Can't a rogue agent forge actions or fake its own timestamps?"</h2>
+<ul>
+<li><strong>TM scope:</strong> <strong>in</strong> (rogue: forge, replay, clock games, persistence; THREAT-MODEL §3, §5). Colluding agents <strong>in</strong> only for naming root candidates (C3).</li>
+<li><strong>Evidence:</strong> F4, F8, X17, X22, L3 · C3, C4 · D6, D7 · rules 2, 3, 4, 10, 11 · B1 · RT3 (= F5, LIVE), RT4, RT6, RT12, RT9 · T§1 (action envelope, act chain, seq) · CALL-01 §2 "Attribution of laundered writes".</li>
+<li><strong>Key distinction:</strong> Gateway signs and sequences; bad signature suspends connection, not victim.</li>
+<li><strong>Traps:</strong></li>
+<li>"A valid signature proves intent": it proves which key signed through which handle (C4 refuse column).</li>
+<li>"Unforgeable" (X15).</li>
+<li>Laundering: a laundered write carries the launderer's signature; we name <strong>root candidates</strong>, ranked, not a verdict (C3; RT9 target: intake in top 3; root candidate ≠ hard evidence, needs a click).</li>
+<li>Saying a bad signature suspends "the agent" (X17; D7 anti-framing; RT3 pass: billing stays active).</li>
+<li>Agent-supplied <code>ts</code>/<code>seq</code> being used for ordering: never; gateway assigns (rule 3; RT6).</li>
+<li>Key theft as "solved": RT2 target 0 key bytes reachable; production wording C2.</li>
+</ul>
+<h2>Q7. "Who watches the witness?"</h2>
+<ul>
+<li><strong>TM scope:</strong> <strong>in</strong> = insider who edits record files, holds <strong>no</strong> gateway or witness key and cannot write the witness head store. <strong>Out</strong> = gateway/witness host or root compromise; one insider holding <strong>both</strong> gateway and witness keys (production mitigation: HSM, split custody, WORM witness log) (THREAT-MODEL §3).</li>
+<li><strong>Evidence:</strong> F12, X15, X16 · C1 · D6, D7 (tamper alert freezes recovery, suspends nobody) · B3, B4 · rule 8 (stall alert) · RT7 (= F6 line edit, LIVE), RT8 (= F6 full rewrite, LIVE; variants e, f, g; witness-stall test) · THREAT-MODEL §7 · T§2 (witness, verify, tamper-evident).</li>
+<li><strong>Key distinction:</strong> Tamper-evident up to last witnessed head; detects, never prevents.</li>
+<li><strong>Notes:</strong></li>
+<li>RT8 hands the attacker the <strong>gateway key</strong> (stronger than the threat model) to isolate what the witness adds. Do not generalise that to "survives gateway compromise" (X23).</li>
+<li>RT8 variant g (rewrite only records after the last witnessed head) <strong>passes when undetected</strong>: it pins the claim boundary. Show it before a juror finds it (SPEC RT8 note).</li>
+<li><strong>Traps:</strong></li>
+<li>"Tamper-proof", "immutable" (X15); Merkle/inclusion proofs, transparency log, "blockchain" (X16; T§2 bans "blockchain").</li>
+<li>Calling the witness an independent third party: it is a separate process with its own key on the same host; host compromise is out (THREAT-MODEL §3).</li>
+<li>Claiming protection after the last witnessed head (C1 refuse column).</li>
+<li>Record <strong>and</strong> heads rewound to an older prefix: caught only against the head printed at run end; no printed head = out of scope (THREAT-MODEL §5 truncation row, "Detect, not exclude").</li>
+<li>Saying a tamper alert suspends someone (D7; X17; RT7 pass: suspends nobody, recovery frozen).</li>
+</ul>
+<h2>Q8. "Couldn't the hold window be cheated: by the agent racing it, or by you tuning it for the demo?"</h2>
+<ul>
+<li><strong>TM scope (agent side):</strong> <strong>in</strong> (rogue: TOCTOU flood, replay into outbox, persistence after suspend; colluding: laundering). <strong>No claim:</strong> splitting under thresholds (THREAT-MODEL §5, "no RT, no claim"); covert channels <strong>out</strong>.</li>
+<li><strong>Evidence (agent racing it):</strong> F6, C5 · D8 · rules 4, 5 (epoch and deny-list in the write transaction; dispatcher re-checks holds) · RT5, RT4 (outbox variant), RT12, RT10 (dispatch re-check race hook), RT9 (laundered value held) · T§3 (lineage hold, sensitive field: early hold) · CALL-01 §2 "Early hold".</li>
+<li><strong>Evidence (us tuning it):</strong> D10 (one config value; demo shows 0 vs &gt;0) · RT10 H=0 run (passes when the escape <strong>is scored</strong>: R &gt; 0) · §1.5 protocol row · SYN §6 (≥20 seeded runs; median, p95, max; snapshot, revert-culprit-only, no-op baselines; collateral stall and false-positive cost) · T§7 gap 5 (hold value in the run-dir config so the scorer sees it).</li>
+<li><strong>Key distinction:</strong> Holds follow recorded reads; hold zero shown and scored too.</li>
+<li><strong>Traps:</strong></li>
+<li>Holding effects released <strong>before</strong> the alert: not held; at hold 0 scored as residual damage (C5 refuse column; F6).</li>
+<li>Agent-declared lineage as the basis of a hold: never trusted; holds come from <strong>recorded</strong> read sets only (D8; C5; RT10 pass line).</li>
+<li>"The hold is free": it delays honest irreversible effects; collateral stall and FP cost are reported (SYN §6). No seconds value exists (§1.5; X21).</li>
+<li>"We cancel / block" as containment: we hold, never cancel (X29; CALL-01 "Release semantics").</li>
+<li>"0 escaped" stated as a result (X21; D13).</li>
+</ul>
+<h2>Q9. "What about irreversible payments and emails?"</h2>
+<ul>
+<li><strong>Evidence:</strong> L1, F11, X14, X29, W4 · C5, C6 · D10 · T§3 (class C, I1, I2, U; outbox), T§4 (compensate; cancel (outbox item)) · RT10 (hero; H&gt;0 vs H=0) and its F3 variant (PII email, pytest only) · #13 (sagas make "no effort" to notify readers) · RES-01 §1 bullet 4 (Retro/Aire also stop at external effects) · RES-06 §4 (no substrate covers them) · RES-11 §3 "External effects" row, §5 must-not corollary.</li>
+<li><strong>Key distinction:</strong> Hold before release; afterwards compensate or report, never reverse.</li>
+<li><strong>Notes:</strong></li>
+<li>Class I2 (uncontainable) runs only with prior human approval (T§3).</li>
+<li>Terminology fork: containment <strong>holds</strong> and never cancels (X29); discarding a held item is a <strong>recovery-plan step</strong> (<code>cancel_outbox</code>) after the dry-run diff (F11; T§4). Do not merge the two.</li>
+<li><strong>Traps:</strong></li>
+<li>"Reverse", "undo", "refund" as our undo of a sent effect (X14; T§4 bans "reverse" for compensate).</li>
+<li>Calling external effects Airlock's weak spot: it is Airlock's strongest part (RES-11 §3).</li>
+<li>"Meets Art 14(4)(e) safe state": "maps to" only (W4; X19).</li>
+<li>Hiding the hold-0 escape: show it; it is the honest contrast (RT10; D10).</li>
+</ul>
+<h2>Q10. "Why not just use Dolt or git revert?"</h2>
+<ul>
+<li><strong>Evidence:</strong> P1, W5, X28 · D5 · RES-06 §1, F4 (Dolt revert-one-keep-later, verified in Dolt's engine tests), F5 (local git run: dependent edit conflicts), §3 table, §5 · SYN §0 "Confirmed" bullet, §5 Dolt/Git row · T§4 write-write conflict, T§6 snapshot and revert-culprit-only baselines · F9 (revert only provable writes, else re-run or flag).</li>
+<li><strong>Key distinction:</strong> Dolt reverts commits but records no reads; dependants invisible.</li>
+<li><strong>Traps:</strong></li>
+<li>"Dolt can't revert one commit": it can, and keeps later commits (RES-06 F4).</li>
+<li>"Runs on Dolt" / "integrated": own row-versioned SQLite; Dolt is the production twin (D5; X28).</li>
+<li>Quoting RES-06 §4's "Dolt as substrate" recommendation: overridden by D5.</li>
+<li>Dolt performance numbers: RES-06 never ran Dolt (F4/§4 caveat). The git run is one toy example, not a benchmark (RES-06 §5).</li>
+<li>Overclaiming conflict handling: a write-write conflict is <strong>flagged</strong>, not merged (T§4; F9).</li>
+</ul>
+<h2>Q11. "Any real incident where this happened? Would this have stopped the METR / OpenAI–Hugging Face case?"</h2>
+<ul>
+<li><strong>TM scope (METR part):</strong> the board was coordination over a channel no gateway mediated (Artifactory cache namespace, #2): covert channels are <strong>out</strong>; collusion is <strong>in</strong> only as "root candidates, no prevention" (C3).</li>
+<li><strong>Evidence:</strong> #1, #2, #3, #9, #10 · P2, P3, X6, X7, X8 · D2 · FACT-CARD "Not safe to print" and "Notes on the A~ rows" · SYN §0 "Partly overturned" · RES-07 §1, §2.1 (7 incidents), §2.4 (would selective rollback have helped?), §4 · RES-11 §6.</li>
+<li><strong>Key distinction:</strong> Incidents are single-agent; METR shows only a blunt stop failing.</li>
+<li><strong>Notes:</strong></li>
+<li>No public case of agent B consuming agent A's bad write and being repaired (SYN §0; RES-07 §2.4 last para). The dependency risk rests on the literature, and we say so (P1 condition; X6).</li>
+<li>RES-07 §2.4: selective rollback would <strong>not</strong> have fixed most catalogued incidents (rm -rf, Antigravity, PocketOS); the levers there were gating and credential scope.</li>
+<li>3 of 7 incidents are disputed or partly unverified (RES-07 §1): "reportedly" + AIID IDs (#9).</li>
+<li><strong>Traps:</strong></li>
+<li>"We would have stopped it" (X7; D2), or METR as B-on-A (X6). It was collusion inside an evaluation.</li>
+<li>"Internal" or "cyber" evaluation: METR says neither (#1 note, re-checked today). <strong>GUARDRAILS P2 and SYN §2 row 1 still say "internal OpenAI cyber evaluation"; the fact card wins (D13).</strong></li>
+<li>Exact dates/times, "11 days to detect", "legitimately held credentials" (X8; fact card "Not safe to print"). SYN §2 rows 1–2 and RES-11 §6 still carry exact dates: do not lift them.</li>
+<li>SYN §1 hook bullet "forensics came weeks later" and "METR read ~1,300 transcripts": not on the fact card; do not quote.</li>
+<li>"Multi-agent incidents are common" (X6); "our tool would have saved PocketOS" (RES-07 §2.4).</li>
+</ul>
+<h2>Q12. "What if detection is wrong and you suspend a good agent? Or miss the bad one?"</h2>
+<ul>
+<li><strong>TM scope:</strong> <strong>in</strong> (rogue tricking auto-suspend of an honest agent, RT11; buggy-agent false positive). Semantic influence <strong>out</strong> (we over-taint).</li>
+<li><strong>Evidence (false positive):</strong> F7, F8, L2, X17, X18 · D7 · C4 · rule 10 (<code>release</code> = un-hold + restore epoch) · RT11 (framing DoS: FP cost reported, recomputed, not thresholded; <code>false_accusations</code> counted against us), RT1 (unattributable mismatch suspends no honest agent), RT3 (connection, not victim), RT9 (root candidate needs a click) · T§3 (suspend, revoke, release) · §1.5 collateral loss C (target 0) · SYN §6 (false accusations, FP cost).</li>
+<li><strong>Evidence (miss):</strong> F5, X30 · SYN §4 principle 6 · T§3 invariant detector · §1.5 TTI-detect (definition only) · THREAT-MODEL §5 splitting row · neutral context: Airlock's safety is also relative to the alert's declared source set (RES-11 §4 Airlock #7).</li>
+<li><strong>Key distinction:</strong> Suspend is reversible; revoke needs a human; false positives scored.</li>
+<li><strong>Traps:</strong></li>
+<li>"Auto-kill", "no human in the loop" (X18); "kill" as an operation (T§3 note).</li>
+<li>Any FP rate or detection accuracy number (X21; D13). Any "beats Who&amp;When" (X20).</li>
+<li>"We detect any misbehaviour": only declared data invariants and hard evidence (X30).</li>
+<li>Over-taint presented as free: collateral holds are possible by design (L2); independents keep running is the RT10 target, not a result.</li>
+</ul>
+<hr />
+<h2>Also likely (one-line pointers, no full entry)</h2>
+<table>
+<thead>
+<tr>
+<th>Question</th>
+<th>Pointers</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>"Is it compliant with the AI Act?"</td>
+<td>W4, X19, #15: "maps to" Art 12(1), 14(4)(e); article numbers only, no regulation number</td>
+</tr>
+<tr>
+<td>"Does it beat Who&amp;When?"</td>
+<td>F5, X20, X9, #4–#6: different task (lookup vs inference); quote #4 with its setting, one 53.5 only</td>
+</tr>
+<tr>
+<td>"Does it scale?"</td>
+<td>L7, X28: ~10 agents, single host, tick barrier</td>
+</tr>
+<tr>
+<td>"Doesn't over-tainting just become kill-everything?"</td>
+<td>L2, F6, RT10 (independents' outbox never held, target), Airlock App. F via RES-11 §4 #9</td>
+</tr>
+<tr>
+<td>"Can you stop prompt injection / collusion?"</td>
+<td>X23, C3, THREAT-MODEL §3: contain and recover effects only</td>
+</tr>
+<tr>
+<td>"Why not least privilege instead?"</td>
+<td>RES-07 §2.4 and §3 (credential scope was the lever in single-agent cases); complementary, not either/or</td>
+</tr>
+<tr>
+<td>"Why is it called Kill Switch if you never kill?"</td>
+<td>T§3 note: project name only; operations are suspend, revoke, lineage hold</td>
+</tr>
+</tbody>
+</table>
+<h2>Inconsistencies found while compiling (for zoya / Aarav; not fixed here)</h2>
+<ol>
+<li>GUARDRAILS P2 condition and SYN §2 row 1 say "internal OpenAI cyber evaluation"; FACT-CARD #1 note (re-checked 19 Nov) says METR does not say "internal" or "cyber". Fact card governs (D13).</li>
+<li>SYN §2 row 11 says OTel <code>gen_ai.*</code> "all Development"; FACT-CARD #11 says "not yet stable", not "all Development".</li>
+<li>SYN §2 rows 1–2 and RES-11 §6 carry exact HF/METR dates and 23:00 UTC, banned by the fact card.</li>
+<li>RES-11 §3 "Us" column is STRAWMAN-era (per-agent revoke, "cancel in-flight", "single process", "signed chain head"): superseded by D6–D8 and C6 (per-action lineage hold, separate subprocesses, witness, hold never cancel). Do not cite it as our design.</li>
+<li>RES-11 §5 safe #3 and RES-01 use "ground truth"; T§5 locks "oracle (S*)". RES-01 §5 "do not re-run agents" is superseded by D4.</li>
+<li>RES-06 §1/§4 recommends Dolt as substrate; superseded by D5.</li>
+</ol></section></main>
+<script>{const bs=[...document.querySelectorAll('nav button')];
+function show(id,push){bs.forEach(b=>{const on=b.getAttribute('aria-controls')===id;b.setAttribute('aria-selected',on);document.getElementById(b.getAttribute('aria-controls')).hidden=!on});if(push)history.replaceState(null,'','#'+id);window.scrollTo(0,0)}
+bs.forEach(b=>b.addEventListener('click',()=>show(b.getAttribute('aria-controls'),true)));
+const h=location.hash.slice(1);if(bs.some(b=>b.getAttribute('aria-controls')===h)){show(h,false);setTimeout(()=>scrollTo(0,0),0)}
+addEventListener('hashchange',()=>{const k=location.hash.slice(1);if(bs.some(b=>b.getAttribute('aria-controls')===k))show(k,false)})}</script>
+</body></html>
