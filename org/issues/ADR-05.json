@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "maya",
-  "status": "changes",
+  "status": "in_review",
   "outcome": "Own row-versioned SQLite (obj=table:pk, get→(value, ver, author), history), conservative forward/backward taint, recovery plan C5 with dry-run diff; due 23 Nov so build starts day 1",
   "acceptance": [
     "ADR file ≤900 words with sections Context, Decision, Consequences, Interface touched (which of C1–C6), Tests that prove it",
@@ -19,7 +19,7 @@
     "CON-01"
   ],
   "deliverable": "org/adr/ADR-05-state-taint-recovery.md",
-  "summary": "ADR-05 written (898 words). Own SQLite: objects (live heads) plus append-only versions (obj, ver, hash, author, seq, action_id), with history values kept in the side store. Maya's ver and seq conventions are confirmed, with three amendments: tombstones continue the counter; a restore creates a new version and taint keys on (obj, ver) not hash; a version is visible only after its seq. Forward taint comes from recorded read sets only. The default is conservative: aggregate reads over-taint and an LLM agent stays tainted after it reads a tainted version. Backward taint ranks root candidates by earliest causal write, then by descendants. Plan order: cancel_outbox, then restore only if the head is still the culprit's after-version (otherwise flag write_write_conflict), then a deterministic rerun through the outbox. The rerun dedupes on idempotency_key: a held item is superseded in place; a dispatched item emits nothing and is flagged. Then compensate (C), replan (LLM), and I2/dispatched effects go to the report. Each step is a signed ks.recover envelope and is re-checked in the transaction: tamper gives FROZEN; a stale expect gives hold/needs_approval. Tests: triage conflict, no double payment (hold 0 and >0, double apply), root candidates (RT9), conservative taint, append-only/fold, frozen, golden plan. No contract field change. Optional ask: a stale_plan hold reason.",
+  "summary": "Call #2 freeze applied to ADR-05 (~1,450 wc words incl. 'Amendments (Call #2)' changelog). Field-level objects for sensitive fields end to end (X1/B1: ids/pk-dot reject, store invariant, field-only edits don't bump row, taint, per-object restore, per-object revert-culprit-only baseline). Read rule (X2/I1): TickFrame.view joins read_set; whole-row reads include field objects; triage's view excludes .iban. Seed (A8/X3): culprit writes in [t0_seq_est, suspend]; t0_seq_est from bounded backward walk over alert evidence, tcb_view only. Ranking (H1/M9): [0] = evidence writer, MAX_HOPS=3 bounded walk; RT9 -> [crm, intake]. Planner: B6 expect = culprit after-version, M13 dropped; M14 rerun mechanics (original tool/args/keys/author, re-hold semantics); dry-run savepoint simulation; apply halts at first stale step (hold/stale_plan); ks.recover.<op> catalogue + ks.approve binding (G6); FROZEN on verify != OK or open tamper/stall alert, run-long. Tests: hero F2+ golden (triage kept, R=0/C=0 under X3b guard), F2+x conflict flag, F2+c culprit-window C>0, root_candidates + bounded, t0 tcb-blind, field/read tests. X4/X5 noted in Consequences.",
   "review": "[maya · changes] CHANGES (maya). The store (§1-2) is approved, so build of ks.state can start day 1. Amendments (a)-(c) are accepted and fit the WriteEntry validator; I fold them into the C3 docs (CON-02 M11). The write-write rule, append-only recovery, idempotency-key dedupe, conservative taint, the FROZEN re-check and the golden plan all meet the acceptance criteria. stale_plan is ACCEPTED: Reason.STALE_PLAN under HOLD (M8). Use hold/stale_plan, not needs_approval. Fix these by 23 Nov:\n1. AGENT VIEW (blocker, shared with me). Agents decide on data that never enters a read set. Example: crm applies ticket T-3, but its crm.update_supplier record reads only suppliers:SUP. Forward taint then under-taints and RT9 backward taint never reaches intake. I'm proposing a gateway-captured TickFrame.view whose entries join that tick's record read_set (CON-02 M6). Your §3 must state the rule, and a test must prove crm's record carries tickets:T-3.\n2. §4 ranking must match ADR-04: rank 0 = the writer of evidence_versions (write_set lookup), then backward-taint candidates. Bound the walk, or give a secondary order, so the oldest ancestor (seed data) doesn't rank first. Add a test where crm's read set also holds an older supplier version written by a third agent, and intake is still in the top 3.\n3. test_root_candidates contradicts ADR-06/SPEC RT9: comms doesn't write suppliers. Use intake plants T-3, crm writes the IBAN, expected [crm, intake], inventory and docs absent.\n4. HERO R (decide explicitly). The object is a row, so the flagged S-17 v3 still carries the swapped IBAN, and F2+ scores R>0 against the D13 target R=0. Either (A) keep the flag and state that the hero R covers flagged rows only (tell zoya/tara), or (B), my recommendation and allowed by \"else re-run\": when every version above `to` is tainted and every writer above the culprit is a deterministic honest action, restore with expect = the current tainted head and re-run triage. Flag only when the head writer is an LLM or non-deterministic. Untainted heads are kept, as now (M13).\n5. Rerun mechanics: it re-executes the original tool and args (side store) for ActionRef.agent_id/action_id. Keys derive from those, OutboxItem.author stays the original agent, and redacted args become a flag (M14). \"Re-enters the hold\" means: status queued, release_tick = tick + hold_window_ticks, lineage = the rerun's recorded read set.\n6. Dry-run: the diff for re-runs needs simulation in a rolled-back savepoint. replan objects get no DiffEntry. dispatched_tainted is decided from the simulated payload hash.\n7. Apply halts at the first stale step. Steps already applied stay (append-only), and the console gets a new plan with as_of_seq = now.\n8. ks.recover.<op> must be in the ADR-03 catalogue for principal ks.recovery, or it is denied as class U (with nisha; SEC-03 F2). Say which ops create envelopes: flag and replan create none, they are report/console only. Bind steps to an approval record (SEC-03 F5).\n9. FROZEN also when verify != OK, so a dead-dir edit freezes too (RT7); it lasts for the rest of the run (M12).\n10. t0_seq is the planner's estimate and must never read RunConfig.fault_tick/culprit (scorer-only).\nKeep it ≤900 words (currently 898): move test detail to the test file.",
   "log": [
     {
@@ -51,6 +51,16 @@
       "t": "19 Nov 06:33",
       "who": "pmo",
       "msg": "Call #2 freeze adopted — apply your items from CALL-02/resolutions.md assignment table + amendments X1–X9 as an 'Amendments (Call #2)' section"
+    },
+    {
+      "t": "19 Nov 10:55",
+      "who": "vikram",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 10:55",
+      "who": "vikram",
+      "msg": "→ in_review: freeze applied"
     }
   ]
 }

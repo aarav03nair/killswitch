@@ -9,15 +9,39 @@ from pydantic import Field, Strict, StringConstraints
 from .canonical import MAX_SAFE_INT
 
 __all__ = [
-    "AGENT_ID_RE", "PRINCIPAL_RE", "SYSTEM_PRINCIPALS", "Hash", "Sig", "Nonce", "AgentId", "PrincipalId",
-    "ActionId", "ConnId", "RecordId", "ToolName", "Token", "Seq", "Tick", "NonNeg", "Epoch", "LogicalUs",
-    "PubKey", "record_id_for", "is_system_principal",
+    "AGENT_ID_RE", "PRINCIPAL_RE", "SYSTEM_PRINCIPALS", "SYSTEM_CONN", "SYSTEM_TOOLS", "RECOVER_TOOL_PREFIX",
+    "Hash", "Sig", "Nonce", "AgentId", "PrincipalId", "ActionId", "ConnId", "RecordId", "ToolName", "Token", "Seq",
+    "Tick", "NonNeg", "Epoch", "LogicalUs", "PubKey", "record_id_for", "is_system_principal", "is_system_tool",
+    "system_tool_signers",
 ]
 
+SYSTEM_PRINCIPALS = frozenset({"ks.gateway", "ks.monitor", "ks.operator", "ks.recovery", "ks.witness"})
+"""Non-agent principals. Each holds its own key; agents can never claim a ``ks.*`` id.
+v1.1 (E2/X7): the human signer is ``ks.operator`` ("incident console" is only the read-only page).
+``ks.console`` is gone with no alias: it no longer even matches :data:`PRINCIPAL_RE`."""
+
 AGENT_ID_RE = r"^[a-z][a-z0-9_]{0,31}$"
-PRINCIPAL_RE = r"^(ks\.)?[a-z][a-z0-9_]{0,31}$"
-SYSTEM_PRINCIPALS = frozenset({"ks.console", "ks.monitor", "ks.recovery", "ks.gateway", "ks.witness"})
-"""Non-agent principals. Each holds its own key; agents can never claim a ``ks.*`` id."""
+PRINCIPAL_RE = r"^(?:ks\.(?:" + "|".join(sorted(p[3:] for p in SYSTEM_PRINCIPALS)) + r")|[a-z][a-z0-9_]{0,31})$"
+"""An agent id or exactly one of :data:`SYSTEM_PRINCIPALS` (any other ``ks.*`` id is rejected)."""
+
+SYSTEM_CONN = "c-0"
+"""Connection id reserved for in-gateway system envelopes (E1/K4). Agents get ``c-1``.. . A system
+``agent_id`` is accepted (``sig_ok``) only on ``c-0``; on ``c-1..`` it is ``deny/bad_sig`` unverified.
+Every envelope recorded on ``c-0`` claims a system principal. Both directions are Record validators.
+c-0 envelopes are still signature-verified; operator frames reach c-0 only via the peercred socket (J1)."""
+
+RECOVER_TOOL_PREFIX = "ks.recover."
+"""``ks.recover.<op>``, ``<op>`` a C5 ``StepOp``; signed by ``ks.recovery`` only."""
+
+SYSTEM_TOOLS: dict[str, frozenset[str]] = {
+    "ks.control": frozenset({"ks.monitor", "ks.gateway", "ks.operator", "ks.recovery"}),
+    "ks.dispatch": frozenset({"ks.gateway"}),
+    "ks.alert": frozenset({"ks.monitor"}),
+    "ks.approve": frozenset({"ks.operator"}),
+}
+"""Reserved ``ks.*`` tools -> principals that may execute them (K13), plus ``ks.recover.<op>`` (recovery).
+Each is a recorded envelope on ``c-0``. An agent principal submitting any ``ks.*`` tool is denied
+(``out_of_scope`` when its signature verified); a system principal executes only these tools."""
 
 _Int = Strict()
 Seq = Annotated[int, _Int, Field(ge=1, le=MAX_SAFE_INT)]
@@ -26,7 +50,8 @@ Tick = Annotated[int, _Int, Field(ge=0, le=MAX_SAFE_INT)]
 """Logical scheduling round assigned by the gateway's tick barrier."""
 NonNeg = Annotated[int, _Int, Field(ge=0, le=MAX_SAFE_INT)]
 Epoch = Annotated[int, _Int, Field(ge=0, le=MAX_SAFE_INT)]
-"""Credential epoch (fencing counter); bumped by suspend/revoke/release."""
+"""Credential epoch (fencing counter). Starts at 0 and is **strictly monotonic per principal** (D1):
+suspend, revoke and release each set a new maximum; an old epoch is never reused (see ``EpochFold``)."""
 LogicalUs = Annotated[int, _Int, Field(ge=0, le=MAX_SAFE_INT)]
 """Logical microseconds derived from the tick, never wall clock (determinism)."""
 
@@ -59,4 +84,18 @@ def record_id_for(seq: int) -> str:
 
 def is_system_principal(p: str) -> bool:
     return p in SYSTEM_PRINCIPALS
+
+
+def is_system_tool(tool: str) -> bool:
+    """True for every ``ks.*`` tool name (reserved namespace), known or not."""
+    return tool.startswith("ks.")
+
+
+def system_tool_signers(tool: str) -> frozenset[str]:
+    """Principals allowed to execute ``tool``; empty for unknown ``ks.*`` tools and for agent tools."""
+    if tool.startswith(RECOVER_TOOL_PREFIX):
+        from .recovery import StepOp  # local import: recovery imports ids
+        return frozenset({"ks.recovery"}) if tool[len(RECOVER_TOOL_PREFIX):] in {o.value for o in StepOp} \
+            else frozenset()
+    return SYSTEM_TOOLS.get(tool, frozenset())
 

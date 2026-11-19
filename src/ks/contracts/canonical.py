@@ -15,6 +15,11 @@ Rules (frozen with CON-01):
 6. ``None`` -> ``null``; tuples and lists -> arrays; dict keys must be ``str``.
 7. Parsing (:func:`loads`) is strict: valid UTF-8, no BOM, no duplicate keys, no floats, and the
    input must already be canonical (re-encoding must reproduce it byte for byte).
+8. (v1.1, SEC-03 B4) Nesting depth (arrays plus objects) is at most :data:`MAX_DEPTH` = 32. :func:`loads`
+   pre-scans the bytes before ``json.loads`` runs and :func:`dumps` checks while recursing, so a deep
+   frame is a :class:`CanonicalError` (gateway: ``deny/schema``), never a ``RecursionError``.
+   **Every** exception raised while decoding is a :class:`CanonicalError`; a gateway that maps
+   ``CanonicalError`` to ``deny/schema`` therefore covers every bad input.
 
 Contract models serialize via ``model.to_canonical()``, which calls :func:`dumps`.
 """
@@ -22,13 +27,18 @@ Contract models serialize via ``model.to_canonical()``, which calls :func:`dumps
 from __future__ import annotations
 
 import json
+import re
 from json.encoder import encode_basestring
 from typing import Any
 
-__all__ = ["MAX_SAFE_INT", "CanonicalError", "NonCanonicalError", "dumps", "loads", "dumps_line", "loads_line"]
+__all__ = ["MAX_SAFE_INT", "MAX_DEPTH", "CanonicalError", "NonCanonicalError", "ContractError", "check_depth", "dumps",
+           "loads", "dumps_line", "loads_line"]
 
 MAX_SAFE_INT = 2**53 - 1
 """Largest integer allowed anywhere in canonical data (I-JSON / JCS safe range)."""
+MAX_DEPTH = 32
+"""Deepest nesting of arrays plus objects (a top-level object is depth 1). Deeper input is rejected."""
+_MAX_INT_CHARS = len(str(-MAX_SAFE_INT))
 
 
 class CanonicalError(ValueError):
@@ -37,6 +47,10 @@ class CanonicalError(ValueError):
 
 class NonCanonicalError(CanonicalError):
     """Input parsed, but is not the canonical encoding of its own value."""
+
+
+class ContractError(CanonicalError):
+    """Input was canonical JSON but is not a valid contract object (schema or validator failure)."""
 
 
 def _key(k: str) -> bytes:
@@ -50,7 +64,7 @@ def _check_str(s: str) -> None:
         raise CanonicalError("string contains a lone surrogate") from exc
 
 
-def _enc(o: Any, out: list[str]) -> None:
+def _enc(o: Any, out: list[str], depth: int = 0) -> None:
     if o is None:
         out.append("null")
     elif o is True:
@@ -71,13 +85,17 @@ def _enc(o: Any, out: list[str]) -> None:
     elif isinstance(o, (bytes, bytearray, memoryview)):
         raise CanonicalError("bytes are not allowed in ks-canon/1; hex-encode them")
     elif isinstance(o, (list, tuple)):
+        if depth >= MAX_DEPTH:
+            raise CanonicalError(f"nesting deeper than MAX_DEPTH={MAX_DEPTH}")
         out.append("[")
         for i, item in enumerate(o):
             if i:
                 out.append(",")
-            _enc(item, out)
+            _enc(item, out, depth + 1)
         out.append("]")
     elif isinstance(o, dict):
+        if depth >= MAX_DEPTH:
+            raise CanonicalError(f"nesting deeper than MAX_DEPTH={MAX_DEPTH}")
         for k in o:
             if not isinstance(k, str):
                 raise CanonicalError(f"object keys must be str, got {type(k).__name__}")
@@ -88,10 +106,10 @@ def _enc(o: Any, out: list[str]) -> None:
                 out.append(",")
             out.append(encode_basestring(str.__str__(k)))
             out.append(":")
-            _enc(o[k], out)
+            _enc(o[k], out, depth + 1)
         out.append("}")
     elif hasattr(o, "__ks_canonical__"):
-        _enc(o.__ks_canonical__(), out)
+        _enc(o.__ks_canonical__(), out, depth)
     else:
         raise CanonicalError(f"type {type(o).__name__} is not canonically serializable")
 
@@ -112,6 +130,8 @@ def _no_const(s: str) -> Any:
 
 
 def _int(s: str) -> int:
+    if len(s) > _MAX_INT_CHARS:  # also avoids Python's int-digit-limit ValueError on huge literals
+        raise CanonicalError(f"integer literal of {len(s)} chars outside the safe range")
     v = int(s)
     if not -MAX_SAFE_INT <= v <= MAX_SAFE_INT:
         raise CanonicalError(f"integer {s} outside the safe range")
@@ -127,8 +147,36 @@ def _pairs(pairs: list[tuple[str, Any]]) -> dict[str, Any]:
     return d
 
 
+_SPECIAL = re.compile(rb'[\\"\[\]{}]')
+
+
+def check_depth(data: bytes) -> None:
+    """Raise :class:`CanonicalError` if ``data`` nests arrays/objects deeper than :data:`MAX_DEPTH`.
+    A linear scan that tracks JSON string state exactly (brackets inside strings do not count)."""
+    depth, in_str, esc_end = 0, False, -1
+    for m in _SPECIAL.finditer(data):
+        i = m.start()
+        if i < esc_end:  # the character right after a backslash inside a string
+            continue
+        c = data[i]
+        if in_str:
+            if c == 0x5C:
+                esc_end = i + 2
+            elif c == 0x22:
+                in_str = False
+        elif c == 0x22:
+            in_str = True
+        elif c in (0x5B, 0x7B):
+            depth += 1
+            if depth > MAX_DEPTH:
+                raise CanonicalError(f"nesting deeper than MAX_DEPTH={MAX_DEPTH}")
+        elif c in (0x5D, 0x7D):
+            depth -= 1
+
+
 def loads(data: bytes) -> Any:
-    """Strictly parse canonical bytes. Raises :class:`NonCanonicalError` if ``data`` is not canonical."""
+    """Strictly parse canonical bytes. Raises :class:`NonCanonicalError` if ``data`` is not canonical,
+    and :class:`CanonicalError` for anything else that goes wrong (never another exception type)."""
     if not isinstance(data, (bytes, bytearray)):
         raise CanonicalError("loads() takes bytes")
     data = bytes(data)
@@ -138,12 +186,18 @@ def loads(data: bytes) -> Any:
         text = data.decode("utf-8")
     except UnicodeDecodeError as exc:
         raise CanonicalError("input is not valid UTF-8") from exc
+    check_depth(data)
     try:
         obj = json.loads(text, parse_float=_no_float, parse_int=_int, parse_constant=_no_const,
                          object_pairs_hook=_pairs)
+        canon = dumps(obj)
+    except CanonicalError:
+        raise
     except json.JSONDecodeError as exc:
         raise CanonicalError(f"invalid JSON: {exc}") from exc
-    if dumps(obj) != data:
+    except Exception as exc:  # RecursionError, ValueError, MemoryError...: fail closed as CanonicalError
+        raise CanonicalError(f"undecodable input: {exc.__class__.__name__}") from exc
+    if canon != data:
         raise NonCanonicalError("input is valid JSON but not in canonical form")
     return obj
 

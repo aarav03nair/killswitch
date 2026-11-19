@@ -36,9 +36,18 @@ class Value(BaseModel):
     @classmethod
     def from_canonical(cls, data: bytes) -> Self:
         """Strict parse: bytes must be canonical AND equal the canonical form of the parsed model
-        (so missing defaulted fields or unsorted sets are rejected, not silently fixed)."""
-        m = cls.model_validate(canonical.loads(data))
-        if m.to_canonical() != bytes(data):
+        (so missing defaulted fields or unsorted sets are rejected, not silently fixed).
+        Every failure is a :class:`~ks.contracts.canonical.CanonicalError` (validation failures are the
+        subclass :class:`~ks.contracts.canonical.ContractError`)."""
+        obj = canonical.loads(data)
+        try:
+            m = cls.model_validate(obj)
+            again = m.to_canonical()
+        except canonical.CanonicalError:
+            raise
+        except Exception as exc:  # pydantic ValidationError, RecursionError, ...
+            raise canonical.ContractError(f"{cls.__name__}: {exc}") from exc
+        if again != bytes(data):
             raise canonical.NonCanonicalError(f"{cls.__name__}: bytes are not this object's canonical form")
         return m
 

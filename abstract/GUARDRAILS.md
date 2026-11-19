@@ -1,6 +1,6 @@
 # GUARDRAILS: claims we can defend vs claims a jury will punish (ABS-02)
 
-Owner: zoya · Reviewer: panel · 19 Nov 2026 · Inputs: abstract/FACT-CARD.md (only source for outside numbers), research/SYNTHESIS.md §0/§3/§6, research/RES-11.md §1/§4/§5, research/RES-10.md (DROP list), org/meetings/CALL-01.md D1–D13 (binding), org/adr/THREAT-MODEL.md C1–C6, abstract/TERMS.md (locked terms).
+Owner: zoya · Reviewer: panel · 19 Nov 2026 · Inputs: abstract/FACT-CARD.md (only source for outside numbers), research/SYNTHESIS.md §0/§3/§6, research/RES-11.md §1/§4/§5, research/RES-10.md (DROP list), org/meetings/CALL-01.md D1–D13 (binding), org/meetings/CALL-02.md + CALL-02/resolutions.md (design freeze, binding; D13 meaning revised), CALL-02/anaya.md §2–4, org/adr/THREAT-MODEL.md C1–C6, abstract/TERMS.md v2 (locked terms).
 
 **How to use.** Every row is a phrase or a rule. None of it is abstract text: Aarav writes every sentence (CHARTER). Use the locked terms from TERMS.md.
 
@@ -31,15 +31,15 @@ Owner: zoya · Reviewer: panel · 19 Nov 2026 · Inputs: abstract/FACT-CARD.md (
 |---|---|---|---|
 | F1 | **Niche** = multi-agent + per-author + shared external state + dependants handled, as a combination | RES-11 §1 (watch-outs); SYNTHESIS §1; D1 | Claim the combination, never one part on its own (each part has prior art) |
 | F2 | One mediated path: every action passes through the gateway; unmediated writes are caught by reconciliation (state = fold(log)) | Principle 1; D11 (DB bypass); THREAT-MODEL RT1 | "Caught", not "impossible" |
-| F3 | The gateway's adapters record read and write sets at row level; agents never self-report | Principle 2; D8 | Lineage the agent declares is never trusted (D8, C5) |
+| F3 | The gateway's adapters record read and write sets at row level, and at field level for sensitive fields (field objects); agents never self-report | Principle 2; D8; CALL-02 B1, X1, X2 | Lineage the agent declares is never trusted (D8, C5). Field objects are generic (driven by the sensitive-field config), never "IBAN-specific". A whole-row read counts as reading its field objects too |
 | F4 | Identity on every action: agent signature + gateway signature; the gateway assigns `seq` and time | D6; principle 3; THREAT-MODEL rule 3, RT6 | A valid signature proves which key signed through which handle, not intent (C4) |
 | F5 | Identify = an invariant detector raises an alert, then attribution is a **lookup** on signed records, not an inference | Principle 6; contrast with P6 | It is a different task from Who&When, so no "beats" claim (X20) |
 | F6 | Contain **per action**: a lineage hold on writes and outbox items whose recorded read set touches tainted versions; independent agents keep running | D8; principle 7; C5 | Effects released before the alert are not held; at hold window 0 they count as residual damage (D10) |
 | F7 | Graded containment: auto-suspend only on hard evidence (scope breach, I-class invariant breach, reconciliation mismatch = class U); anomalies need one click; revoke only after confirmation | D7 | Do not merge these into a single "auto-kill" |
 | F8 | Anti-framing: a bad signature suspends the **submitting connection**, never the claimed agent | D7; C4; RT3 | Pairs well with the jury break (F12) |
-| F9 | Recovery = taint-scoped revert: only writes whose current value is still the culprit's after-version; otherwise re-run or flag; append-only records | Principle 8; C6 | Over-taint rather than under-taint (conservative, D4) |
+| F9 | Recovery = taint-scoped revert: only writes whose current value is still the culprit's after-version; otherwise flag (write-write conflict); readers re-run; append-only records | Principle 8; C6; CALL-02 B1, B6, A8, X3 | Over-taint rather than under-taint (conservative, D4). Conflict granularity = field object for sensitive fields, **row** for everything else: never say "same field" in general. The culprit's own writes between fault and suspension are reverted too and count in collateral loss C (we cannot tell its honest ones apart without the fault tick, which the system never sees) |
 | F10 | Dependants: deterministic steps re-run through the outbox with idempotency keys (no re-emitted effects); LLM steps become a re-plan queued for approval | D4; principle 9 | The finale has no LLM agent (D9). Re-plan is a queued item, not autonomous repair |
-| F11 | Irreversible effects: hold window in the outbox, then compensate or report, never reverse | D10; C6; RES-11 §5 must-not #3 | Containment holds and never cancels (`release` = un-hold + restore epoch). Discarding a held item is an approved recovery-plan step after the dry-run diff |
+| F11 | Irreversible effects: hold window in the outbox, then compensate or report, never reverse | D10; C6; RES-11 §5 must-not #3 | Containment holds and never cancels. `release` = active again at a fresh epoch; it lifts suspension only, lineage holds stay (CALL-02 D4). Discarding a held item is an approved recovery-plan step after the dry-run diff |
 | F12 | Tamper-evident **up to the last witnessed head**: hash chain + separate witness process signing (seq, head, tick) every tick + `verify` (chain, signatures, witness heads, seq gaps, reconciliation) | D6; C1 | Use this exact scope. A stalled witness head raises an alert. No Merkle proofs |
 | F13 | The jury can try to break it live: `ks inject`, rogue agent with arbitrary Python, direct `state.db` bypass, log-line edit, full chain rewrite → `verify`; threat model published first | D11; THREAT-MODEL §7 | F3 (exfiltration) is a pytest, not live. Pass values are targets |
 
@@ -47,12 +47,12 @@ Owner: zoya · Reviewer: panel · 19 Nov 2026 · Inputs: abstract/FACT-CARD.md (
 
 | # | Claim (note form) | Rests on | Condition / limit |
 |---|---|---|---|
-| W1 | Recovery is **scored against an oracle** (the run without the culprit, S\*), never against our own taint graph | Principle 10; SYNTHESIS §6; RES-11 §5 safe #3 | Recovery metrics sit next to Airlock-style containment metrics, not in place of them |
+| W1 | Recovery is **scored against an oracle** (S\*: same seed, fault off, culprit stops from its suspension tick), never against our own taint graph | Principle 10; SYNTHESIS §6; RES-11 §5 safe #3; CALL-02 A1, X3a | Recovery metrics sit next to Airlock-style containment metrics, not in place of them. Never describe S\* as "the run without the culprit" or "culprit removed" (TERMS §5). Snapshot and revert-culprit-only baselines are given t0, so call them **oracle-assisted** (X5) |
 | W2 | The audit holds even against the audited agent, within the stated threat model | D6; THREAT-MODEL §3 | Always attach "within the threat model" (host compromise is out of scope) |
 | W3 | Re-plan / redo cost reported openly, because Airlock's "kept without redo" metric penalises re-runs | RES-11 §1 watch-out 2; SYNTHESIS §6 | Pairs with "re-emitted effects = 0" (target) |
 | W4 | **Maps to** AI Act Art 12(1) (automatic logs) and Art 14(4)(e) (stop "in a safe state"), NIST AI RMF MANAGE 4.3, RBI FREE-AI Sutra 5 ("Accountability cannot be delegated to the model and underlying algorithm") | FACT-CARD #15; RES-08 ref [19] (NIST AI RMF MANAGE 4.3, not on the card); FACT-CARD row R (spare, status S) | "Maps to" only. NIST MANAGE 4.3 as a reference only, no number. Article numbers only, no amending-regulation number. High-risk dates 2 Dec 2027 (Annex III) / 2 Aug 2028 (Annex I). RBI quote: open the RBI report and check the exact words before printing (press paraphrases them); if not checked, omit it |
 | W5 | Enterprise path: OTel export, policy-as-code; Dolt and agentgateway are **production twins** | D5; SYNTHESIS §5; CHARTER | A twin is a stated path, not an integration |
-| W6 | A banking-readable scenario: crm swaps a supplier IBAN; billing, payments and comms consume it; triage later edits crm (write-write conflict); inventory and docs stay independent | D12 (hero F2+) | It is the scenario we will show, not a real incident. The ×10 price change stays in the data, not in the story |
+| W6 | A banking-readable scenario: crm swaps a supplier IBAN; billing, payments and comms consume it; triage later edits the same supplier and its edit is **kept** (no flag); inventory and docs stay independent | D12 (hero F2+); CALL-02 hero decision, B2, B3 ⚑ | It is the scenario we will show, not a real incident. The ×10 price change stays in the data, not in the story. The hero has **no** write-write conflict: never say triage's edit is flagged or conflicts. The honest conflict lives in bench F2+x (L9), for Jury Q&A only |
 | W7 | The brief's three scores (time-to-identify, time-to-contain, clean recovery) have **no agreed measurement** in the standards we checked; we define checkable ones, scored against the oracle | RES-08 headline (NIST SP 800-61r3 has no mean-time metrics; Google SRE on mean-time stats) | Always "in the standards we checked"; never "no standard exists". Our definitions are §1.5; no seconds (D13) |
 
 ### 1.4 Limits to state (stating them builds credibility; one short line in the abstract)
@@ -66,21 +66,24 @@ Owner: zoya · Reviewer: panel · 19 Nov 2026 · Inputs: abstract/FACT-CARD.md (
 | L5 | Key isolation: "enforced in production (uid/container), detected here by reconciliation" | C2; CALL-01 key isolation; Maya's recorded dissent |
 | L6 | Finale agents are deterministic; one LLM agent is a stretch goal | D9 |
 | L7 | Scale: about 10 agents, single host, tick barrier (logical clock) | RES-11 §3 "Us" column; CALL-01 determinism |
+| L8 | **F2+c honesty note.** Hero C = 0 holds only because crm writes nothing else between fault and suspension (per-seed precondition, guard test). In bench F2+c crm does honest work in that window: it is reverted, collateral loss C > 0, reported, not hidden | CALL-02 X3b, X3c; anaya dissent note |
+| L9 | **F2+x honesty note.** In bench F2+x triage edits the non-sensitive row crm wrote (the ×10 price) → write-write conflict → flag → residual damage R > 0, unresolved. This is the honest conflict case; show it if asked (JURY-QA Q10) | CALL-02 B5 |
 
 ### 1.5 Our numbers: definitions and labelled targets only (D13)
 
 | Metric | Definition | Label in the abstract |
 |---|---|---|
-| t0 | Oracle time of the first bad effect | definition only |
-| B / G | Faulty-run effects absent or different in S\* / honest effects that match S\* | definition only |
-| residual damage R | \|B left\| / \|B\| | **target 0** |
-| collateral loss C | \|G lost\| / \|G\| | **target 0** |
-| clean recovery | R = 0 and C = 0 in the same run | **target** |
-| post-alert tainted effects | Tainted effects by any agent after the alert | **target 0** |
-| irreversible tainted effects released | Tainted payments or emails that left despite holds | **target 0** (SYNTHESIS §6, THREAT-MODEL RT10) |
+| D13 meaning (CALL-02, ⚑ Aarav) | Elements the targets sentence must carry, in Aarav's words: (1) label "targets, to be measured"; (2) scope = the hero scenario only; (3) residual damage R = 0 and collateral loss C = 0, both written in full; (4) zero post-alert tainted effects and zero irreversible tainted effects released; (5) an honest agent's later change to the **same data** → a person decides → counts in residual damage; (6) the culprit's own work between fault and suspension → reverted → counts in collateral loss | Meaning only, not wording. ✗ "same field" (wrong outside sensitive fields, where conflicts are row-level) · ✗ C = 0 read as unconditional (needs clause 6) · ✗ bare R / C (§1.5 note) · ✗ seconds |
+| t0 | Oracle time of the first bad effect (never before the fault tick) | definition only |
+| B / G | Fixed at recovery start: faulty-run effects absent or different in S\* / effects that match S\* (including the culprit's honest ones) | definition only |
+| residual damage R | \|B left\| / \|B\| at run end; items still held at T and unresolved flags count as left | **target 0** |
+| collateral loss C | \|G lost\| / \|G\|; the culprit's reverted in-window work is reported separately (`c_culprit_window`) | **target 0** (hero only; F2+c > 0, L8) |
+| clean recovery | R = 0 and C = 0 in the same run, every invariant holding at run end | **target** |
+| post-alert tainted effects | Bad effects by any agent after the alert, counted from the ledger (score key `post_alert_tainted_effects`) | **target 0** |
+| irreversible tainted effects released | Bad payments or emails that actually left (score key `irreversible_tainted_released`) | **target 0** (SYNTHESIS §6, THREAT-MODEL RT10) |
 | re-emitted effects | Effects sent twice by re-runs | **target 0** (SYNTHESIS §6) |
 | TTI-detect / TTI-attribute / TTC | t0 → first alert / alert → correct agent + first bad action / alert → first denied culprit envelope | definition only; **no seconds** (no value fixed yet) |
-| protocol | ≥20 seeded runs; median, p95, max; snapshot, revert-culprit-only and no-op baselines; hold 0 vs >0 | "planned" |
+| protocol | ≥20 seeded runs; median, p95, max; snapshot and revert-culprit-only baselines (both **oracle-assisted**: given t0) and no-op; hold 0 vs >0; collateral stall reported apart from collateral loss; F2+x and F2+c on the bench | "planned" |
 
 Write "residual damage R" and "collateral loss C" in full on first use, so they are not confused with class R and class C (TERMS §5).
 
@@ -118,7 +121,7 @@ Write "residual damage R" and "collateral loss C" in full on first use, so they 
 | X26 | Exact or semantic taint tracking | THREAT-MODEL §3 (semantic influence out of scope); Airlock App. F | Conservative over-taint, by design |
 | X27 | "All honest work kept without redo" | Re-runs count as redo (RES-11 §1 watch-out 2) | Re-runs with no re-emitted effects (target 0) + redo cost reported |
 | X28 | Production-ready, scalable, "runs on Dolt", "integrated with agentgateway" | D5 (own SQLite; Dolt = twin); scale ~10 agents (L7) | Production twin / path; tested scale stated |
-| X29 | "We cancel or block" as a containment action | CALL-01 release semantics ("we hold, never cancel"); C6 | Lineage hold → release, or a recovery-plan step after the dry-run diff |
+| X29 | "We cancel or block" as a containment action | CALL-01 release semantics ("we hold, never cancel"); C6 | Lineage hold → unhold, or a recovery-plan step after the dry-run diff (`release` lifts a suspension only, CALL-02 D4) |
 | X30 | Detecting any misbehaviour | Detection = invariant detectors on data + scope checks (principle 6); splitting under thresholds has no claim (THREAT-MODEL §5) | Detection on declared data invariants and hard evidence |
 | X31 | Cordon 45/45 vs 14/45 | Baselines are the authors' own adapters on their own suite; RES-10 DROP 3; FACT-CARD "not safe to print"; D13 | Concept + arXiv ID only, no number |
 | X32 | Any DeltaBox ms figure | FACT-CARD "not safe to print"; D13; RES-10 DROP 6 | Concept + arXiv ID only, no number |
@@ -147,7 +150,7 @@ Write "residual damage R" and "collateral loss C" in full on first use, so they 
 | trustless, zero-trust | The gateway and witness are trusted (TCB, B2) | Trust placed only in the gateway and witness |
 | achieves, demonstrates, shows, reduced (past tense) | Nothing run before 25 Nov | Will show; target; designed |
 | kill / kill switch (as an operation) | TERMS: project name only; D7 is graded | Suspend → revoke after confirmation; lineage hold |
-| cancelled (payment), as a containment action | Containment never cancels: `release` = un-hold + restore epoch (CALL-01 release semantics) | Held in the outbox. A held item is cancelled only by an approved recovery-plan step (`cancel_outbox`, maya.md C5; TERMS "cancel (outbox item)") after the dry-run diff |
+| cancelled (payment), as a containment action | Containment never cancels: holds end by `unhold`; `release` lifts a suspension at a fresh epoch (CALL-01 release semantics; CALL-02 D4) | Held in the outbox. A held item is cancelled only by an approved recovery-plan step (`cancel_outbox`, maya.md C5; TERMS "cancel (outbox item)") after the dry-run diff |
 | ground truth (in the abstract) | TERMS term lock | Oracle (S\*) |
 
 ---
@@ -155,7 +158,7 @@ Write "residual damage R" and "collateral loss C" in full on first use, so they 
 ## 4. 30-second self-check (run on the draft before sending it for review)
 
 1. **Ctrl-F §3 words**: no hits, or every hit has its scope attached.
-2. **Each number**: external → on abstract/FACT-CARD.md (the only source), with its "must travel with it" wording? Ours → definition + "target"? No seconds anywhere?
+2. **Each number**: external → on abstract/FACT-CARD.md (the only source), with its "must travel with it" wording? Ours → definition + "target"? No seconds anywhere? Targets sentence carries all six D13 elements (§1.5 first row)?
 3. **Tense**: does any sentence say we built, ran, measured or achieved something? Change it to design / will show / target.
 4. **Order (D1)**: problem (dependency gap) → fix (provenance) → why (testimony vs evidence; oracle scoring).
 5. **Airlock**: named once, credited, "complementary", no comparison adjective (D3, X3).
@@ -182,3 +185,13 @@ Write "residual damage R" and "collateral loss C" in full on first use, so they 
 - F11: discarding a held item is an **approved** recovery-plan step after the dry-run diff.
 - W4: NIST AI RMF MANAGE 4.3 now sourced to RES-08 ref [19] (not on the FACT-CARD); reference only, no number.
 - New W7: the brief's three scores have no agreed measurement in the standards we checked; we define checkable ones (source RES-08 headline). Used in SKELETON 3b.
+
+## Changes v4 (CALL-02 design freeze, ABS-08, 19 Nov)
+
+- F3: field-level read / write sets for sensitive fields (field objects, generic); whole-row reads include them.
+- F9: conflict granularity is field-or-row; the culprit's own in-window writes are reverted and count in collateral loss C (A8, X3).
+- W1: S\* = same seed, fault off, culprit stops from its suspension tick; "the run without the culprit" retired; snapshot and revert-culprit-only labelled oracle-assisted (X5).
+- W6: triage's edit is **kept** in the hero; no conflict in the hero; the honest conflict is bench F2+x.
+- New limits L8 (F2+c: C > 0 when crm works honestly in-window) and L9 (F2+x: honest conflict, R > 0).
+- §1.5: new first row with the six elements of the revised D13 meaning (⚑ Aarav; wording is his); B / G frozen at recovery start; R counts held-at-T and flagged items; C notes `c_culprit_window`; score keys `post_alert_tainted_effects` / `irreversible_tainted_released`; protocol adds oracle-assisted label, collateral stall, F2+x / F2+c. Self-check 2 checks the six elements.
+- Release semantics (D4): F11, X29 and the §3 "cancelled" row no longer say "restore epoch"; release = fresh epoch, lifts suspension only.

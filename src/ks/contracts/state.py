@@ -1,7 +1,32 @@
 """C3 State: object ids, versions, read/write set entries, outbox items, side store, and the state API.
 
-Object id is ``table:pk``. Every object has a per-object version counter starting at 1; each write
-creates version ``before.ver + 1``. Deletion writes the JSON value ``null`` (hash = TOMBSTONE_HASH).
+**Object ids (v1.1, B1/X1).** A row object is ``table:pk``. Each ``RunConfig.sensitive_fields`` entry
+``table.field`` is its own versioned **field object** ``table:pk.field`` (:func:`field_obj_id`); the rest
+of the row stays ``table:pk``. A pk never contains ``.`` (validator on every ``ObjId``), so
+:func:`split_obj_id` -> ``(table, pk, field | None)`` is unambiguous. ``OBJ_ID_RE`` is unchanged; the
+"no dot in pk" rule is a Python validator (the JSON schema still shows only the pattern). That a
+``.field`` suffix names a sensitive field of that table needs the config: ``RunConfig.check_obj``.
+
+**Versions (M11).** Every object has a per-object counter starting at 1; each write creates
+``before.ver + 1``. (a) A delete writes a tombstone (value ``null``, hash TOMBSTONE_HASH); a re-create
+continues the counter; ``before is None`` iff the object never existed. (b) A restore writes a *new*
+version (author ``ks.recovery``); taint keys on ``(obj, ver)``, never on hash. (c) A version written at
+seq *s* is visible only to records with seq > *s* (execution is sequential, M2).
+
+**Field objects in writes and reads (X2).** A row value never carries a sensitive key, so each datum
+lives in exactly one object; the row's value hash excludes sensitive fields. Actions write only the
+objects that changed: a field-only edit does not bump the row. Row create/delete also writes/tombstones
+its field objects; a null field is a tombstone. A read records every object it delivered:
+
+* a **whole-row read** (``<table>.read``, an aggregate, a row in ``TickFrame.view``) lists the row **and
+  every existing field object of that row** (``RunConfig.field_objs_of``);
+* a projection that omits the field lists only the row (e.g. triage's view lists ``suppliers:S-17``,
+  not ``suppliers:S-17.iban``);
+* any read that returns a sensitive value lists its field object.
+
+**Aggregates enumerate rows (SEC-03 F7).** There is no coarse (``table:*``) or absence read in v1:
+an adapter that scans a table lists every row it read (and, per X2, their field objects).
+
 Records carry only (obj, ver, hash); raw values live in the side store, keyed by value hash.
 """
 
@@ -12,42 +37,78 @@ from collections.abc import Mapping, Sequence
 from enum import StrEnum
 from typing import Annotated, Any, Literal, Protocol, runtime_checkable
 
-from pydantic import Field, JsonValue, Strict, StringConstraints, field_validator, model_validator
+from pydantic import AfterValidator, Field, JsonValue, Strict, StringConstraints, field_validator, model_validator
 
 from ._base import Document, Value
 from .canonical import MAX_SAFE_INT
-from .hashing import Domain, raw_hash, tagged_hash
+from .hashing import Domain, raw_hash, tagged_hash, value_hash
 from .ids import ActionId, Hash, PrincipalId, Seq, Token
 
 __all__ = [
-    "OBJ_ID_RE", "ObjId", "Version", "make_obj_id", "split_obj_id", "ObjVer", "VersionRef", "ReadEntry",
+    "OBJ_ID_RE", "PK_RE", "FIELD_RE", "ObjId", "Version", "make_obj_id", "field_obj_id", "row_obj_id",
+    "split_obj_id", "is_field_obj", "ViewEntry", "ObjVer", "VersionRef", "ReadEntry",
     "WriteEntry", "StateRead", "HistoryEntry", "OutboxStatus", "OutboxItem", "SideDomain", "SideEntry",
     "StateView", "StateWriter", "SideStore", "state_digest", "idempotency_key", "OutboxClass",
 ]
 
 OBJ_ID_RE = r"^[a-z][a-z0-9_]{0,31}:[A-Za-z0-9_.-]{1,128}$"
-ObjId = Annotated[str, StringConstraints(strict=True, pattern=OBJ_ID_RE)]
-"""``table:pk``, e.g. ``suppliers:S-17``, ``outbox:ob-000042``, ``tickets:T-3``."""
+"""Unchanged since 1.0 (B1). The id grammar is refined by :func:`split_obj_id` (no ``.`` in a pk)."""
+TABLE_RE = r"[a-z][a-z0-9_]{0,31}"
+PK_RE = r"[A-Za-z0-9_-]{1,128}"
+"""A primary key: no ``.`` (X1), so ``table:pk.field`` can never collide with a row id."""
+FIELD_RE = r"[a-z][a-z0-9_]{0,63}"
+"""A field name, as in ``RunConfig.sensitive_fields`` entries ``table.field``."""
+
+_OBJ = re.compile(OBJ_ID_RE)
+_FORM = re.compile(rf"^({TABLE_RE}):({PK_RE})(?:\.({FIELD_RE}))?$")
+
+
+def split_obj_id(obj: str) -> tuple[str, str, str | None]:
+    """``"suppliers:S-17"`` -> ``("suppliers", "S-17", None)``; ``"suppliers:S-17.iban"`` ->
+    ``("suppliers", "S-17", "iban")``. Raises ``ValueError`` for anything else (e.g. a dotted pk)."""
+    m = _FORM.match(obj) if isinstance(obj, str) and _OBJ.match(obj) else None
+    if m is None:
+        raise ValueError(f"invalid object id {obj!r} (table:pk or table:pk.field; no '.' in pk)")
+    return m.group(1), m.group(2), m.group(3)
+
+
+def _check_obj(obj: str) -> str:
+    split_obj_id(obj)
+    return obj
+
+
+ObjId = Annotated[str, StringConstraints(strict=True, pattern=OBJ_ID_RE), AfterValidator(_check_obj)]
+"""``table:pk`` (row) or ``table:pk.field`` (sensitive field object), e.g. ``suppliers:S-17``,
+``suppliers:S-17.iban``, ``outbox:ob-000042``, ``tickets:T-3``. A pk never contains ``.``."""
 Version = Annotated[int, Strict(), Field(ge=1, le=MAX_SAFE_INT)]
 """Per-object version; 1 = created. 0 never appears (absent = ``None``)."""
 
-_OBJ = re.compile(OBJ_ID_RE)
-
 
 def make_obj_id(table: str, pk: str) -> str:
-    """Build and validate a ``table:pk`` object id."""
+    """Build and validate a row id ``table:pk``. A ``.`` in ``pk`` is rejected (X1)."""
     o = f"{table}:{pk}"
-    if not _OBJ.match(o):
-        raise ValueError(f"invalid object id {o!r}")
+    if split_obj_id(o)[2] is not None:
+        raise ValueError(f"'.' not allowed in pk {pk!r}")
     return o
 
 
-def split_obj_id(obj: str) -> tuple[str, str]:
-    """``"suppliers:S-17"`` -> ``("suppliers", "S-17")``."""
-    if not _OBJ.match(obj):
-        raise ValueError(f"invalid object id {obj!r}")
-    t, _, pk = obj.partition(":")
-    return t, pk
+def field_obj_id(table: str, pk: str, field: str) -> str:
+    """Build and validate a field object id ``table:pk.field`` (only for ``sensitive_fields`` entries)."""
+    o = f"{table}:{pk}.{field}"
+    t, p, f = split_obj_id(o)
+    if (t, p, f) != (table, pk, field):
+        raise ValueError(f"invalid field object {o!r}")
+    return o
+
+
+def row_obj_id(obj: str) -> str:
+    """The row object of ``obj``: ``suppliers:S-17.iban`` -> ``suppliers:S-17``; a row id maps to itself."""
+    t, pk, _ = split_obj_id(obj)
+    return f"{t}:{pk}"
+
+
+def is_field_obj(obj: str) -> bool:
+    return split_obj_id(obj)[2] is not None
 
 
 class ObjVer(Value):
@@ -77,6 +138,30 @@ class ReadEntry(Value):
     """Version read."""
     hash: Hash
     """Value hash of the version read."""
+
+
+class ViewEntry(Value):
+    """One entry of ``TickFrame.view`` (I1): an object version delivered to an agent with its raw value.
+    The gateway adds ``read_entry()`` of every delivered entry to the ``read_set`` of whatever that agent
+    submits in the same tick. Raw value: transport only, never in a record."""
+
+    obj: ObjId
+    """Object delivered (row or field object, per the scenario's per-agent view scope)."""
+    ver: Version
+    """Version delivered."""
+    hash: Hash
+    """``value_hash(value)``; checked."""
+    value: JsonValue
+    """Raw value of that version (a row value never contains sensitive fields)."""
+
+    @model_validator(mode="after")
+    def _h(self) -> ViewEntry:
+        if self.hash != value_hash(self.value):
+            raise ValueError("view entry hash does not match value")
+        return self
+
+    def read_entry(self) -> ReadEntry:
+        return ReadEntry(obj=self.obj, ver=self.ver, hash=self.hash)
 
 
 class WriteEntry(Value):
@@ -187,7 +272,9 @@ class OutboxItem(Document):
     status: OutboxStatus
     """Lifecycle state."""
     release_tick: Annotated[int, Strict(), Field(ge=0, le=MAX_SAFE_INT)]
-    """Earliest tick it may be released (created tick + hold window)."""
+    """Earliest tick it may be released: ``created_tick + H`` (H = ``hold_window_ticks``); with an early
+    hold (G3), when the lineage holds a sensitive-field version written at tick v,
+    ``max(created_tick + H, v + 2H)``. Off at H = 0."""
     dispatched_seq: Seq | None
     """Record seq of the dispatch; set iff status is dispatched."""
 

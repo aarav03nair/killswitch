@@ -10,6 +10,12 @@ signature without the raw args, and redacting the args from the side store never
 
 Unknown keys are rejected (gateway: ``deny/schema``). Agent-supplied time or sequence goes only in
 ``claimed_ts_us`` / ``claimed_seq``; the gateway never orders by them (RT6).
+
+Admission order (D2): **signature, expiry, nonce**, then epoch/deny-list (re-checked in the write txn).
+Expiry: ``tick <= expiry_tick <= tick + MAX_EXPIRY_TICKS`` (:func:`expiry_ok`), else ``deny/expired``.
+The nonce store keeps exactly that window. A reused nonce **or a reused ``(agent_id, action_id)``** is
+``deny/nonce_reused`` (K11: checked at the nonce step; ``idempotency_key`` relies on that uniqueness).
+An unhold re-execution (M10) re-runs a held envelope without re-checking nonce or expiry.
 """
 
 from __future__ import annotations
@@ -23,10 +29,17 @@ from ._base import Document, Value
 from .hashing import Domain, args_hash
 from .ids import ActionId, Epoch, LogicalUs, NonNeg, Nonce, PrincipalId, Sig, Tick, ToolName, Hash
 
-__all__ = ["MAX_ACT_DEPTH", "ActLink", "EnvelopeHeader", "Envelope"]
+__all__ = ["MAX_ACT_DEPTH", "MAX_EXPIRY_TICKS", "ActLink", "EnvelopeHeader", "Envelope", "expiry_ok"]
 
 MAX_ACT_DEPTH = 16
 """Longest act chain the gateway accepts."""
+MAX_EXPIRY_TICKS = 8
+"""Largest ``expiry_tick - tick`` admitted (SEC-03 B3, D2). Also the nonce-store window."""
+
+
+def expiry_ok(expiry_tick: int, tick: int) -> bool:
+    """The one expiry rule: valid at ``tick`` iff ``tick <= expiry_tick <= tick + MAX_EXPIRY_TICKS``."""
+    return tick <= expiry_tick <= tick + MAX_EXPIRY_TICKS
 
 
 class ActLink(Value):
@@ -56,9 +69,11 @@ class _EnvelopeFields(Document):
     nonce: Nonce
     """Anti-replay nonce, unique per agent_id (``ks.envelope.nonce``). Not used for dedupe."""
     expiry_tick: Tick
-    """Last tick at which the envelope is valid; later -> ``deny/expired`` (``ks.envelope.expiry_tick``)."""
+    """Last tick at which the envelope is valid; later, or more than MAX_EXPIRY_TICKS ahead -> ``deny/expired``
+    (``ks.envelope.expiry_tick``)."""
     epoch: Epoch
-    """Agent's credential epoch; stale -> ``deny/stale_epoch``, checked inside the write txn (``ks.agent.epoch``)."""
+    """Agent's credential epoch (learned from ``TickFrame.epoch``); stale -> ``deny/stale_epoch``, checked inside
+    the write txn (``ks.agent.epoch``)."""
     claimed_ts_us: LogicalUs | None
     """Agent-claimed time, kept for evidence only; ordering uses gateway ``seq``/``ts_us``."""
     claimed_seq: NonNeg | None
