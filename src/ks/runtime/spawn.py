@@ -1,0 +1,121 @@
+"""Process spawning, uids and teardown (ADR-00 "Processes", THREAT-MODEL v4 Live setup).
+
+Every child (agent or witness) is started through :data:`BOOT`, which sets ``PR_SET_DUMPABLE=0`` as its very
+first statement. It cannot be done in ``preexec_fn``: ``execve`` resets the dumpable flag to 1 when real and
+effective ids match (checked 19 Nov), so the template must do it after exec, before any agent code.
+Children get a numeric uid with no passwd entry, ``close_fds``, only the passed socketpair ends, env
+``{PYTHONHASHSEED=0}`` and cwd ``/``.
+"""
+
+from __future__ import annotations
+
+import ctypes
+import os
+import resource
+import signal
+import socket
+import subprocess
+import sys
+import time
+from collections.abc import Iterable
+from pathlib import Path
+
+__all__ = ["WITNESS_UID", "AGENT_UID_BASE", "agent_uid", "BOOT", "spawn_child", "proc_uid", "pids_with_uids",
+           "kill_uids", "set_nondumpable", "set_oom_score_adj"]
+
+WITNESS_UID = 60000
+AGENT_UID_BASE = 60001
+AGENT_NPROC = 64
+"""RLIMIT_NPROC per agent uid (threads count too)."""
+PR_SET_DUMPABLE = 4
+SRC = str(Path(__file__).resolve().parents[2])
+"""Directory that contains the ``ks`` package; children put it on sys.path themselves (clean env)."""
+
+BOOT = ("import ctypes,sys\n"
+        "if ctypes.CDLL(None).prctl(4,0,0,0,0)!=0: sys.exit(70)\n"
+        "sys.path.insert(0,sys.argv[1])\n"
+        "import importlib\n"
+        "sys.exit(importlib.import_module(sys.argv[2]).main(sys.argv[3:]))\n")
+"""Child bootstrap: non-dumpable first, then ``<module>.main(argv)``."""
+
+
+def agent_uid(index: int) -> int:
+    return AGENT_UID_BASE + index
+
+
+def set_nondumpable() -> bool:
+    return ctypes.CDLL(None, use_errno=True).prctl(PR_SET_DUMPABLE, 0, 0, 0, 0) == 0
+
+
+def set_oom_score_adj(pid: int | str, value: int) -> bool:
+    try:
+        Path(f"/proc/{pid}/oom_score_adj").write_text(str(value))
+        return True
+    except OSError:
+        return False
+
+
+def _agent_limits() -> None:  # runs in the child after setuid, before exec: may only tighten
+    resource.setrlimit(resource.RLIMIT_NPROC, (AGENT_NPROC, AGENT_NPROC))
+    set_oom_score_adj("self", 1000)
+
+
+def spawn_child(module: str, args: Iterable[str], *, uid: int | None, pass_socks: Iterable[socket.socket],
+                agent: bool) -> subprocess.Popen:
+    """Start ``module.main(args)`` via BOOT under ``uid`` (``None`` = same uid as us: degraded mode)."""
+    fds = tuple(s.fileno() for s in pass_socks)
+    debug = os.environ.get("KS_DEBUG") == "1"
+    kw: dict = {}
+    if uid is not None:
+        kw.update(user=uid, group=uid, extra_groups=[])
+        if agent:
+            kw["preexec_fn"] = _agent_limits
+    return subprocess.Popen(
+        [sys.executable, "-s", "-P", "-c", BOOT, SRC, module, *args],
+        env={"PYTHONHASHSEED": "0"}, cwd="/", close_fds=True, pass_fds=fds, stdin=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL, stderr=None if debug else subprocess.DEVNULL, **kw)
+
+
+def proc_uid(pid: int) -> int | None:
+    """Real uid of a live process, read from /proc (``None`` if it is gone)."""
+    try:
+        for line in Path(f"/proc/{pid}/status").read_text().splitlines():
+            if line.startswith("Uid:"):
+                return int(line.split()[1])
+    except (OSError, ValueError, IndexError):
+        pass
+    return None
+
+
+def pids_with_uids(uids: Iterable[int]) -> list[int]:
+    """Every live (non-zombie) process whose real, effective, saved or fs uid is in ``uids``."""
+    want = set(uids)
+    out = []
+    for d in os.listdir("/proc"):
+        if not d.isdigit():
+            continue
+        try:
+            status = dict(l.split(":", 1) for l in Path(f"/proc/{d}/status").read_text().splitlines() if ":" in l)
+            if status["State"].split()[0] != "Z" and want & {int(x) for x in status["Uid"].split()}:
+                out.append(int(d))
+        except (OSError, ValueError, KeyError, IndexError):
+            continue
+    return sorted(out)
+
+
+def kill_uids(uids: Iterable[int], timeout_s: float = 5.0) -> list[int]:
+    """SIGKILL every process running under ``uids`` until none is left (forks included, K2).
+    Returns the pids that survived the timeout (empty on success). Only meaningful when the uids are
+    not ours: in degraded (shared-uid) mode the caller kills its children by pid instead."""
+    uids = tuple(uids)
+    end = time.monotonic() + timeout_s
+    while True:
+        pids = pids_with_uids(uids)
+        if not pids or time.monotonic() > end:
+            return pids
+        for pid in pids:
+            try:
+                os.kill(pid, signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        time.sleep(0.01)

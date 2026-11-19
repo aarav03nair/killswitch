@@ -1315,6 +1315,11 @@
       "t": "19 Nov 11:13",
       "who": "pmo",
       "msg": "reviewed SEC-02: done"
+    },
+    {
+      "t": "19 Nov 11:26",
+      "who": "maya",
+      "msg": "moved SKEL-01 to in_review"
     }
   ]
 }
