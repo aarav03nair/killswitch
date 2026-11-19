@@ -410,6 +410,7 @@ def test_ids_operator_replaces_console():
 
 
 def test_contracts_version_bumped():
-    assert C.CONTRACTS_VERSION == "1.1.0"
-    assert S.run_config().contracts_version == "1.1.0"
-    assert all(f"/schema/1.1.0/" in p.read_text() for p in (SRC / "schema").glob("*.json"))
+    # 1.1.0 at CON-02; later additive bumps (1.2.0, B3-01) keep this check honest without pinning the minor.
+    assert tuple(map(int, C.CONTRACTS_VERSION.split("."))) >= (1, 1, 0)
+    assert S.run_config().contracts_version == C.CONTRACTS_VERSION
+    assert all(f"/schema/{C.CONTRACTS_VERSION}/" in p.read_text() for p in (SRC / "schema").glob("*.json"))

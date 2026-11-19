@@ -5,7 +5,7 @@ import socket
 import pytest
 
 from ks.contracts import (CONTRACTS_VERSION, SYSTEM_PRINCIPALS, ActionClass, Decision, Envelope, Reason, RunConfig,
-                          RunDir, SignRequest, SubmitFrame, encode_frame)
+                          RunDir, SignRefusal, SignReply, SignRequest, SubmitFrame, decode_frame, encode_frame)
 from ks.gateway import Gateway
 from ks.identity import KeyStore, SignerService, sign_hex
 from ks.recorder import Recorder
@@ -66,12 +66,18 @@ def test_signer_refusals(gw):
                        nonce="0" * 32, expiry_tick=2, epoch=0, claimed_ts_us=None, claimed_seq=None, sig=None)
         return encode_frame(SignRequest(header=env.header()))
 
-    assert s.handle("agent_00", req(agent="agent_01")) is None
-    assert s.handle("agent_00", req(tool="ks.control")) is None
-    assert s.handle("agent_01", req(agent="agent_01")) is None             # suspended principal
-    assert s.handle("agent_00", req(action="a1")) and s.handle("agent_00", req(action="a2"))
-    assert s.handle("agent_00", req(action="a3")) is None                  # MAX_SIGN_PER_TICK = 2
-    assert [r[2] for r in s.refusals] == ["foreign_agent", "system_tool", "suspended", "rate"]
+    def reply(principal, line):
+        return decode_frame(s.handle(principal, line))
+
+    # contracts 1.2 (SKEL-01 finding 3): every refusal is answered with SignRefusal{reason}
+    assert reply("agent_00", req(agent="agent_01")) == SignRefusal(reason="foreign_agent")
+    assert reply("agent_00", req(tool="ks.control")) == SignRefusal(reason="system_tool")
+    assert reply("agent_01", req(agent="agent_01")) == SignRefusal(reason="suspended")     # suspended principal
+    assert isinstance(reply("agent_00", req(action="a1")), SignReply)
+    assert isinstance(reply("agent_00", req(action="a2")), SignReply)
+    assert reply("agent_00", req(action="a3")) == SignRefusal(reason="rate")               # MAX_SIGN_PER_TICK = 2
+    assert reply("agent_00", b"garbage\n") == SignRefusal(reason="schema")
+    assert [r[2] for r in s.refusals] == ["foreign_agent", "system_tool", "suspended", "rate", "schema"]
 
 
 class _NoWitness:

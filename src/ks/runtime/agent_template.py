@@ -1,7 +1,7 @@
 """The agent template: what runs inside each agent subprocess (own uid, non-dumpable via BOOT).
 
 It holds two socket ends and nothing else: the gateway (TickFrame in, Submit/Noop out, Reply in) and its
-signer handle (SignRequest out, SignReply in). No keys, no paths, no record access.
+signer handle (SignRequest out, SignReply or SignRefusal in). No keys, no paths, no record access.
 
     main(["--agent", ID, "--seed", N, "--gw-fd", F, "--signer-fd", G, "--behaviour", MODULE])
 
@@ -14,8 +14,8 @@ import argparse
 import importlib
 import socket
 
-from ks.contracts import (Envelope, NoopFrame, SignReply, SignRequest, SubmitFrame, TickFrame, decode_frame,
-                          encode_frame)
+from ks.contracts import (Envelope, NoopFrame, SignRefusal, SignReply, SignRequest, SubmitFrame, TickFrame,
+                          decode_frame, encode_frame)
 
 from .rng import draw_hex
 
@@ -50,6 +50,9 @@ def main(argv: list[str]) -> int:
                        claimed_seq=None, sig=None)
         signer.sendall(encode_frame(SignRequest(header=env.header())))
         reply = decode_frame(signer_in.readline())
+        if isinstance(reply, SignRefusal):
+            gw.sendall(encode_frame(NoopFrame(tick=frame.tick)))  # refused: no-op now, don't wait the deadline
+            continue
         if not isinstance(reply, SignReply):
             return 3
         gw.sendall(encode_frame(SubmitFrame(tick=frame.tick, envelope=env.with_sig(reply.sig))))

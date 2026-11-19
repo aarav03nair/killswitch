@@ -87,15 +87,17 @@ def run(*, agents: int, ticks: int, seed: int, key_mode: str, out: str | os.Path
         secret = load_repro_secret(sp)
     elif key_mode != "fresh":
         raise ValueError(f"unknown key mode {key_mode!r}")
+    root = os.geteuid() == 0
+    separate = root if separate_uids is None else (separate_uids and root)
+    # contracts 1.2: isolation is fixed before spawn and covered by config_hash (SKEL-01 finding 4). The abort on
+    # a contradicting /proc readback is B3-10; the banner below already reads it back.
     config = RunConfig(run_id=run_id or f"skeleton-s{seed}", contracts_version=CONTRACTS_VERSION, seed=seed,
                        scenario="skeleton", fault=None, culprit=None, fault_tick=None, key_mode=key_mode,
                        decision_latency_ticks=0, ticks=ticks, tick_us=TICK_US, start_ts_us=0, hold_window_ticks=0,
-                       sensitive_fields=(), agents=ids)
+                       sensitive_fields=(), agents=ids, isolation="per_agent_uid" if separate else "degraded",
+                       decisions_from=None)
     if config.tick_us <= SYSTEM_SLOTS + agents:
         raise ValueError("tick_us must exceed the records-per-tick cap (C7)")
-
-    root = os.geteuid() == 0
-    separate = root if separate_uids is None else (separate_uids and root)
     our_uids = [WITNESS_UID] + [agent_uid(i) for i in range(agents)]
     if separate and pids_with_uids(our_uids):
         raise RuntimeError(f"processes already run under uids {our_uids[0]}..{our_uids[-1]} (K2): refusing")

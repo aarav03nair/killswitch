@@ -2,7 +2,7 @@
   "$defs": {
     "JsonValue": {}
   },
-  "$id": "https://killswitch.local/schema/1.1.0/c3.state_read.schema.json",
+  "$id": "https://killswitch.local/schema/1.2.0/c3.state_read.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Result of ``StateView.get``: ``(value, ver, author)``. Holds a RAW value: never put it in a record.",

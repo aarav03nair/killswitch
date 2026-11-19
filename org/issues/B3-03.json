@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "maya",
-  "status": "in_progress",
+  "status": "in_review",
   "outcome": "SQLite-backed versioned store per ADR-05: get -> (value, ver, author), history(obj), put with before/after versions",
   "acceptance": [
     "put/get/history round-trip with monotonic ver per object; put returns WriteEntry before/after ver+hash matching contracts C3",
@@ -18,7 +18,7 @@
     "B3-01"
   ],
   "deliverable": "src/ks/state/",
-  "summary": "",
+  "summary": "src/ks/state/: SQLite versioned store per ADR-05 §1-2. objects(head) + append-only versions (UPDATE/DELETE triggers abort), values in a redactable side table in the same db (SqliteSideStore, C3 SideStore). Store implements StateView/StateWriter: put -> WriteEntry before/after ver+hash, ver+1 per object, tombstones (re-create continues counter), restore(expect=head) = new version by ks.recovery (StaleExpect / RedactedValue), visible_to=seq for M11c, history/heads/value_at. put refuses outside a caller-owned BEGIN IMMEDIATE txn, seq behind store, or 2nd write to an object at one seq; Store.txn() helper. FieldSchema (fields.py) is the B3-04 seam: sensitive-key rejection, field obj check, write_row splits rows and writes only changed objects (field-only edit keeps row ver; row create/delete writes/tombstones field objects). DB 0600. Completed interrupted attempt: lint, re-put of a redacted value re-populates side entry. tests/state: 20 passed; full suite 441 passed.",
   "review": "",
   "log": [
     {
@@ -35,6 +35,16 @@
       "t": "19 Nov 11:36",
       "who": "vikram",
       "msg": "→ in_progress: started: SQLite versioned store on contracts 1.1.0"
+    },
+    {
+      "t": "19 Nov 12:23",
+      "who": "vikram",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 12:23",
+      "who": "vikram",
+      "msg": "→ in_review"
     }
   ]
 }

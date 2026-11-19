@@ -1,4 +1,4 @@
-# ks.contracts: C1–C6 reference (CON-01 → CON-02, contracts **1.1.0**, frozen 22 Nov)
+# ks.contracts: C1–C6 reference (CON-01 → CON-02 → B3-01, contracts **1.2.0**, frozen 22 Nov)
 
 Import from `ks.contracts`, never from submodules. Every type is a frozen pydantic model that rejects unknown
 fields. Each one has `to_canonical()` / `from_canonical()` (strict: the bytes must already be canonical) and
@@ -13,8 +13,8 @@ fields. Each one has `to_canonical()` / `from_canonical()` (strict: the bytes mu
 | C3 State | `StateView`/`StateWriter`/`SideStore` protocols; `ObjVer`, `VersionRef`, `ReadEntry`, `ViewEntry`, `WriteEntry`, `StateRead`, `HistoryEntry`, `OutboxItem`, `SideEntry`; `make_obj_id`/`field_obj_id`/`row_obj_id`/`split_obj_id`; `idempotency_key()` | `sidestore/xx/<hash>.json` |
 | C4 | `Alert` (`root_candidates` ranked; no `suspect`; H3 hard table), `Control` (target `agent:`/`conn:`/`action:`/`outbox:`), `EpochFold` | `alerts.jsonl` (copy); Alerts and Controls inside records |
 | C5 | `RecoveryPlan` (`t0_seq_est`), `TaintSet`, steps `restore`/`rerun`/`replan`/`cancel_outbox`/`compensate`/`flag`, `DiffEntry`; `Approval`, `RecoverArgs` | `plans/<plan_id>.json` |
-| C6 | `RunConfig` (seed, `fault_tick`, `key_mode`, `decision_latency_ticks`, `hold_window_ticks`, `sensitive_fields`, agents; `tcb_view()`), `Keyring`, `RunAnchor`, `RunDir`, `Exit`, `VerifyReport` (+`anchored`) | `config.json`, `keys.json` |
-| Transport | `TickFrame` (+`epoch`, `view`), `SubmitFrame`, `NoopFrame`, `ReplyFrame`, `SignRequest`, `SignReply`; `MAX_VIEW_ENTRIES`, `MAX_SIGN_PER_TICK`, `signer_refusal()` | JSON lines over Unix sockets |
+| C6 | `RunConfig` (seed, `fault_tick`, `key_mode`, `decision_latency_ticks`, `hold_window_ticks`, `sensitive_fields`, agents, `isolation`, `decisions_from`; `tcb_view()`), `Keyring`, `RunAnchor`, `RunDir`, `Exit`, `VerifyReport` (+`anchored`, `isolation`) | `config.json`, `keys.json` |
+| Transport | `TickFrame` (+`epoch`, `view`), `SubmitFrame`, `NoopFrame`, `ReplyFrame`, `SignRequest`, `SignReply`, `SignRefusal`; witness link `WitnessInit/Pub/Files/Ready/Head/Close` (`decode_witness_frame`); `MAX_VIEW_ENTRIES`, `MAX_SIGN_PER_TICK`, `SIGN_REFUSAL_REASONS`, `signer_refusal()` | JSON lines over Unix sockets |
 
 ## One serializer
 `ks.contracts.canonical` (`dumps`, `loads`, `dumps_line`, `loads_line`) is the only encoder that signer,
@@ -117,6 +117,31 @@ Each is a recorded envelope on `c-0`. Every outbox status change carries a `writ
 Metric and score keys and the `effects.jsonl` schema (tara, ADR-06); policy rule ids (nisha, ADR-03); the store implementation (vikram, ADR-05); side-store and verify internals (arjun, ADR-02).
 
 ## Changelog
+
+### 1.2.0 (B3-01, 19 Nov; CALL-03/maya-plan §2) — additive only
+Closes SKEL-01 findings 2–4 and the contract parts of R3 and F9. Nothing renamed or removed: every 1.1 type,
+field, reason and export is unchanged. Tests: `tests/contracts/test_contracts_12.py`.
+
+- **Transport, witness link (finding 2):** `WitnessInit{key_seed}` (null = fresh, the witness makes its own key;
+  repro = derived seed), `WitnessPub{pub}`, `WitnessFiles` (+ `WITNESS_FILES_FDS = 2` by SCM_RIGHTS),
+  `WitnessReady`, `WitnessHead{seq, head, tick}` (head ≠ genesis), `WitnessClose`; the ack stays the signed
+  `WitnessCheckpoint` line. A separate union decoded by `decode_witness_frame`, so witness and agent frames never
+  cross. `ks.witness` uses them; `witness/protocol.py` keeps only `HEADS_FILE`.
+- **Transport, `SignRefusal{reason}` (finding 3):** the signer answers every refusal; closed vocabulary
+  `SIGN_REFUSAL_REASONS` = the `signer_refusal()` reasons + `schema`. Not a record. The agent template no-ops on it.
+- **C6 `RunConfig.isolation` ∈ {`per_agent_uid`, `degraded`} (finding 4):** default `degraded` (a config that does
+  not say claims nothing); fixed before spawn, covered by `config_hash`. `VerifyReport.isolation` echoes it
+  (`None` only if config.json is unreadable); verify logs "per-agent attribution VOID" when degraded. The /proc
+  readback abort is runtime code (B3-10).
+- **C6 `RunConfig.decisions_from: Hash | None` (R3):** default `None`; the anchored source run for `--decisions`.
+  Refused with `fault == "rogue"` and with `key_mode == "repro"` (validator). X6 replay checks stay gateway code (B3-20).
+- **C6 verify reason `reexec_invalid` → TAMPER (F9).** Verify logic is B3-25.
+- **Schemas:** regenerated under `/schema/1.2.0/`; `c6.run_config` and `c6.verify_report` gain the new properties.
+  Frames have no schema files (unchanged policy: only `DOCUMENTS`).
+
+**Golden hashes, re-pinned on purpose.** Only `doc:run_config` changed (new fields `isolation`,
+`decisions_from`, and `contracts_version` = 1.2.0 in the sample). Format vectors and every other document hash
+are unchanged. `test_contracts_version_bumped` (CON-02) now checks the current version rather than pinning 1.1.0.
 
 ### 1.1.0 (CON-02, 19 Nov; CALL-02 design freeze)
 Implements the CON-02 checklist in `org/meetings/CALL-02/resolutions.md`, amendments X1, X2, X7 and X8-F1 from

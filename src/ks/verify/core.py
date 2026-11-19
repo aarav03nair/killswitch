@@ -49,11 +49,14 @@ def verify(run: str | Path, anchor: RunAnchor | None = None, *, log=lambda s: pr
             anchored, why = False, ("repro_keys" if cfg is not None and cfg.key_mode == "repro" else "no_anchor")
         code = VERIFY_REASONS[reason]
         return VerifyReport(ok=code == 0, exit=int(code), first_bad=first_bad, reason=reason,
-                            last_witnessed_seq=state["lws"], anchored=anchored, unanchored_reason=why)
+                            last_witnessed_seq=state["lws"], anchored=anchored, unanchored_reason=why,
+                            isolation=cfg.isolation if cfg is not None else None)
 
     try:
         config, keyring, record_bytes = _load(run)
         state["config"] = config
+        if config.isolation == "degraded":
+            log("verify: isolation degraded: per-agent attribution VOID for this run")
         if anchor is not None:
             probs = anchor.problems(keyring, config)
             if probs:

@@ -1,5 +1,5 @@
 {
-  "$id": "https://killswitch.local/schema/1.1.0/c6.run_config.schema.json",
+  "$id": "https://killswitch.local/schema/1.2.0/c6.run_config.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "``config.json``: everything needed to reproduce a seeded run, and what the scorer must know.",
@@ -46,6 +46,20 @@
       "title": "Decision Latency Ticks",
       "type": "integer"
     },
+    "decisions_from": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "v1.2 (R3): ``RunConfig.content_hash()`` of the anchored source run whose operator decisions ``--decisions``\nreplays; ``None`` for a live run. Refused with ``fault == \"rogue\"`` and with ``key_mode == \"repro\"``\n(validator; the X6 replay checks are gateway code, B3-20).",
+      "title": "Decisions From"
+    },
     "fault": {
       "anyOf": [
         {
@@ -79,6 +93,16 @@
       "minimum": 0,
       "title": "Hold Window Ticks",
       "type": "integer"
+    },
+    "isolation": {
+      "default": "degraded",
+      "description": "v1.2 (SKEL-01 finding 4): the uid isolation the run was started with, fixed before spawn and covered by\n``config_hash``. ``per_agent_uid`` = each agent under its own uid, the witness under its own; ``degraded``\n= shared or unverified uids, so **per-agent attribution is VOID** for the run (RT3b). The runtime aborts if\nthe /proc readback contradicts it; verify echoes it as ``VerifyReport.isolation``. Defaults to\n``degraded`` so a config that does not say claims nothing.",
+      "enum": [
+        "per_agent_uid",
+        "degraded"
+      ],
+      "title": "Isolation",
+      "type": "string"
     },
     "key_mode": {
       "description": "C3: ``fresh`` = keys generated in memory per run (the witness makes its own, E4); the only mode for\nsecurity runs. ``repro`` = keys derived from a secret outside the run dir (0600 uid 0) for byte-identical\nreplays; labelled \"not a security run\", forces ``VerifyReport.anchored = false`` (X7, ``repro_keys``),\nbanned for D11/RT2/RT8 and refused with ``fault == \"rogue\"`` (validator).",
@@ -145,9 +169,11 @@
     "contracts_version",
     "culprit",
     "decision_latency_ticks",
+    "decisions_from",
     "fault",
     "fault_tick",
     "hold_window_ticks",
+    "isolation",
     "key_mode",
     "run_id",
     "scenario",

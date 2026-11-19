@@ -45,7 +45,7 @@
       "type": "object"
     }
   },
-  "$id": "https://killswitch.local/schema/1.1.0/c3.outbox_item.schema.json",
+  "$id": "https://killswitch.local/schema/1.2.0/c3.outbox_item.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "C3 value of an ``outbox:<id>`` object: an irreversible effect waiting to leave.",

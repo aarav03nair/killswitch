@@ -1,5 +1,5 @@
 {
-  "$id": "https://killswitch.local/schema/1.1.0/c6.verify_report.schema.json",
+  "$id": "https://killswitch.local/schema/1.2.0/c6.verify_report.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Last stdout line of ``ks verify`` (canonical JSON).",
@@ -29,6 +29,23 @@
       ],
       "description": "seq (= 1-based line number) of the first bad record, or ``None``.",
       "title": "First Bad"
+    },
+    "isolation": {
+      "anyOf": [
+        {
+          "enum": [
+            "per_agent_uid",
+            "degraded"
+          ],
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null,
+      "description": "v1.2: echo of ``RunConfig.isolation``; ``None`` only when config.json could not be read. When\n``degraded``, verify prints \"per-agent attribution VOID\" (SKEL-01 finding 4).",
+      "title": "Isolation"
     },
     "last_witnessed_seq": {
       "description": "Highest seq covered by a valid witness checkpoint (0 = none). Tamper-evident up to here.",
@@ -69,6 +86,7 @@
     "anchored",
     "exit",
     "first_bad",
+    "isolation",
     "last_witnessed_seq",
     "ok",
     "reason",

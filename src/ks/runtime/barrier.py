@@ -219,9 +219,7 @@ class TickBarrier:
                             sel.unregister(c.signer)
                             continue
                         for line in lines:
-                            reply = self.signer.handle(c.agent_id, line)
-                            if reply is not None:
-                                c.reply_signer(reply)
+                            c.reply_signer(self.signer.handle(c.agent_id, line))  # SignReply | SignRefusal
                         continue
                     if c not in waiting:
                         continue

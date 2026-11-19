@@ -9,10 +9,9 @@ import socket
 import subprocess
 import time
 
-from ks.contracts import CanonicalError, WitnessCheckpoint, canonical
+from ks.contracts import (WITNESS_FILES_FDS, CanonicalError, WitnessCheckpoint, WitnessClose, WitnessFiles,
+                          WitnessHead, WitnessInit, WitnessPub, WitnessReady, decode_witness_frame, encode_frame)
 from ks.identity import verify_hex
-
-from .protocol import msg
 
 __all__ = ["WitnessLink", "WitnessError"]
 
@@ -46,26 +45,35 @@ class WitnessLink:
 
     def init(self, key_seed: bytes | None, timeout_s: float = 30.0) -> str:
         """Hand over the repro key seed (``None`` in fresh mode) and get the witness public key."""
-        self.sock.sendall(msg("init", key_seed=None if key_seed is None else key_seed.hex()))
+        self.sock.sendall(encode_frame(WitnessInit(key_seed=None if key_seed is None else key_seed.hex())))
         line = self._readline(timeout_s)
         if line is None:
             raise WitnessError("witness did not start")
-        reply = canonical.loads_line(line)
-        if reply.get("type") != "pub":
-            raise WitnessError(f"unexpected witness reply {reply!r}")
-        self.pub = reply["pub"]
+        try:
+            reply = decode_witness_frame(line)
+        except CanonicalError as e:
+            raise WitnessError(f"bad witness reply: {e}") from None
+        if not isinstance(reply, WitnessPub):
+            raise WitnessError(f"unexpected witness reply {reply.type!r}")
+        self.pub = reply.pub
         return self.pub
 
     def attach(self, witness_fd: int, heads_dir_fd: int, timeout_s: float = 10.0) -> None:
         """Pass the open ``witness.jsonl`` and ``witness-heads/`` descriptors (no path access needed)."""
-        socket.send_fds(self.sock, [msg("files")], [witness_fd, heads_dir_fd])
+        fds = [witness_fd, heads_dir_fd]
+        assert len(fds) == WITNESS_FILES_FDS
+        socket.send_fds(self.sock, [encode_frame(WitnessFiles())], fds)
         line = self._readline(timeout_s)
-        if line is None or canonical.loads_line(line) != {"type": "ready"}:
+        try:
+            ok = line is not None and isinstance(decode_witness_frame(line), WitnessReady)
+        except CanonicalError:
+            ok = False
+        if not ok:
             raise WitnessError("witness did not accept its files")
 
     def push(self, seq: int, head: str, tick: int, timeout_s: float) -> WitnessCheckpoint | None:
         """Push one head; the verified checkpoint, or ``None`` on stall (deadline, bad or regressing ack)."""
-        self.sock.sendall(msg("head", seq=seq, head=head, tick=tick))
+        self.sock.sendall(encode_frame(WitnessHead(seq=seq, head=head, tick=tick)))
         end = time.monotonic() + timeout_s
         while True:
             line = self._readline(max(0.0, end - time.monotonic()))
@@ -82,7 +90,7 @@ class WitnessLink:
 
     def close(self, timeout_s: float = 5.0) -> None:
         try:
-            self.sock.sendall(msg("close"))
+            self.sock.sendall(encode_frame(WitnessClose()))
         except OSError:
             pass
         try:

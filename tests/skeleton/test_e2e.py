@@ -29,3 +29,14 @@ def test_run_dir_shape(clean_run):
     assert all(r.ts_us == r.tick * 1000 + (r.seq - 1) % 2 for r in recs)
     assert [(c.count, c.tick, c.seq) for c in cps] == [(t + 1, t, 2 * (t + 1)) for t in range(10)]
     assert {r.envelope.tool for r in recs} == {"skel.echo", "skel.noop"}
+
+
+def test_isolation_fixed_in_config_and_echoed_by_verify(clean_run):
+    """contracts 1.2 (SKEL-01 finding 4): RunConfig.isolation is set before spawn; verify echoes it."""
+    from ks.contracts import RunConfig
+    from .conftest import IS_ROOT
+    run, anchor, _ = clean_run
+    cfg = RunConfig.from_canonical((run / "config.json").read_bytes())
+    assert cfg.isolation == ("per_agent_uid" if IS_ROOT else "degraded") and cfg.decisions_from is None
+    _, rep = ks_verify(run, anchor)
+    assert rep.isolation == cfg.isolation

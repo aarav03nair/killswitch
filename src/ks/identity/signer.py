@@ -1,8 +1,7 @@
 """Signer handle service (ADR-01 §3, E5). Runs inside the gateway; each agent reaches it over its own
-path-less socketpair and gets ``SignRequest{header}`` -> ``SignReply{sig}``, nothing else.
-
-A refused request gets no reply: transport has no refusal frame (see SKEL-01 notes), so the agent's
-request simply goes unanswered and the barrier deadline turns its slot into a no-op.
+path-less socketpair and gets ``SignRequest{header}`` -> ``SignReply{sig}`` or, since contracts 1.2,
+``SignRefusal{reason}`` (SKEL-01 finding 3), so a refused agent no-ops at once instead of waiting out the
+barrier deadline. A refusal is not a record; ``refusals`` keeps the count for the console.
 """
 
 from __future__ import annotations
@@ -12,7 +11,8 @@ from collections.abc import Callable
 
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
-from ks.contracts import CanonicalError, SignReply, SignRequest, decode_frame, encode_frame, signer_refusal
+from ks.contracts import (CanonicalError, SignRefusal, SignReply, SignRequest, decode_frame, encode_frame,
+                          signer_refusal)
 
 from .keys import sign_hex
 
@@ -34,20 +34,21 @@ class SignerService:
         self._tick = tick
         self._count.clear()
 
-    def handle(self, principal: str, line: bytes) -> bytes | None:
-        """One request line from ``principal``'s handle -> one reply line, or ``None`` (refused/garbage)."""
+    def _refuse(self, principal: str, why: str) -> bytes:
+        self.refusals.append((self._tick, principal, why))
+        return encode_frame(SignRefusal(reason=why))
+
+    def handle(self, principal: str, line: bytes) -> bytes:
+        """One request line from ``principal``'s handle -> one reply line: ``SignReply`` or ``SignRefusal``."""
         try:
             req = decode_frame(line)
         except CanonicalError:
-            self.refusals.append((self._tick, principal, "schema"))
-            return None
+            return self._refuse(principal, "schema")
         if not isinstance(req, SignRequest):
-            self.refusals.append((self._tick, principal, "schema"))
-            return None
+            return self._refuse(principal, "schema")
         why = signer_refusal(req, principal=principal, current_epoch=self._epoch_of(principal),
                              signed_this_tick=self._count[principal])
         if why is not None:
-            self.refusals.append((self._tick, principal, why))
-            return None
+            return self._refuse(principal, why)
         self._count[principal] += 1
         return encode_frame(SignReply(sig=sign_hex(self._keys[principal], req.header.signing_bytes())))

@@ -1,0 +1,45 @@
+{
+  "id": "B3-38",
+  "title": "ks.monitor: rate and tamper detectors (ADR-04 catalogue remainder)",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "nisha",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "in_review",
+  "outcome": "ADR-04's detector catalogue is complete",
+  "acceptance": [
+    "rate anomaly detector (soft) with per-agent baseline",
+    "tamper detector: on-disk record vs in-memory head each tick → freeze recovery, suspend nobody (never hard)",
+    "tests incl. tamper alert names nobody"
+  ],
+  "depends": [
+    "B3-07"
+  ],
+  "deliverable": "src/ks/monitor/",
+  "summary": "rate (soft, per-agent rolling baseline w/ warmup+min count, key per agent/tick, never suspends) and tamper (disk chain/hash/seq-gap vs itself and memory head; never hard, names nobody) detectors in src/ks/monitor/detectors.py, registered in DETECTORS; contracts already carry Detector.RATE/TAMPER in DETECTOR_KIND (no contract change needed). Fixed two test fixtures (everything() lacked an analytics baseline; edited-record test indexed past hero_world's records). tests/monitor 48 passed.",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 11:40",
+      "who": "maya",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 11:40",
+      "who": "nisha",
+      "msg": "→ in_progress"
+    },
+    {
+      "t": "19 Nov 12:22",
+      "who": "nisha",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 12:22",
+      "who": "nisha",
+      "msg": "→ in_review"
+    }
+  ]
+}

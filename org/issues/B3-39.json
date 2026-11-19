@@ -1,0 +1,29 @@
+{
+  "id": "B3-39",
+  "title": "Run on Mac: Dockerfile + one-command demo (Apple Silicon + x86)",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "ishaan",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Aarav can run the real demo on his Mac via Docker Desktop/OrbStack with full per-agent isolation",
+  "acceptance": [
+    "multi-arch Dockerfile (python:3.13-slim) runs as root inside the container so per-agent uids work; no network needed at runtime",
+    "make demo / scripts/demo.sh: build + ks run --fault F2+ --pause-at --step with run dir on a bind mount",
+    "README section 'Run on macOS' incl. degraded native mode warning",
+    "CI-style smoke test: container run + ks verify exits OK"
+  ],
+  "depends": [],
+  "deliverable": "Dockerfile",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 12:21",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

@@ -404,46 +404,6 @@
   ],
   "activity": [
     {
-      "t": "19 Nov 00:37",
-      "who": "anaya",
-      "msg": "opened RES-10 — Citation audit: verify the key papers and numbers we plan to quote"
-    },
-    {
-      "t": "19 Nov 00:37",
-      "who": "rohan",
-      "msg": "moved RES-10 to in_progress"
-    },
-    {
-      "t": "19 Nov 00:37",
-      "who": "meera",
-      "msg": "moved RES-09 to in_progress"
-    },
-    {
-      "t": "19 Nov 00:38",
-      "who": "sameer",
-      "msg": "moved RES-08 to in_review"
-    },
-    {
-      "t": "19 Nov 00:38",
-      "who": "meera",
-      "msg": "moved RES-09 to in_review"
-    },
-    {
-      "t": "19 Nov 00:39",
-      "who": "panel",
-      "msg": "reviewed ENG-00: changes"
-    },
-    {
-      "t": "19 Nov 00:39",
-      "who": "anaya",
-      "msg": "opened RES-11 — Deep read: Airlock (2611.06727) — closest competitor, exact differentiation"
-    },
-    {
-      "t": "19 Nov 00:39",
-      "who": "meera",
-      "msg": "moved RES-11 to in_progress"
-    },
-    {
       "t": "19 Nov 00:40",
       "who": "rohan",
       "msg": "moved RES-10 to in_review"
@@ -1402,6 +1362,46 @@
       "t": "19 Nov 11:38",
       "who": "pmo",
       "msg": "moved ORG-05 to done"
+    },
+    {
+      "t": "19 Nov 11:40",
+      "who": "nisha",
+      "msg": "moved B3-07 to in_review"
+    },
+    {
+      "t": "19 Nov 11:40",
+      "who": "maya",
+      "msg": "opened B3-38 — ks.monitor: rate and tamper detectors (ADR-04 catalogue remainder)"
+    },
+    {
+      "t": "19 Nov 11:40",
+      "who": "nisha",
+      "msg": "moved B3-38 to in_progress"
+    },
+    {
+      "t": "19 Nov 11:41",
+      "who": "maya",
+      "msg": "moved B3-01 to in_review"
+    },
+    {
+      "t": "19 Nov 12:21",
+      "who": "maya",
+      "msg": "opened B3-39 — Run on Mac: Dockerfile + one-command demo (Apple Silicon + x86)"
+    },
+    {
+      "t": "19 Nov 12:22",
+      "who": "nisha",
+      "msg": "moved B3-38 to in_review"
+    },
+    {
+      "t": "19 Nov 12:23",
+      "who": "vikram",
+      "msg": "moved B3-03 to in_review"
+    },
+    {
+      "t": "19 Nov 12:23",
+      "who": "maya",
+      "msg": "moved B3-01 to in_review"
     }
   ]
 }
