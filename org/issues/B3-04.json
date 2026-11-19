@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "maya",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "Reads record every object delivered (row + its field objects), digest for reconcile, savepoints for re-run simulation",
   "acceptance": [
     "test_row_read_includes_field_objects and test_row_read_lists_field_obj (R2 store side): whole-row reads and aggregates list the row plus every existing field object; a projection without the field lists the row only",
@@ -18,13 +18,28 @@
     "B3-03"
   ],
   "deliverable": "src/ks/state/",
-  "summary": "",
+  "summary": "src/ks/state: FieldSchema.read_objs (read rule seam, contract field_obj_id/row_obj_id/split_obj_id); Store.read(obj, project=, visible_to=) and Store.read_table(table, ...) return ReadResult(value, read_set): whole-row/aggregate lists row + every existing field object (tombstones included), projection without the field lists row only, any returned sensitive value lists its field obj, direct field read lists only itself; no absence read (None). put already rejects row values with sensitive keys; write_row field-only edits do not bump the row. Store.state_digest(visible_to=) + ks.state.digest fold/fold_digest (chain-checked, FoldError). Store.savepoint() (kept unless raise) and Store.simulate() (always rolled back, nests, works inside/outside caller txn) for B3-24. tests/state/test_reads.py: 20 new tests (test_row_read_includes_field_objects, test_row_read_lists_field_obj, test_triage_edit_does_not_bump_iban, test_triage_view_excludes_iban, test_state_digest_fold_30_writes, test_digest_stability, test_dryrun_savepoint, ...). tests/state 36 passed; full suite 461 passed (441 baseline + 20); intermittent tests/skeleton failures are K2 uid contention from concurrent ks runs (reproduce with tests/state ignored), not ks.state. runtime/gateway/world/contracts untouched.",
   "review": "",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 16:01",
+      "who": "vikram",
+      "msg": "→ in_progress: started: read rule, digest, savepoints"
+    },
+    {
+      "t": "19 Nov 16:06",
+      "who": "vikram",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 16:06",
+      "who": "vikram",
+      "msg": "→ in_review: read rule, digest/fold, savepoints done; tests/state 36 green"
     }
   ]
 }

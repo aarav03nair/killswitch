@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "maya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "Erratum blocks in ADR-00/01/02/03 and THREAT-MODEL repro row so ADR text matches contracts and the skeleton",
   "acceptance": [
     "Each of findings 1,5,6,7,8,9,10,11 has a dated 'Erratum (Call #3)' block in the owning ADR, worded exactly as CALL-03/maya-plan.md section 1",
@@ -19,7 +19,7 @@
   ],
   "deliverable": "org/adr/",
   "summary": "Errata (SKEL-01) applied in place with dated 'Errata (Call #3)' blocks: ADR-00 (#1,5,11; #12 note), ADR-01 (#1,7,8; §8 now points to ADR-03 §1), ADR-02 (#5,6,9,10,11), ADR-03 (#7,8; single admission order), THREAT-MODEL (#1,6 repro). No code touched; no CALL-02 resolution or THREAT-MODEL claim changed.",
-  "review": "",
+  "review": "[kabir · done] Erratum blocks present for findings 1,5-11 in ADR-00/01/02/03 and THREAT-MODEL. The body text matches maya-plan s1 (ADR-03 s1 is the single admission order and ADR-01 s8 points to it). No CALL-02 resolution or THREAT-MODEL claim changed. Nit, not blocking: the blocks are one-line pointers and the exact wording is in the section bodies.",
   "log": [
     {
       "t": "19 Nov 11:34",
@@ -35,6 +35,11 @@
       "t": "19 Nov 11:36",
       "who": "maya",
       "msg": "→ in_review"
+    },
+    {
+      "t": "19 Nov 16:01",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

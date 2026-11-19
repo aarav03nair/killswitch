@@ -6,7 +6,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ks.runtime.rng import draw_int
+from ks.rng import draw_int
 
 __all__ = ["Action", "step"]
 

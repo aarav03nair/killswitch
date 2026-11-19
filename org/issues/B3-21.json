@@ -25,6 +25,11 @@
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 16:03",
+      "who": "maya",
+      "msg": "From B3-03 review: restore cannot delete an object the culprit created — planner must emit put(None)/tombstone for culprit-created objects; also note get() raises RedactedValue on redacted head"
     }
   ]
 }

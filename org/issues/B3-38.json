@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "ADR-04's detector catalogue is complete",
   "acceptance": [
     "rate anomaly detector (soft) with per-agent baseline",
@@ -19,7 +19,7 @@
   ],
   "deliverable": "src/ks/monitor/",
   "summary": "rate (soft, per-agent rolling baseline w/ warmup+min count, key per agent/tick, never suspends) and tamper (disk chain/hash/seq-gap vs itself and memory head; never hard, names nobody) detectors in src/ks/monitor/detectors.py, registered in DETECTORS; contracts already carry Detector.RATE/TAMPER in DETECTOR_KIND (no contract change needed). Fixed two test fixtures (everything() lacked an analytics baseline; edited-record test indexed past hero_world's records). tests/monitor 48 passed.",
-  "review": "",
+  "review": "[kabir · done] rate is soft and tamper is never hard and names nobody (roots empty, suspect None, validator rejects hard). Both fixture changes were fixture bugs: everything() needed an analytics baseline for rate to fire, and the edited-record test indexed past hero_world's records. The assertions were not weakened, and test_hard_table now also covers RATE and TAMPER. tests/contracts + tests/monitor: 402 passed.",
   "log": [
     {
       "t": "19 Nov 11:40",
@@ -40,6 +40,11 @@
       "t": "19 Nov 12:22",
       "who": "nisha",
       "msg": "→ in_review"
+    },
+    {
+      "t": "19 Nov 16:01",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

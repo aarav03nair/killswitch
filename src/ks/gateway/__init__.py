@@ -1,5 +1,9 @@
-"""ks.gateway: the reference monitor (ADR-01 §8, ADR-03). Owner: nisha. SKEL-01 ships only the stub."""
+"""ks.gateway: the reference monitor (ADR-01 §8, ADR-03). Owner: nisha. SKEL-01 ships only the stub.
 
-from .stub import TOOLS, Admission, Gateway
+Seams: ``Gateway.open``/``Gateway.tick`` toward ks.runtime; ``ToolDispatcher`` toward ks.world (B3-37).
+"""
 
-__all__ = ["TOOLS", "Admission", "Gateway"]
+from .dispatch import Execution, StateTxn, ToolDispatcher
+from .stub import Admission, Gateway, InFrame
+
+__all__ = ["Admission", "Execution", "Gateway", "InFrame", "StateTxn", "ToolDispatcher"]

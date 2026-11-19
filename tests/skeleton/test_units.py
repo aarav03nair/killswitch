@@ -10,6 +10,7 @@ from ks.gateway import Gateway
 from ks.identity import KeyStore, SignerService, sign_hex
 from ks.recorder import Recorder
 from ks.runtime.barrier import AgentConn, TickBarrier
+from ks.world.tools import SkeletonDispatcher
 
 AGENTS = ("agent_00", "agent_01")
 
@@ -22,7 +23,7 @@ def gw(tmp_path):
     keys = KeyStore.create(sorted(SYSTEM_PRINCIPALS | set(AGENTS)), key_mode="fresh", seed=1)
     ring = keys.keyring({})
     g = Gateway(cfg, ring, Recorder(RunDir.create(tmp_path / "run", cfg, ring), keys.signer("ks.gateway")),
-                {a: 0 for a in AGENTS}.get)
+                {a: 0 for a in AGENTS}.get, dispatcher=SkeletonDispatcher())
     g.begin_tick(1)
     return g, keys
 
@@ -92,7 +93,7 @@ def test_barrier_missing_frame_is_noop_and_three_misses_close(gw):
                        proc=None, uid=None) for i, a in enumerate(AGENTS)]
     agent0 = pairs[0][1]
     signer = SignerService({a: keys.private(a) for a in AGENTS}, {a: 0 for a in AGENTS}.get)
-    b = TickBarrier(conns, g, signer, _NoWitness(), {a: 0 for a in AGENTS}, deadline_s=0.05)
+    b = TickBarrier(conns, g, signer, _NoWitness(), deadline_s=0.05)
     for t in range(3):  # agent_00 answers, agent_01 stays silent
         agent0.sendall(_frame(keys, tick=t, action=f"t{t}", nonce=f"{t:032x}"))
         o = b.run_tick(t)

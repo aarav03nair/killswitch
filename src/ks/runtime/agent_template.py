@@ -16,8 +16,7 @@ import socket
 
 from ks.contracts import (Envelope, NoopFrame, SignRefusal, SignReply, SignRequest, SubmitFrame, TickFrame,
                           decode_frame, encode_frame)
-
-from .rng import draw_hex
+from ks.rng import draw_hex
 
 EXPIRY_TICKS = 2
 """How far ahead the template sets ``expiry_tick`` (<= MAX_EXPIRY_TICKS)."""

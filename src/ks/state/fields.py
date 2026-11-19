@@ -6,7 +6,7 @@ hash excludes sensitive fields. Sensitivity comes only from config (no IBAN-spec
 
 This module is the seam between the store and the config: :class:`FieldSchema` answers "which fields of
 this table are objects of their own" and splits a full row into its row part and field parts. The read
-rule (whole-row reads list the row's existing field objects) is B3-04 and builds on the same schema.
+rule (whole-row reads list the row's existing field objects, B3-04) is :meth:`FieldSchema.read_objs`.
 """
 
 from __future__ import annotations
@@ -14,7 +14,7 @@ from __future__ import annotations
 from collections.abc import Iterable, Mapping
 from typing import Any
 
-from ks.contracts import RunConfig, split_obj_id
+from ks.contracts import RunConfig, field_obj_id, row_obj_id, split_obj_id
 
 __all__ = ["FieldSchema", "SensitiveKeyError"]
 
@@ -48,7 +48,30 @@ class FieldSchema:
         table, pk, field = split_obj_id(row_obj)
         if field is not None:
             raise ValueError(f"{row_obj!r} is a field object, not a row")
-        return tuple(f"{table}:{pk}.{f}" for f in self.fields_of(table))
+        return tuple(field_obj_id(table, pk, f) for f in self.fields_of(table))
+
+    def read_objs(self, obj: str, project: Iterable[str] | None = None) -> tuple[str, ...]:
+        """Read rule (C3 X2, ADR-05 §3): the objects a read of ``obj`` may deliver, before existence is known.
+
+        * a field object reads only itself;
+        * a whole-row read (``project=None``) reads the row and every field object of the row;
+        * a projection reads the row plus the field objects of the sensitive fields it names; a projection
+          that omits every sensitive field reads only the row.
+
+        The store keeps only the field objects that exist (a never-written field delivers nothing)."""
+        _, _, field = split_obj_id(obj)
+        if field is not None:
+            self.check_obj(obj)
+            return (obj,)
+        if project is None:
+            return (obj, *self.field_objs_of(obj))
+        keep = set(project)
+        return (obj, *(o for o in self.field_objs_of(obj) if split_obj_id(o)[2] in keep))
+
+    @staticmethod
+    def row_of(obj: str) -> str:
+        """``table:pk.field`` -> ``table:pk`` (contract ``row_obj_id``)."""
+        return row_obj_id(obj)
 
     def check_obj(self, obj: str) -> None:
         """Kabir R1 (as ``RunConfig.check_obj``): a ``.field`` suffix must name a sensitive field."""

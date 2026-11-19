@@ -1,6 +1,10 @@
-"""Tick barrier (ADR-00, gateway = scheduler): open -> collect one frame per connection (FIFO, deadline)
--> execute in agent_id order -> replies -> checkpoint. Arrival order is discarded, so a slow or noisy agent
-delays only itself. Control phase, view, dispatch and monitor are Sprint 3.
+"""Tick barrier (ADR-00, gateway = scheduler): I/O and timing only (B3-37).
+
+    open (Gateway.open -> send TickFrames) -> collect one frame per connection (FIFO, deadline, signer requests)
+    -> Gateway.tick(tick, frames) -> send replies -> K-miss / oversize close -> witness checkpoint
+
+Everything that decides anything (control, view, admission, dispatch, monitor) lives behind ``Gateway.open`` and
+``Gateway.tick``; this module never looks inside a frame beyond its length and terminator.
 """
 
 from __future__ import annotations
@@ -12,7 +16,7 @@ import time
 from dataclasses import dataclass, field
 
 from ks.contracts import MAX_FRAME_BYTES, TickFrame, WitnessCheckpoint, encode_frame
-from ks.gateway import Gateway
+from ks.gateway import Gateway, InFrame
 from ks.identity import SignerService
 from ks.witness import WitnessLink
 
@@ -141,12 +145,11 @@ class TickOutcome:
 
 class TickBarrier:
     def __init__(self, conns: list[AgentConn], gateway: Gateway, signer: SignerService, witness: WitnessLink,
-                 epochs: dict[str, int | None], deadline_s: float):
-        self.conns = sorted(conns, key=lambda c: c.index)  # index order == agent_id order (agents are sorted)
+                 deadline_s: float):
+        self.conns = sorted(conns, key=lambda c: c.index)
         self.gateway = gateway
         self.signer = signer
         self.witness = witness
-        self.epochs = epochs
         self.deadline_s = deadline_s
         self.last_checkpoint: WitnessCheckpoint | None = None
 
@@ -154,32 +157,28 @@ class TickBarrier:
         t0 = time.monotonic()
         deadline = t0 + (self.deadline_s if deadline_s is None else deadline_s)
         self.signer.begin_tick(tick)
-        self.gateway.begin_tick(tick)
         seq0 = self.gateway.recorder.seq
-        # 2. open
+        # open
+        opened = self.gateway.open(tick, [c.agent_id for c in self.conns])
         for c in self.conns:
             if c.alive:
-                c.send(encode_frame(TickFrame(tick=tick, epoch=self.epochs[c.agent_id], view=())))
-        # 3. collect
+                c.send(encode_frame(opened[c.agent_id]))
+        # collect
         frames, missed = self._collect(deadline)
-        # 4. execute in agent_id order, then reply
-        replies = []
-        for c in self.conns:
-            if c in frames:
-                c.misses = 0
-                line = frames[c]
-                adm = self.gateway.admit(c.conn_id, line)
-                if adm.reply is not None:
-                    replies.append((c, adm.reply))
-                if len(line) > MAX_FRAME_BYTES or not line.endswith(b"\n"):
-                    c.close()  # oversize closes the connection (SEC-03 F8)
-        for c, reply in replies:
-            c.send(encode_frame(reply))
+        # execute (behind the gateway), then reply
+        by_conn = {c.conn_id: c for c in self.conns}
+        replies = self.gateway.tick(tick, [InFrame(c.agent_id, c.conn_id, line) for c, line in frames.items()])
+        for c, line in frames.items():
+            c.misses = 0
+            if len(line) > MAX_FRAME_BYTES or not line.endswith(b"\n"):
+                c.close()  # oversize closes the connection (SEC-03 F8)
+        for conn_id, reply in replies:
+            by_conn[conn_id].send(encode_frame(reply))
         for c in missed:
             c.misses += 1
             if c.misses >= MAX_MISSES:
                 c.close()
-        # 6. checkpoint (records are already flushed: one append per record)
+        # checkpoint (records are already flushed: one append per record)
         cp = None
         rec = self.gateway.recorder
         if rec.seq > 0:

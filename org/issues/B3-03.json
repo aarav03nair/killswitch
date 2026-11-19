@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "maya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "SQLite-backed versioned store per ADR-05: get -> (value, ver, author), history(obj), put with before/after versions",
   "acceptance": [
     "put/get/history round-trip with monotonic ver per object; put returns WriteEntry before/after ver+hash matching contracts C3",
@@ -19,7 +19,7 @@
   ],
   "deliverable": "src/ks/state/",
   "summary": "src/ks/state/: SQLite versioned store per ADR-05 §1-2. objects(head) + append-only versions (UPDATE/DELETE triggers abort), values in a redactable side table in the same db (SqliteSideStore, C3 SideStore). Store implements StateView/StateWriter: put -> WriteEntry before/after ver+hash, ver+1 per object, tombstones (re-create continues counter), restore(expect=head) = new version by ks.recovery (StaleExpect / RedactedValue), visible_to=seq for M11c, history/heads/value_at. put refuses outside a caller-owned BEGIN IMMEDIATE txn, seq behind store, or 2nd write to an object at one seq; Store.txn() helper. FieldSchema (fields.py) is the B3-04 seam: sensitive-key rejection, field obj check, write_row splits rows and writes only changed objects (field-only edit keeps row ver; row create/delete writes/tombstones field objects). DB 0600. Completed interrupted attempt: lint, re-put of a redacted value re-populates side entry. tests/state: 20 passed; full suite 441 passed.",
-  "review": "",
+  "review": "[maya · done] 20/20 tests pass. Checked against ADR-05 §1-2 and the C3 StateView/StateWriter/SideStore protocols: append-only versions (triggers), +1 per object, tombstones with the counter continuing, restore as a new version by ks.recovery (StaleExpect/RedactedValue), visible_to=seq (seq<r), history/heads/value_at, 0600 db and reopen persistence, sensitive-key rejection, and write_row changing only changed objects all match. put refuses outside a caller-owned BEGIN IMMEDIATE and enforces seq order, so it fits ADR-03 step 13. Non-blocking: (1) a later put of a value with a redacted hash revives the erased side entry, so erasure is undone by any identical write; B3-04/recorder should decide if that is acceptable. (2) get() raises RedactedValue on a redacted head instead of returning a marker; the planner must catch it. (3) state.db is separate from the record/seq store, so commit-then-append atomicity stays the gateway's job (ADR-03 step 14). (4) restore cannot delete a culprit-created object (to_ver>=1); the planner needs put(None) for that.",
   "log": [
     {
       "t": "19 Nov 11:34",
@@ -45,6 +45,11 @@
       "t": "19 Nov 12:23",
       "who": "vikram",
       "msg": "→ in_review"
+    },
+    {
+      "t": "19 Nov 16:01",
+      "who": "maya",
+      "msg": "review: done"
     }
   ]
 }

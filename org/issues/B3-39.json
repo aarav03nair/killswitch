@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "Aarav can run the real demo on his Mac via Docker Desktop/OrbStack with full per-agent isolation",
   "acceptance": [
     "multi-arch Dockerfile (python:3.13-slim) runs as root inside the container so per-agent uids work; no network needed at runtime",
@@ -24,6 +24,21 @@
       "t": "19 Nov 12:21",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 16:01",
+      "who": "ishaan",
+      "msg": "→ in_progress"
+    },
+    {
+      "t": "19 Nov 16:01",
+      "who": "ishaan",
+      "msg": "→ in_review: Dockerfile, .dockerignore, scripts/demo.sh, Makefile, README.md added. NOT executed: docker daemon unavailable (build/run/smoke untested). Note: no 'ks' console script in pyproject, Dockerfile adds /usr/local/bin/ks wrapper (python -m ks). Smoke-test AC (CI) not added; demo.sh run+verify serves as it."
+    },
+    {
+      "t": "19 Nov 16:03",
+      "who": "pmo",
+      "msg": "Docker not available in sandbox: build/make demo/make test untested — first real run on Aarav's Mac"
     }
   ]
 }

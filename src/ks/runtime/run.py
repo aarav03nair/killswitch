@@ -16,6 +16,7 @@ from ks.gateway import Gateway
 from ks.identity import KeyStore, SignerService, derive_key_bytes, load_repro_secret
 from ks.recorder import Recorder
 from ks.witness import WitnessLink, open_witness_fds
+from ks.world.tools import SkeletonDispatcher
 
 from .barrier import AgentConn, TickBarrier
 from .spawn import WITNESS_UID, agent_uid, kill_uids, pids_with_uids, proc_uid, set_nondumpable, set_oom_score_adj, \
@@ -153,9 +154,9 @@ def run(*, agents: int, ticks: int, seed: int, key_mode: str, out: str | os.Path
             say(line)
 
         recorder = Recorder(rd, keys.signer("ks.gateway"))
-        gateway = Gateway(config, keyring, recorder, epochs.get)
+        gateway = Gateway(config, keyring, recorder, epochs.get, dispatcher=SkeletonDispatcher())
         signer = SignerService({a: keys.private(a) for a in ids}, epochs.get)
-        barrier = TickBarrier(conns, gateway, signer, witness, epochs, tick_deadline_ms / 1000)
+        barrier = TickBarrier(conns, gateway, signer, witness, tick_deadline_ms / 1000)
         timing, stalls, misses = [], 0, 0
         for t in range(ticks):
             o = barrier.run_tick(t, deadline_s=max(STARTUP_GRACE_S, barrier.deadline_s) if t == 0 else None)

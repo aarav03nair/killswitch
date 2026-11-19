@@ -1,5 +1,6 @@
-"""The one RNG derivation (ADR-00 M1): ``sha256(canonical([seed, name, tick]))`` per consumer and tick, so a
-dropped or diverging step shifts nobody else's later draws."""
+"""ks.rng: the one RNG derivation (ADR-00 M1), ``sha256(canonical([seed, name, tick]))`` per consumer and tick,
+so a dropped or diverging step shifts nobody else's later draws. Depends only on ks.contracts: world, agents and
+the injector all draw from here, never from ks.runtime."""
 
 from __future__ import annotations
 

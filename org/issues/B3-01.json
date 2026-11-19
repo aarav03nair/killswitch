@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "maya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "Additive contracts bump closing SKEL-01 findings 2-4 plus the contract parts of R3 and F9",
   "acceptance": [
     "Transport has WitnessInit/Pub/Files/Ready/Head/Close and SignRefusal{reason} (closed vocabulary) with round-trip + unknown-key tests; ks.witness and ks.identity use them (no ad-hoc dicts)",
@@ -17,7 +17,7 @@
   "depends": [],
   "deliverable": "src/ks/contracts/",
   "summary": "Contracts 1.2.0, additive only (1.1 __all__ fully preserved; 11 exports added). transport: WitnessInit/Pub/Files/Ready/Head/Close (own union, decode_witness_frame, WITNESS_FILES_FDS=2) and SignRefusal{reason} with closed SIGN_REFUSAL_REASONS = signer_refusal() reasons + schema. C6: RunConfig.isolation in {per_agent_uid, degraded} (default degraded, in config_hash), VerifyReport.isolation echo (None only if config unreadable), RunConfig.decisions_from: Hash|None refused with fault=rogue and key_mode=repro; VERIFY_REASONS reexec_invalid -> TAMPER. ks.witness link/server and ks.identity signer use the contract frames (protocol.py keeps only HEADS_FILE; no ad-hoc dicts left); signer answers every refusal, agent template no-ops on SignRefusal; runtime sets isolation before spawn; verify echoes it and logs 'per-agent attribution VOID' when degraded. Schemas regenerated (/schema/1.2.0/, verified in sync with schema_gen), golden doc:run_config re-pinned (only change), README changelog 1.2.0. Tests: tests/contracts/test_contracts_12.py (43), signer refusal unit test updated, e2e isolation echo test. contracts+skeleton 373 passed; full suite 441 passed (incl. state/monitor WIP). Skeleton run --agents 2 --ticks 10 --seed 3 fresh + verify: OK, isolation per_agent_uid echoed. Left for owners: /proc readback abort (B3-10), X6 replay checks (B3-20), reexec_invalid detection (B3-25).",
-  "review": "",
+  "review": "[kabir · done] Additive only (1.1 exports and reasons preserved). isolation is in RunConfig and so in config_hash, and VerifyReport echoes it. decisions_from is refused with rogue and with repro. SignRefusal is a frame with no envelope, so it cannot become a record. Witness frames use a separate strict union. Tests green.",
   "log": [
     {
       "t": "19 Nov 11:34",
@@ -53,6 +53,11 @@
       "t": "19 Nov 12:23",
       "who": "maya",
       "msg": "→ in_review"
+    },
+    {
+      "t": "19 Nov 16:01",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

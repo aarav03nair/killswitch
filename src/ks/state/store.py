@@ -18,21 +18,32 @@ Transactions (ADR-03 §1.8, CALL-02 G5). The store never opens or commits a tran
 gateway owns ``BEGIN IMMEDIATE``, takes ``seq`` first, re-checks epoch and the deny-list, then calls
 :meth:`Store.put`, then commits and appends the record. ``put`` refuses to run outside a transaction, so
 a write can never autocommit on its own. :meth:`Store.txn` is a convenience wrapper with the same shape.
-Savepoints for dry-run simulation are B3-04.
+
+Reads (B3-04, C3 X2, ADR-05 §3). :meth:`Store.read` and :meth:`Store.read_table` return the delivered value
+**and** the read set the gateway records: a whole-row read lists the row and every existing field object
+of that row; a projection that omits the field lists only the row; any read returning a sensitive value
+lists its field object. :meth:`Store.state_digest` is the live side of reconciliation
+(``state_digest(fold(record))``, see :mod:`ks.state.digest`).
+
+Savepoints (B3-04, ADR-05 §7). :meth:`Store.savepoint` nests inside the caller's transaction and keeps its
+writes unless the block raises; :meth:`Store.simulate` always rolls back (dry-run re-run simulation, B3-24).
 """
 
 from __future__ import annotations
 
+import itertools
 import os
 import sqlite3
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
 from ks.contracts import (
     TOMBSTONE_HASH,
     HistoryEntry,
+    ReadEntry,
     SideDomain,
     StateRead,
     VersionRef,
@@ -41,6 +52,7 @@ from ks.contracts import (
     split_obj_id,
     value_hash,
 )
+from ks.contracts import state_digest as _state_digest
 
 from .fields import FieldSchema
 from .side import SqliteSideStore
@@ -49,6 +61,7 @@ __all__ = [
     "RECOVERY_AUTHOR",
     "SCHEMA_VERSION",
     "NotInTransaction",
+    "ReadResult",
     "RedactedValue",
     "SeqOrderError",
     "StaleExpect",
@@ -110,6 +123,25 @@ class RedactedValue(StateError):
     """The value of that version was erased; only its hash remains."""
 
 
+@dataclass(frozen=True)
+class ReadResult:
+    """What a read delivered (raw ``value``: gateway-internal, never in a record) and its read set
+    (``ReadEntry`` per delivered object version, sorted by obj, unique): goes into ``Record.read_set``."""
+
+    value: Any
+    read_set: tuple[ReadEntry, ...]
+
+
+def _merge_read_sets(*sets: Iterable[ReadEntry]) -> tuple[ReadEntry, ...]:
+    by_obj: dict[str, ReadEntry] = {}
+    for rs in sets:
+        for e in rs:
+            prev = by_obj.setdefault(e.obj, e)
+            if prev != e:
+                raise StateError(f"{e.obj} read at two versions in one read set (v{prev.ver}, v{e.ver})")
+    return tuple(by_obj[o] for o in sorted(by_obj))
+
+
 def _text(value: Any) -> str:
     return canonical.dumps(value).decode()
 
@@ -128,6 +160,7 @@ class Store:
         self.conn = conn
         self.fields = fields if fields is not None else FieldSchema()
         self.side = SqliteSideStore(conn)
+        self._sp = itertools.count(1)
         for stmt in _DDL:
             conn.execute(stmt)
         row = conn.execute("SELECT v FROM meta WHERE k = 'schema'").fetchone()
@@ -153,6 +186,105 @@ class Store:
             self.conn.execute("ROLLBACK")
             raise
         self.conn.execute("COMMIT")
+
+    @contextmanager
+    def savepoint(self) -> Iterator[Store]:
+        """Nested ``SAVEPOINT``: its writes join the enclosing transaction unless the block raises, in which
+        case only they are rolled back. Outside a transaction it opens (and commits) ``BEGIN IMMEDIATE``."""
+        name, outer = self._begin_savepoint()
+        try:
+            yield self
+        except BaseException:
+            self._rollback_savepoint(name, outer)
+            raise
+        self.conn.execute(f"RELEASE {name}")
+        if outer:
+            self.conn.execute("COMMIT")
+
+    @contextmanager
+    def simulate(self) -> Iterator[Store]:
+        """Dry-run block (ADR-05 §7, B3-24 re-run simulation): reads and writes see the block's own writes,
+        and everything (versions, heads, side values, redactions) is rolled back on exit, raise or not.
+        Nests: an inner ``simulate``/``savepoint`` inside it is discarded with it."""
+        name, outer = self._begin_savepoint()
+        try:
+            yield self
+        finally:
+            self._rollback_savepoint(name, outer)
+
+    def _begin_savepoint(self) -> tuple[str, bool]:
+        name = f"ks_sp_{next(self._sp)}"
+        outer = not self.conn.in_transaction
+        if outer:
+            self.conn.execute("BEGIN IMMEDIATE")
+        self.conn.execute(f"SAVEPOINT {name}")
+        return name, outer
+
+    def _rollback_savepoint(self, name: str, outer: bool) -> None:
+        if not self.conn.in_transaction:  # sqlite already rolled the whole transaction back
+            return
+        self.conn.execute(f"ROLLBACK TO {name}")
+        self.conn.execute(f"RELEASE {name}")
+        if outer:
+            self.conn.execute("ROLLBACK")
+
+    # --- reads with read sets (X2) ---------------------------------------------------------------
+    def read(self, obj: str, *, project: Iterable[str] | None = None,
+             visible_to: int | None = None) -> ReadResult | None:
+        """Read ``obj`` and return the value delivered plus its read set (C3 X2, ADR-05 §3).
+
+        * Row, ``project=None`` (whole-row read): the row value merged with every live field value; the read
+          set lists the row and **every existing field object** of that row (tombstoned ones included: the
+          absence of the field was delivered too).
+        * Row, ``project=[keys]``: only those keys of the merged row; the read set lists the row plus the
+          existing field objects of the sensitive keys named. A projection that omits every sensitive field
+          lists only the row, so a field-only edit (which does not bump the row) is invisible to it.
+        * Field object: its value; the read set lists only that field object.
+
+        ``None`` if ``obj`` does not exist (at ``visible_to``): there is no absence read in v1 (SEC-03 F7).
+        A deleted row reads as ``value=None`` and still lists its tombstone version."""
+        _, _, field = split_obj_id(obj)
+        objs = self.fields.read_objs(obj, project)
+        head = self.get(obj, visible_to=visible_to)
+        if head is None:
+            return None
+        if field is not None:
+            return ReadResult(head.value, (ReadEntry(obj=obj, ver=head.ver, hash=head.hash),))
+        entries = [ReadEntry(obj=obj, ver=head.ver, hash=head.hash)]
+        merged = None if head.value is None else dict(head.value) if isinstance(head.value, dict) else head.value
+        for fo in objs[1:]:
+            fr = self.get(fo, visible_to=visible_to)
+            if fr is None:
+                continue
+            entries.append(ReadEntry(obj=fo, ver=fr.ver, hash=fr.hash))
+            if fr.value is not None and isinstance(merged, dict):
+                merged[split_obj_id(fo)[2]] = fr.value
+        value = merged
+        if project is not None and isinstance(merged, dict):
+            keep = set(project)
+            value = {k: v for k, v in merged.items() if k in keep}
+        return ReadResult(value, _merge_read_sets(entries))
+
+    def read_table(self, table: str, *, project: Iterable[str] | None = None,
+                   visible_to: int | None = None) -> ReadResult:
+        """Aggregate read (SEC-03 F7): enumerate every live row of ``table`` and read each by :meth:`read`
+        (whole-row unless ``project`` names keys). ``value`` maps row obj -> delivered row value; the read
+        set is the union of the row reads. Deleted rows are not delivered and not listed."""
+        project = None if project is None else tuple(project)
+        values: dict[str, Any] = {}
+        sets = []
+        for obj, ref in self.heads(visible_to=visible_to).items():
+            t, _, f = split_obj_id(obj)
+            if t != table or f is not None or ref.hash == TOMBSTONE_HASH:
+                continue
+            r = self.read(obj, project=project, visible_to=visible_to)
+            values[obj] = r.value
+            sets.append(r.read_set)
+        return ReadResult(values, _merge_read_sets(*sets))
+
+    def state_digest(self, *, visible_to: int | None = None) -> str:
+        """``state_digest(heads())``: the live digest that reconciliation compares with ``fold(record)``."""
+        return _state_digest(self.heads(visible_to=visible_to))
 
     # --- StateView -------------------------------------------------------------------------------
     def get(self, obj: str, *, visible_to: int | None = None) -> StateRead | None:
