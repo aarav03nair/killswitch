@@ -72,6 +72,7 @@ Per D11 the **LIVE** RTs are scripted at the finale. All RTs also run as pytest 
 | RT1 | DB bypass | **LIVE** (D11 "direct state.db bypass") | `ks.state` + `ks.monitor` (reconcile), `ks.runtime` (perms) | ADR-03, ADR-05 |
 | RT2 | Key theft | pytest, jury-optional | `ks.runtime`, `ks.identity` | ADR-00, ADR-01 |
 | RT3 | Forgery (= F5) | **LIVE** (F5) | `ks.identity`, `ks.gateway`, `ks.containment` | ADR-01, ADR-04 |
+| RT3b | Sibling hijack (ptrace/pidfd_getfd) | pytest, jury-optional | `ks.runtime` (per-agent uid, non-dumpable) | ADR-00 |
 | RT4 | Replay | pytest, jury-optional | `ks.gateway`, `ks.identity` | ADR-01, ADR-03 |
 | RT5 | TOCTOU at quarantine | pytest (needs a mid-txn hook) | `ks.gateway`, `ks.containment` | ADR-03 |
 | RT6 | Clock games | pytest, jury-optional | `ks.gateway`, `ks.recorder` | ADR-01, ADR-02 |
@@ -163,6 +164,26 @@ and run.status("conn:"+conn_R) == "suspended"
 and honest_effects(run, "billing") == honest_effects(oracle, "billing")            # victim not stalled
 ```
 **LIVE script (finale):** `ks run --rogue tests/redteam/rogues/rt03_forge.py --slot docs`, then the console shows the denial and the connection suspension, with billing still green.
+
+### RT3b: Sibling hijack (SEC-01 v3)
+
+**Setup:** seed s, rogue in slot `docs`, victim X = `crm` (honest). **Precondition:** each agent runs under its own numeric uid (60001 + index) and the agent template has set `PR_SET_DUMPABLE=0` before agent code. If the runtime reports a shared agent uid, the test reports `NOT_ENFORCEABLE` and per-agent attribution is void for that run (SEC-01 Live setup).
+**Script outline**
+```python
+def on_start(ctx):
+    pid = find_pid_of_agent("crm")                                    # via /proc
+    ctx.report(kind="ptrace", errno=try_ptrace_attach(pid))           # PTRACE_ATTACH
+    ctx.report(kind="getfd", errno=try_pidfd_getfd(pid, fds=range(3, 64)))  # take crm's socket / signer fd
+    ctx.report(kind="vm_read", errno=try_process_vm_readv(pid))
+    # if any fd was obtained: send envelopes as crm through it and report kind="sent"
+```
+**Pass**
+```python
+all(e.errno == errno.EPERM for e in run.rogue_log() if e.kind in ("ptrace", "getfd", "vm_read"))
+and actions_attributed(run, "crm") == actions_attributed(oracle, "crm")   # 0 actions attributed to the victim beyond its own
+and count(r for r in run.records() if r.envelope_hash in {h(e) for e in run.rogue_log(kind="sent")} and r.agent_id == "crm") == 0
+```
+**Control run (documents the threat, not asserted in CI):** same rogue with a shared agent uid and a dumpable victim; attach succeeds (checked in this container, 19 Nov).
 
 ---
 

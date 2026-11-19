@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "maya",
-  "status": "in_progress",
+  "status": "in_review",
   "outcome": "C1 Envelope, C2 Record, C3 State, C4 Alert/Control, C5 RecoveryPlan, C6 Run dir frozen by 22 Nov as typed modules + JSON Schema, one canonical serializer, JSON-lines-over-Unix-socket transport; every ADR builds on these",
   "acceptance": [
     "src/ks/contracts/ has one module + one JSON Schema per C1–C6 with the fields in CALL-01/maya.md §3 (C1 incl. nonce, expiry, epoch, full act chain; C2 incl. read_set, write_set before/after ver+hash, prev_hash, gw_sig; C2 values as hashes only)",
@@ -17,7 +17,7 @@
   ],
   "depends": [],
   "deliverable": "src/ks/contracts/",
-  "summary": "",
+  "summary": "Contracts 1.0.0 frozen in src/ks/contracts/ (pydantic v2 frozen models, extra=forbid, field docstrings with OTel gen_ai.*/ks.* mapping) + 14 JSON Schema files (draft 2020-12, all fields required; >=1 per C1-C6) + README. C1 Envelope/EnvelopeHeader (commit-then-sign: agent signs header with args_hash, so verify works after args redaction; nonce, expiry_tick, epoch, full act_chain, claimed_ts_us/claimed_seq evidence-only). C2 Record (seq from 1, tick, logical ts_us, conn_id, embedded signed header = claimed agent_id+act_chain, sig_ok, decision exec|deny|hold, closed Reason enum, action_class R/C/I1/I2/U, read_set (obj,ver,hash), write_set before/after ver+hash, outbox_ids, result_hash, Control in clear, prev_hash, hash, gw_sig; attributed_agent is None unless sig_ok) + WitnessCheckpoint. C3 StateView/StateWriter/SideStore protocols, OutboxItem (author, class, idempotency_key gateway-derived, lineage from recorded read set, status queued|held|released|dispatched|cancelled, dispatched_seq), SideEntry. C4 Alert (no suspect; ranked root_candidates; signature alerts name conn only; tamper names nobody) and Control (target agent:/conn:/action:/outbox:; revoke never auto). C5 RecoveryPlan (taint_set, discriminated steps restore|rerun|replan|cancel_outbox|compensate|flag, hash-only dry-run diff; taint-scoped revert = the restore steps). C6 RunConfig (seed, hold_window_ticks, sensitive_fields), Keyring (public only), RunDir create/validate, verify Exit enum (OK/IO/TAMPER/WITNESS/RECONCILE/FROZEN/USAGE) + VerifyReport. Transport frames for JSON lines over Unix sockets. ONE serializer ks.contracts.canonical (JCS-identical: sorted keys, UTF-8, ints within 2^53, no floats, no bytes, strict loads). Folded in TERMS section 7 and redteam SPEC Q1-Q5, Q7, Q9, Q10; Q6 (score keys) left to ADR-06; Q8 = Exit.FROZEN. pytest: 231 passed (round-trip identity, byte-stable across 2 processes with different hash seeds, schema validation, golden hashes, rule invariants, single-serializer guard).",
   "review": "",
   "log": [
     {
@@ -39,6 +39,16 @@
       "t": "19 Nov 00:55",
       "who": "maya",
       "msg": "→ in_progress"
+    },
+    {
+      "t": "19 Nov 06:01",
+      "who": "maya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 06:01",
+      "who": "maya",
+      "msg": "→ in_review: 231 tests green; ready for kabir (SEC-03) review"
     }
   ]
 }

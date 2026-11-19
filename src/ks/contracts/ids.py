@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from typing import Annotated
 
 from pydantic import Field, Strict, StringConstraints
@@ -61,5 +60,3 @@ def record_id_for(seq: int) -> str:
 def is_system_principal(p: str) -> bool:
     return p in SYSTEM_PRINCIPALS
 
-
-_AGENT = re.compile(AGENT_ID_RE)

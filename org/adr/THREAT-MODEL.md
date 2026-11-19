@@ -1,10 +1,10 @@
 # THREAT-MODEL: Project Kill Switch, for the jury
 
-Owner: kabir · SEC-01 v2 · Binding source: org/meetings/CALL-01.md · Read before the D11 live attacks.
+Owner: kabir · SEC-01 v3 · Binding source: org/meetings/CALL-01.md · Read before the D11 live attacks.
 
 **System:** agents are separate subprocesses that reach shared state only through the **gateway**, which owns workspace, record and keys. A separate **witness** process signs `(seq, head, tick, count)` every tick; `count` is its own monotonic counter. `verify` checks chain, signatures, witness heads, seq gaps and reconciliation (state = fold(record)).
 
-**Live setup (fixed day 1).** The container runs as uid 0 and has a `nobody` user; setuid to it works here (checked 19 Nov). Gateway: uid 0; witness: own uid; agents: a separate unprivileged uid. Keys are generated in memory, never on disk; gateway, witness and signer set `PR_SET_DUMPABLE=0`; each agent gets a path-less `socketpair`, a clean env and `close_fds`. The console prints the mode at start. **If an environment cannot separate the uid, C1 and C4 degrade:** a key read from the rogue subprocess is the admitted gap and voids C1/C4 for that run; reconciliation does not see it. RT2 stays the test.
+**Live setup (fixed day 1).** The container runs as uid 0. Gateway: uid 0; witness: its own uid; **each agent: its own numeric uid** (60001 + index, no passwd entry needed); the agent template sets `PR_SET_DUMPABLE=0` before agent code runs; rlimits are per uid. Checked here 19 Nov: cross-uid `ptrace`/`pidfd_getfd` → EPERM. Keys are generated in memory, never on disk; gateway, witness and signer set `PR_SET_DUMPABLE=0`; each agent gets a path-less `socketpair`, a clean env and `close_fds`. The console prints the mode at start. **If an environment cannot separate the gateway uid, C1 and C4 degrade:** a key read from the rogue subprocess is the admitted gap and voids C1/C4 for that run; reconciliation does not see it (RT2). **If per-agent uids fail, per-agent attribution is void for that run:** a sibling may act through an honest agent's handle (RT3b).
 
 ## 1. Assets
 
@@ -37,7 +37,7 @@ The console operator who approves recovery plans and revokes is **trusted**.
 | **Buggy agent** (F1/F2/F4/F7) | Non-adaptive. Wrong but well-formed, in-scope writes (hero: crm swaps a supplier IBAN) |
 | **Rogue agent** | Arbitrary code in its own process. **The jury may run arbitrary Python inside the rogue subprocess** (D11): bypass, replay, forge, flood, stall |
 | **Colluding agents** | Laundering via tickets, splitting under thresholds. We name **root candidates**; no prevention claim |
-| **Insider record tamper** | Can edit record files; holds no gateway or witness key and no write access to the witness head store |
+| **Insider record tamper** | Edits record files; holds no witness key; cannot alter the head printed at run end (the head store is defence in depth) |
 
 **Out of scope**, with the production mitigation we would use:
 
@@ -45,7 +45,7 @@ The console operator who approves recovery plans and revokes is **trusted**.
 |---|---|---|
 | Gateway/witness host or root compromise | A reference monitor falls with its host (Airlock also trusts its TCB, App. A.6) | Keys in an **HSM**; record on **WORM** storage |
 | One insider holding both gateway and witness keys | Can re-sign and re-witness a rewritten chain | Split key custody (HSM) + **WORM** witness store |
-| Shared uid (agent = gateway user) | Only where setuid fails; voids C1/C4 (Live setup) | Separate **uid/container** per agent; C2 |
+| Shared uid (agent = gateway user, or agents share one uid) | Only where setuid fails; voids C1/C4, or per-agent attribution (Live setup) | Separate **container** per agent; C2 |
 | Exhaustion beyond per-agent rlimits | One shared host | Container limits (pids, memory, CPU) |
 | Covert channels between agents | Not in any read set | Network isolation narrows them; no claim |
 | Semantic influence | Taint tracks data exposure, not meaning | None; we **over-taint** (conservative) |
@@ -75,6 +75,7 @@ Controls: **D6** chain + agent sig + gateway sig + witness + `verify`; **D7** au
 | Rogue | RT1 | Direct `state.db` bypass | Rule 1 (gateway owns workspace, 0600, separate uid); D6 reconciliation → D7 class-U suspend | Blocked; else flagged in ≤1 tick |
 | Rogue | RT2 | Key theft (fs, env, fds, `/proc` memory) | Rules 1, 2; Live setup (uid, in-memory keys, non-dumpable, socketpair, clean env) | 0 key bytes reachable |
 | Rogue | RT3 | Forgery: claims X, signed by Y | Rule 4 (canonical serializer); D7 connection suspend | 0 executed; X not suspended |
+| Rogue | RT3b | Sibling hijack: `ptrace`/`pidfd_getfd` on another agent to use its socket and signer handle | Per-agent uid + non-dumpable agent processes; rule 2 | Attach gets EPERM; 0 actions attributed to the victim |
 | Rogue | RT4 | Replay of valid or expired envelope | Rule 4 (nonce, expiry) | 0 duplicate effects |
 | Rogue | RT5 | Write flood during suspension (TOCTOU) | Rule 5 (epoch + deny-list checked in the write transaction); rule 11 | 0 culprit writes after suspension `seq` |
 | Rogue | RT6 | Supplies its own `ts`/`seq` | Rule 3 (gateway assigns `seq`, `ts`, `record_id`) | Ordering uses gateway values |
@@ -89,10 +90,8 @@ Controls: **D6** chain + agent sig + gateway sig + witness + `verify`; **D7** au
 | Insider | RT7 | Edit one record (one IBAN hash) | D6 chain + sigs; rule 9; `verify` prints first bad index | `verify` non-zero |
 | Insider | RT8 | Recompute the whole chain | D6 witness heads (insider holds no witness key) | Detected |
 | Insider | RT8 (variant) | Truncate the tail | D6 seq gaps + witness head; rule 8 | Detected up to last witnessed head |
-| Insider | RT8 (variant) | Truncate record **and** witness heads to an older valid prefix | Witness `count` is monotonic; `verify` checks against the final signed head + count printed at run end (off the file system) | Detected against the printed head |
+| Insider | RT8 (variant) | Truncate record **and** witness heads to an older valid prefix | Witness `count` is monotonic; `verify` checks against the final signed head + count printed at run end (off the file system). A run with no printed head is out of scope (production: **WORM** witness store) | Detected against the printed head |
 | Insider | RT7/8 | Any tamper during recovery | D7: tamper alert freezes recovery, suspends nobody | Recovery frozen |
-
-**Detect, not exclude:** the insider cannot write the witness head store, and the printed head is on the jury's screen, so a rewound prefix contradicts it. A run with no printed head is out of scope (production: **WORM** witness store).
 
 All pass values are **targets, not results** (D13); measured values appear only in the Sprint 4 red-team report.
 
@@ -102,6 +101,4 @@ All pass values are **targets, not results** (D13); measured values appear only 
 
 ## 7. Rules of engagement for the jury
 
-**Live (F5/F6):** `ks inject`; arbitrary Python in the rogue-agent template (including stalls and resource bombs); direct `state.db` bypass; a record edit; a full chain rewrite, then `verify`. **Pytest:** F3 (exfiltration). A host shell as the gateway's or witness's user is host compromise (§3), not a break of C1-C6.
-
-**Changes v2 (panel):** C6 reworded; Live setup + shared-uid consequence; witness head store + record-and-heads truncation row; stall/resource row; Control/recovery-key row, operator trusted; TERMS fixes (suspension, record); side store → F3.
+**Live (F5/F6):** `ks inject`; arbitrary Python in the rogue-agent template (including stalls, resource bombs and attaching to sibling agents); direct `state.db` bypass; a record edit; a full chain rewrite, then `verify`. **Pytest:** F3 (exfiltration). A host shell as the gateway's or witness's user is host compromise (§3), not a break of C1-C6.

@@ -861,6 +861,31 @@
       "t": "19 Nov 05:59",
       "who": "pmo",
       "msg": "reviewed ABS-01: done"
+    },
+    {
+      "t": "19 Nov 05:59",
+      "who": "panel",
+      "msg": "reviewed ABS-02: done"
+    },
+    {
+      "t": "19 Nov 05:59",
+      "who": "panel",
+      "msg": "reviewed SEC-01: changes"
+    },
+    {
+      "t": "19 Nov 06:00",
+      "who": "panel",
+      "msg": "reviewed ABS-06: changes"
+    },
+    {
+      "t": "19 Nov 06:01",
+      "who": "maya",
+      "msg": "moved CON-01 to in_review"
+    },
+    {
+      "t": "19 Nov 06:02",
+      "who": "kabir",
+      "msg": "moved SEC-01 to in_review"
     }
   ]
 }
