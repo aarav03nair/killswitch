@@ -1,41 +1,26 @@
-# Handoff: where work stopped (19 Nov 2026, ~10:50 IST)
+# Handoff: where work stopped (19 Nov 2026, ~16:10 IST)
 
-Moved from the Claude app to Claude Code. The previous session hit the Opus 5-hour usage limit mid-wave; the interrupted items are below. Nothing is broken: `python3 -m pytest -q` gives 231 passed.
+Moving from the Claude app to **Claude Code in IntelliJ** on Aarav's Mac. Everything is committed. `python3 -m pytest -q` gives 462 passed. On macOS, run tests and demos inside Docker (see README "Run on macOS"), because the runtime uses Linux per-agent uids.
 
-## Status by sprint
-- **Sprint 0 Kickoff:** done.
-- **Sprint 1 Research:** done. 11 reports + synthesis, all reviewed. Lacuna Research connector was used for RES-09/10/11.
-- **Sprint 2 Frame & Design:** in its last step. Abstract Kit delivered to Aarav. Contracts v1.0.0 built. All 8 ADRs written, reviewed, and frozen in **Call #2** (`org/meetings/CALL-02.md` + `CALL-02/resolutions.md`).
-- **Sprint 3 Build:** not started. Opens after CON-02 lands.
+## Status
+- **Sprints 0–2 (research, framing, design): done.** Abstract Kit delivered; reference draft at `abstract/REFERENCE-DRAFT.md` (model only; Aarav writes his own). Design frozen in Call #2. Build plan in Call #3.
+- **Sprint 3 build: 9 of 40 issues finished** (B3-01 contracts 1.2 · B3-02 errata · B3-03 state store · B3-04 field objects/read rule/savepoints · B3-07 + B3-38 monitor · B3-37 refactor seams · B3-39 Docker · SKEL-01 skeleton). Reviews pending: B3-04 (maya), B3-37 (panel), B3-39 (kabir; Docker never executed in the cloud sandbox, so the first real run is on the Mac).
+- Board: `python3 board/render.py` then open `board/index.html`. Abstract Kit: `python3 board/kit.py`. Demo rehearsal: `board/demo-sim.html`.
 
-## Interrupted mid-task (resume these first)
-| Issue | Owner | State | What's left |
-|---|---|---|---|
-| **CON-02** contracts v1.1.0 | maya (opus) | Started, **no code changes landed yet** | Implement the whole "CON-02 checklist" in `CALL-02/resolutions.md` + amendments X1, X2, X7, X8-F1 in `CALL-02.md` + Kabir's sign-off tests (see `CALL-02/kabir.md`, `org/reports/SEC-03.md` B1–B4). Then Kabir signs (closes CON-01 + SEC-03). **Critical path.** |
-| **ADR-00** freeze amendments | maya | Amendments section written, uncommitted, not re-verified | Re-read against Panel M1–M7 + assignment table; set `in_review` |
-| **ADR-05** freeze amendments | vikram (opus) | Amendments written, was trimming length | Finish trim; set `in_review` |
-| **SEC-02 + THREAT-MODEL** freeze updates | kabir | Unknown progress | Apply N1–N5, D4, F7, H5, X6, X7, Maya's SEC-02 review items; THREAT-MODEL v4 (ks.operator, c-0, operator socket, repro ≠ security run) |
-| **ABS-08** kit update for the freeze | zoya | Not started (agent died early) | Update TERMS, GUARDRAILS, SKELETON, JURY-QA, SYNTHESIS §6 for the new hero decision + D13 wording; apply Maya's ABS-04 name corrections. Then `python3 board/kit.py` |
+## Next, in order (dependency graph in `python3 org/issue.py list --sprint 3`)
+1. Close the 3 reviews above.
+2. **Wave 3** (all unblocked now): B3-05 world + view (tara) · B3-06 tool adapters (tara) · B3-08 witness fd handover (arjun) · B3-09 recorder txn + GatewayHooks (arjun) · B3-36 Panel skeleton fixes M1/M2/S2/S3 (arjun, after B3-08) · B3-10 10-agent runtime (maya, after B3-05).
+3. Then gateway (B3-11 → B3-14 → B3-23), taint (B3-18), planner (B3-21), re-run simulation (B3-24, critical path), oracle/score (B3-22/26) → **B3-27 hero end-to-end (target 24 Nov)** → apply/bench/console/red-team → **code freeze 26 Nov 18:00 IST**.
+4. Slip rule: if B3-24 is not green by 24 Nov 18:00, maya pairs with vikram and B3-29 moves to Sprint 4.
+5. Sprint 4: 20-seed bench, red team RT1–RT13, Panel jury dry run, finale rehearsal (`board/demo-sim.html` is the script).
 
-## Waiting for review (freeze applied)
-ADR-01, ADR-02 (reviewer kabir), ADR-03 (kabir), ADR-04 (maya), ADR-06 (anaya), ADR-07 (zoya). Each reviewer only re-checks their own must-fixes.
+## Waiting on Aarav
+- ⚑ D-02 headline · ⚑ D-10 hero field objects · ⚑ D-11 D13 target wording.
+- His own abstract (due **22 Nov**). Run ABS-07: comment-only reviews (zoya, anaya), and never rewrite his sentences.
+- Stretch decision: one LangGraph agent running through our gateway (not yet in the plan).
 
-## Waiting on Aarav (Product Owner)
-- ⚑ D-02 layered headline · ⚑ D-10 hero = field-level objects for sensitive fields · ⚑ D-11 revised D13 target wording (all on the board under Decisions).
-- **ABS-07:** when Aarav pastes his abstract draft, run two comment-only review rounds (zoya framing, anaya facts). Never rewrite his sentences.
-
-## Next, in order
-1. Finish CON-02 → Kabir sign-off → commit.
-2. Close ADR reviews; ABS-08 kit refresh (abstract due **22 Nov**).
-3. **SKEL-01** walking skeleton: 2 agent subprocesses (own uids) → gateway stub → recorder → `ks verify`, plus the same-seed determinism test.
-4. **Call #3**, Sprint 3 build kickoff. Leads open small build issues per module (ownership in `CALL-01/maya.md` §3 + ADR assignment table): arjun identity/recorder/witness/verify · nisha gateway/policy/monitor/containment · vikram state/taint/recovery (9.5-day estimate, so start early) · tara world/inject/oracle/score/bench · ishaan cli/console · maya runtime + integration.
-5. Sprint 4: 10-agent benchmark (≥20 seeds), red-team RT1–RT12, Panel jury dry-run, 5-beat demo (`CALL-01/zoya.md` §4).
-
-## Published pages (Claude app artifacts; may not open from Claude Code)
-- Board: https://claude.ai/artifact/HSWLtXFe9GYB36whkxwhwL. Locally: `python3 board/render.py` → `board/index.html`.
-- Abstract Kit: https://claude.ai/artifact/S7oNQViS1fy7pz7ZwLZw1f. Locally: `python3 board/kit.py` → `board/kit.html`.
-- How it works: https://claude.ai/artifact/38FVafjkHf2vXLTm2z6uBF. Locally: `abstract/how-it-works.html`.
-
-## Lessons from the first session
-- Opus usage limits hit twice. Keep Opus for leads, reviews and the rollback engine; use Sonnet for most dev/research work.
-- Reviews caught real bugs every round (anti-framing, epoch reuse, sibling ptrace hijack, oracle leaks). Keep the review gate.
+## Gotchas learned
+- **Only one `ks run` at a time per machine**: runs claim uids 60000+. Parallel test runs or parallel agents collide (the K2 guard refuses). Run pytest serially.
+- Opus usage limits hit three times. Keep Opus for leads, reviews and vikram; Sonnet for the rest; at most about 4 agents at once.
+- Agents never commit; the PMO commits after each wave.
+- Reviews keep finding real bugs. Keep the gate.
