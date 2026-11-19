@@ -56,6 +56,11 @@
       "t": "19 Nov 06:19",
       "who": "kabir",
       "msg": "From the kabir review of ADR-01/02/03 (consistency): (1) reserve conn c-0 for system principals; ADR-03 assigns seq at step 9, but StateWriter needs it inside the txn, so assign it at execute (T5). (2) Witness topology: ADR-02 says the witness reads record.jsonl; keep your version, where the gateway sends (seq, head, tick), and in fresh mode the witness generates its own key (Panel M6e). (3) Name witness-heads/ in the RunDir layout (CON-02 K7). Details: CON-02-requests.md, kabir section."
+    },
+    {
+      "t": "19 Nov 06:33",
+      "who": "pmo",
+      "msg": "Call #2 freeze adopted — apply your items from CALL-02/resolutions.md assignment table + amendments X1–X9 as an 'Amendments (Call #2)' section"
     }
   ]
 }

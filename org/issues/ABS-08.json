@@ -1,0 +1,28 @@
+{
+  "id": "ABS-08",
+  "title": "Update abstract kit for the design freeze (D13, hero, S*)",
+  "sprint": 2,
+  "track": "pitch",
+  "owner": "zoya",
+  "reviewer": "anaya",
+  "model": "opus",
+  "created_by": "zoya",
+  "status": "todo",
+  "outcome": "Kit files consistent with CALL-02: new D13 meaning, triage kept, S* definition",
+  "acceptance": [
+    "TERMS, GUARDRAILS, SKELETON, JURY-QA updated per CALL-02 follow-ups",
+    "no pasteable prose introduced",
+    "Changes notes added"
+  ],
+  "depends": [],
+  "deliverable": "abstract/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 06:33",
+      "who": "zoya",
+      "msg": "opened"
+    }
+  ]
+}

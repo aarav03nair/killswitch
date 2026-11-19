@@ -50,6 +50,11 @@
       "t": "19 Nov 06:19",
       "who": "kabir",
       "msg": "From the kabir review of ADR-02: 'ks verify RUN [--json]' needs --head <RunAnchor line> (CON-02 K1). Without it, the record+witness truncation and keyring-swap defences cannot be invoked. The release-epoch reply is CON-02 maya M5 (TickFrame.epoch)."
+    },
+    {
+      "t": "19 Nov 06:33",
+      "who": "pmo",
+      "msg": "Call #2 freeze adopted — apply your items from CALL-02/resolutions.md assignment table + amendments X1–X9 as an 'Amendments (Call #2)' section"
     }
   ]
 }

@@ -231,6 +231,36 @@
         "Threat model + red-team spec",
         "Walking skeleton with the determinism test"
       ]
+    },
+    {
+      "id": "CALL-02",
+      "title": "Call #2 — Design freeze",
+      "date": "19 Nov 2026",
+      "attendees": [
+        "pmo",
+        "maya",
+        "kabir",
+        "anaya",
+        "vikram",
+        "panel"
+      ],
+      "summary": "All eight ADRs came back from review with real holes. One binding resolution per item (A–N) was adopted with nine amendments. Contracts move to v1.1.0. Build starts as soon as CON-02 lands.",
+      "decisions": [
+        "Hero: sensitive fields become their own versioned objects. IBAN and price restored; triage's edit kept; no flags (Aarav to confirm)",
+        "Honest conflict kept in bench variant F2+x (R>0) and culprit-window variant F2+c (C>0)",
+        "S*: same seed with the fault off; the culprit also stops from its suspension tick; baselines labelled oracle-assisted",
+        "root_candidates[0] = writer of the bad version; read-only links never auto-suspend",
+        "Epochs strictly increase; release always issues a fresh epoch; max expiry 8 ticks",
+        "Run anchor (head, count, keyring hash, config hash) checked by ks verify --head",
+        "Field-level reads recorded; the agent's view joins its read set",
+        "Operator signer renamed ks.operator; root-only socket checked by peer credentials"
+      ],
+      "next": [
+        "CON-02 contracts v1.1.0",
+        "ADR amendments by all owners",
+        "Abstract kit updates for the new D13 wording",
+        "Sprint 3 build"
+      ]
     }
   ],
   "decisions": [
@@ -287,6 +317,30 @@
       "title": "Honest-claims rules for the abstract",
       "status": "accepted",
       "summary": "No 'first', no Airlock comparison, no 'tamper-proof'/'compliant', Who&When quoted with its setting, our numbers labelled targets."
+    },
+    {
+      "id": "D-10",
+      "title": "Hero uses field-level objects for sensitive fields",
+      "status": "awaiting Aarav",
+      "summary": "Restores the swapped IBAN and price without touching triage's honest edit. Honest conflicts are kept in variants F2+x and F2+c."
+    },
+    {
+      "id": "D-11",
+      "title": "Revised D13 target wording",
+      "status": "awaiting Aarav",
+      "summary": "R=0 and C=0 on the hero as targets. Honest later edits go to a person and count in R. The culprit's own window counts in C."
+    },
+    {
+      "id": "D-12",
+      "title": "Root candidate = writer of the bad version",
+      "status": "accepted",
+      "summary": "Stops a rogue framing an honest upstream agent by reading its data first."
+    },
+    {
+      "id": "D-13",
+      "title": "Start the build ahead of the official prototyping window",
+      "status": "accepted",
+      "summary": "Recovery modules are estimated at 9.5 build days against an 8-day window."
     }
   ],
   "risks": [
@@ -309,6 +363,10 @@
     {
       "r": "Airlock is close prior art",
       "mit": "Credit it; claim only the backward half + authenticated record + oracle scoring"
+    },
+    {
+      "r": "Recovery modules need 9.5 build days against an 8-day window",
+      "mit": "Build starts now; re-run simulation is the critical path"
     }
   ],
   "activity": [
@@ -1046,6 +1104,31 @@
       "t": "19 Nov 06:19",
       "who": "kabir",
       "msg": "reviewed ADR-03: changes"
+    },
+    {
+      "t": "19 Nov 06:20",
+      "who": "pmo",
+      "msg": "opened ORG-04 — Call #2: design freeze — resolve all cross-ADR issues"
+    },
+    {
+      "t": "19 Nov 06:20",
+      "who": "pmo",
+      "msg": "moved ORG-04 to in_progress"
+    },
+    {
+      "t": "19 Nov 06:33",
+      "who": "pmo",
+      "msg": "moved ORG-04 to done"
+    },
+    {
+      "t": "19 Nov 06:33",
+      "who": "maya",
+      "msg": "opened CON-02 — Contracts v1.1.0 per design freeze"
+    },
+    {
+      "t": "19 Nov 06:33",
+      "who": "zoya",
+      "msg": "opened ABS-08 — Update abstract kit for the design freeze (D13, hero, S*)"
     }
   ]
 }

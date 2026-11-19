@@ -56,6 +56,11 @@
       "t": "19 Nov 06:19",
       "who": "kabir",
       "msg": "From the kabir review of ADR-01/03: §6 'restoring the pre-suspend epoch' revives presigned envelopes (SEC-03 B3; CON-02 maya M4). Release must set a fresh epoch and lift only suspension holds, with lineage/sensitive holds surviving (CON-02 K15). Also: a sig_ok deny/out_of_scope (p.scope, ADR-03) is your scope detector's evidence. Without that, it never fires, because the gateway denies first."
+    },
+    {
+      "t": "19 Nov 06:33",
+      "who": "pmo",
+      "msg": "Call #2 freeze adopted — apply your items from CALL-02/resolutions.md assignment table + amendments X1–X9 as an 'Amendments (Call #2)' section"
     }
   ]
 }

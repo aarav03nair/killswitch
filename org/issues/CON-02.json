@@ -1,0 +1,28 @@
+{
+  "id": "CON-02",
+  "title": "Contracts v1.1.0 per design freeze",
+  "sprint": 2,
+  "track": "eng",
+  "owner": "maya",
+  "reviewer": "kabir",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "Contracts implement the CON-02 checklist + X1, X7, X8(F1) with tests; Kabir can sign",
+  "acceptance": [
+    "every checklist item in CALL-02/resolutions.md implemented with a test",
+    "Kabir's sign-off tests pass: test_count_chain, RT8(h)-ready anchor, test_fresh_keys_differ, test_epoch_monotonic, test_depth_6kb_denied, pk '.' rejected",
+    "all existing tests green; schemas regenerated; README updated"
+  ],
+  "depends": [],
+  "deliverable": "src/ks/contracts/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 06:33",
+      "who": "maya",
+      "msg": "opened"
+    }
+  ]
+}

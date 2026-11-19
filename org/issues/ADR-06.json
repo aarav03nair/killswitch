@@ -56,6 +56,11 @@
       "t": "19 Nov 06:19",
       "who": "kabir",
       "msg": "From the kabir review of ADR-03: the catalogue has no tools for crm customers write/delete (F1 would be class U), ledger writes or compliance findings. Comms email is I2 here but I1 in ADR-03, and I1 is needed for the hero flow. F3 culprit crm is denied at once by p.scope, and no rule stops an in-scope agent from emailing PII. RT9/RT12 need a world mechanism that carries a parent action_id (ticket origin)."
+    },
+    {
+      "t": "19 Nov 06:33",
+      "who": "pmo",
+      "msg": "Call #2 freeze adopted — apply your items from CALL-02/resolutions.md assignment table + amendments X1–X9 as an 'Amendments (Call #2)' section"
     }
   ]
 }

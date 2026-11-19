@@ -1,0 +1,43 @@
+{
+  "id": "ORG-04",
+  "title": "Call #2: design freeze — resolve all cross-ADR issues",
+  "sprint": 2,
+  "track": "ops",
+  "owner": "pmo",
+  "reviewer": "panel",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "done",
+  "outcome": "One binding resolution per open review item, owners for every ADR edit, CON-02 scope fixed",
+  "acceptance": [
+    "Maya drafts resolutions covering every must-fix in ADR-00..07, SEC-03 and CON-02-requests",
+    "Kabir, Anaya, Vikram post objections or sign-off",
+    "PMO publishes the freeze with dissent recorded"
+  ],
+  "depends": [],
+  "deliverable": "org/meetings/CALL-02.md",
+  "summary": "Design freeze adopted: resolutions.md + amendments X1–X9 (org/meetings/CALL-02.md). Hero = field-level sensitive objects (⚑ Aarav). D13 wording revised (⚑ Aarav). CON-02 next, then build.",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 06:20",
+      "who": "pmo",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 06:20",
+      "who": "pmo",
+      "msg": "→ in_progress"
+    },
+    {
+      "t": "19 Nov 06:33",
+      "who": "pmo",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 06:33",
+      "who": "pmo",
+      "msg": "→ done"
+    }
+  ]
+}
