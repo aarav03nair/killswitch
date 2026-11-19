@@ -91,7 +91,7 @@ Note: "kill switch" is the **project name only**. Never use it for an operation;
 | **residual damage (R)** | Share of bad effects still wrong at run end, held or flagged included. Target 0. | `ks.score` key `R` = {n,d}: \|{k ∈ keys(B): final(k) ≠ S\*(k)}\| / \|keys(B)\|, scored at T; compares values only (X4) | leftover damage, error rate, miss rate |
 | **collateral loss (C)** | Share of good effects lost by recovery, including the culprit's own reverted work. Target 0. | `ks.score` key `C` = {n,d}; split-out key `c_culprit_window` (X3d) | collateral damage, false positives, overkill |
 | **culprit-window loss** | The part of collateral loss that is the culprit's own reverted honest work. | `ks.score` key `c_culprit_window` (X3d), from the ledger | acceptable loss, expected loss |
-| **collateral stall** | Delay that holds and recovery impose on honest work, reported apart from collateral loss. | `ks.score`, measured against the unmirrored S\* (A1′); key name ⚠ (§7 item 10) | slowdown, overhead, latency cost |
+| **collateral stall** | Delay that holds and recovery impose on honest work, reported apart from collateral loss. | `ks.score`, measured against the unmirrored S\* (A1′); score.json key `collateral_stall` `{n,d}`, apart from `fp_cost.stall_ticks` (§7 item 10) | slowdown, overhead, latency cost |
 | **clean recovery** | Residual damage R = 0 and collateral loss C = 0 together, all invariants holding. | `ks.score`; also requires `invariants_ok` at T; no composite score | perfect recovery, full undo, 100% |
 | **TTI-detect** | Time from t0 to the first alert. | `ks.score` key `tti_detect`, from chained `ks.alert` records (X8) | detection time, MTTD, time to alert |
 | **TTI-attribute** | Time from alert to naming the right agent and its first bad action. | `ks.score` key `tti_attribute` (`root_candidates[0]` == culprit) | blame time, attribution latency, MTTI |
@@ -119,18 +119,18 @@ Note: "R" and "C" are overloaded (class R / class C vs residual damage R / colla
 
 ## 7. Contract check (Maya's ABS-04 answers + CALL-02)
 
-All ⚠ from v1 are closed except item 10.
+All ⚠ from v1 are closed.
 
 1. **Revert vs `restore`**: confirmed. `restore` stays the per-object step; a taint-scoped revert = the set of `restore` steps (C5 docstring). "Restore" stays banned in prose.
 2. **Culprit vs suspect**: there is no `Alert.suspect`. Culprit = `RunConfig.culprit` (scorer) / `RecoveryPlan.culprit` (person). Suspect = `root_candidates[0]`, console only (row added).
 3. **Provenance graph**: confirmed, no graph type.
 4. **Witness checkpoint, side store**: resolved, C2 `WitnessCheckpoint`, C3 `SideStore`.
 5. **Hold window, sensitive tag**: resolved, `RunConfig.hold_window_ticks`, `RunConfig.sensitive_fields`.
-6. **Metric names**: fixed by CALL-02 A6: `post_alert_tainted_effects`, `irreversible_tainted_released`. TERMS copies score.json keys exactly. ADR-06 text still shows the old names until tara's revision lands; TERMS wins for the kit.
+6. **Metric names**: fixed by CALL-02 A6: `post_alert_tainted_effects`, `irreversible_tainted_released`. TERMS copies score.json keys exactly. ADR-06 now uses the PMO metric names; TERMS and ADR-06 agree.
 7. **Idempotency key**: resolved, it exists as C3 `OutboxItem.idempotency_key`.
 8. **Connection suspend**: resolved, Control target `conn:<id>` (row added).
 9. **Reconciliation**: confirmed, detector `reconcile`, class U.
-10. ⚠ **Collateral stall** (new, ABS-08): CALL-02 names the concept but no score.json key. tara (ADR-06) to name it; TERMS then copies it.
+10. **Collateral stall** (ABS-08): resolved, score.json key `collateral_stall` `{n,d}` like R and C (ADR-06-metrics §3): the system run's `final_T` against the unmirrored fault-off run S0 over non-culprit keys; separate from `fp_cost.stall_ticks`.
 11. **`ks.console`**: removed from ids.py with no alias (E2, X7; grep test). Nowhere in the kit except as a banned synonym.
 
 ## Changes v2 (ABS-04 review fixes + CALL-02 freeze, ABS-08, 19 Nov)

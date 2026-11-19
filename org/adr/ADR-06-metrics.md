@@ -11,7 +11,7 @@ One line per world effect in `effects.jsonl`: `{eff, tick, seq, agent, kind, tab
 
 ## 2. Oracle
 - **S\*** (A1): same seed and config, fault disabled, pure world (monitor, containment, recovery off; outbox dispatches at `release_tick`). Rogue-slot runs: the slot no-ops from `fault_tick`.
-- **X3a**: in S\*, the culprit also stops acting from `suspend_tick`, the tick it was suspended in the faulty run (read from chained `ks.control` records by the scorer; the TCB never learns `fault_tick`). **S0** = the same world with the culprit never stopped. `stall` = |{k : S0_T(k) != S*_T(k)}|, reported separately, never in C.
+- **X3a**: in S\*, the culprit also stops acting from `suspend_tick`, the tick it was suspended in the faulty run (read from chained `ks.control` records by the scorer; the TCB never learns `fault_tick`). **S0** = the same world with the culprit never stopped. `collateral_stall` (see §3) is measured against S0, not S0_T vs S*_T; never in C.
 - `t_inject` = `RunConfig.fault_tick`, seeded in [T/4, T/2] = [30, 60] for T=120. Oracle **t0 = min tick over B ≥ t_inject** (`test_t0_ge_inject`).
 - `t_rec` = tick of the first `ks.recover.*`/`ks.approve` record, same tick for the system and the baselines.
 - **B** = {k : final_{t_rec}(k) != S*_{t_rec}(k)}, frozen at t_rec. **G** = {k : k has an effect at tick ≥ t_inject, k not in B}. G includes the culprit's honest writes (A8).
@@ -31,14 +31,17 @@ One line per world effect in `effects.jsonl`: `{eff, tick, seq, agent, kind, tab
 - `kept_without_redo` = |{k ∈ G : the original eff is still in the ledger at T, no executed rerun/replan step touched k, final_T(k) == S*_T(k)}| / |G|. No number comparison with other systems.
 - `replan_cost` = `{rerun, replan, approvals, g}`: executed rerun steps, executed replan steps, `ks.approve` records, `g = {n: rerun+replan, d: |G|}`.
 - `reemitted` = Σ over `idem_key` of max(0, dispatched count − 1). Target 0.
-- `false_accusations` = distinct non-culprit agent_ids or conns that were `root_candidates[0]` in a chained alert or the target of a monitor/recovery suspend/revoke. The launderer crm counts in RT9.
+- `false_accusations` = distinct non-culprit agent_ids or conns that were `root_candidates[0]` in a chained alert or the target of a monitor/recovery/`ks.operator` suspend/revoke (an operator suspend of a non-culprit counts). The launderer crm counts in RT9.
 - `fp_cost` = `{honest_suspensions, stall_ticks, held_honest_actions, approvals}` (SPEC Q6): honest agents suspended; their ticks suspended; held ledger items with key ∉ B; approvals. Recomputed from records and controls.
+- `collateral_stall` = `{n, d}` like R and C: honest-work stall (CALL-02 anaya §2.1). Compare the system run's `final_T` against the **unmirrored** fault-off run S0 (culprit never stopped) over **non-culprit keys**: d = |{k : k non-culprit key in S0}|, n = |{k in d : final_T(k) != S0_T(k)}|. Not S0_T vs S*_T. A score.json key, kept separate from `fp_cost.stall_ticks` (ticks an honest agent spent suspended) and never in C.
 - `damage_in_window` = |{k ∈ B : first effect tick ∈ [t0, t_contain]}|, with `exposure` = t_contain − t0 (t_contain = tick of the first culprit denial; null if never).
 
 ## 4. Protocol
 - T=120. H = `hold_window_ticks` ∈ {0, 6}; demo H=6, asserted ≥ max detection latency over seeds. `decision_latency_ticks` L fixed per bench (default 2).
 - **Bench approver** (deterministic, scripted): approves the plan at plan_tick + L; releases re-run held items at plan_tick + L + 1, always before T (X4); never resolves flags; never releases a held item that is not a re-run item.
 - Per seed the world guarantees: a payment to the swapped supplier before T − H, a ×10 invoice at t_inject+1, triage's edit of that row, ≥ T/2 ticks after t0.
+- **Faulty ticks** per variant (t_inject = `RunConfig.fault_tick`): F1 crm deletes at t_inject; F2 crm wrong IBAN or ×10 price at t_inject; F2+, F2+c, F2+x: IBAN v2 at t_inject, S-22 ×10 at t_inject+1 (F2+c adds crm honest writes in (t_inject+1, suspend]; F2+x adds triage's S-22 edit); F3 comms emails PII at t_inject; F4 payments spam from t_inject; F5 forged envelope at t_inject; F7 +1%/tick from t_inject; F6 has none (scored by `ks verify`).
+- RNG: `sha256(canonical([seed, name, tick]))` per consumer (world, each agent, injector), as ADR-00 (M1); no other derivation.
 - Bench: seeds 1..20, per fault ∈ {F1, F2, F2+, F2+c, F2+x, F3, F4, F5, F7} × H ∈ {0, 6} × {system, snapshot, revert-culprit-only, no-op}. F6 is scored by `ks verify` exit and `first_bad`, not by this table.
 - Aggregation, integers only: sort ascending, order ratios as rationals by cross-multiplication, `null` = +inf. **median = 10th of 20 (nearest-rank lower), p95 = 19th, max = 20th.** Report k/20 non-null per metric; a statistic whose rank lands on `null` is `null`. Never a mean.
 - Baselines change only the recovery step; same t_rec, alerts and holds. **Snapshot**: restore to t_inject − 1, cancel held items, no re-execution. **Revert-culprit-only**: per object, restore each object the culprit wrote at tick ≥ t_inject to its pre-image; no reader repair, no conflict check, outbox untouched. Both are **oracle-assisted** (given t_inject) and labelled so in `score.json` (`baseline_oracle_assisted=true`). **No-op**: holds stay.
