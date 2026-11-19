@@ -1,8 +1,8 @@
 # TERMS: one name per concept (ABS-04; updated for the design freeze in ABS-08)
 
-Owner: zoya · Reviewer: maya · 19 Nov 2026 · v2 · Inputs: CALL-01.md, contracts 1.0.0 (`src/ks/contracts`), ABS-04 review (maya), CALL-02.md + CALL-02/resolutions.md (v1.1.0 changes), CALL-02/anaya.md §2–4, SYNTHESIS §4/§6, PANEL-ENG-00, RES-02.
+Owner: zoya · Reviewer: maya · 19 Nov 2026 · v2 · Inputs: CALL-01.md, contracts 1.1.0 (`src/ks/contracts`), ABS-04 review (maya), CALL-02.md + CALL-02/resolutions.md (v1.1.0 changes), CALL-02/anaya.md §2–4, SYNTHESIS §4/§6, PANEL-ENG-00, RES-02.
 
-**Rule.** The abstract, diagram, demo narration, incident-console labels and code use the left-hand term and nothing else. If a banned synonym appears in a draft, reviewers flag it. Glosses are written for a banking reader and are at most 15 words. They are glosses, not abstract sentences: Aarav writes his own (CHARTER). Code names come from the frozen contracts 1.0.0 (`src/ks/contracts`), plus CALL-02/resolutions.md for v1.1.0 changes (marked **v1.1** with the resolution id). `⚠` marks a gap still open (see §7).
+**Rule.** The abstract, diagram, demo narration, incident-console labels and code use the left-hand term and nothing else. If a banned synonym appears in a draft, reviewers flag it. Glosses are written for a banking reader and are at most 15 words. They are glosses, not abstract sentences: Aarav writes his own (CHARTER). Code names come from the frozen contracts 1.1.0 (`src/ks/contracts`), with CALL-02/resolutions.md ids for the v1.1 changes (marked **v1.1** with the resolution id). `⚠` marks a gap still open (see §7).
 
 ## 1. Actors and the mediated path
 
@@ -18,7 +18,7 @@ Owner: zoya · Reviewer: maya · 19 Nov 2026 · v2 · Inputs: CALL-01.md, contra
 | **operator** | The person who approves plans, releases and revokes; each decision is a signed Control. | signer `ks.operator` (**v1.1**, E2; replaces `ks.console`, no alias, X7); `operator.sock` (J1). "Incident console" = the read-only page | admin, supervisor, `ks.console`, console (as the signer) |
 | **action envelope** ("envelope" after first use) | A signed request from an agent: who, what, on whose behalf, valid when. | C1 `Envelope` {agent_id, action_id, parent_action_id, act_chain, tool, args, nonce, expiry_tick, epoch, claimed_ts_us, claimed_seq, sig}; recorded form `EnvelopeHeader` (args → args_hash) | request, message, call, payload, ticket |
 | **act chain** | The chain of who asked whom, carried on every envelope. | C1 `act_chain: [ActLink{principal, action_id}]`, `parent_action_id` | delegation path, call stack, lineage (reserved, see §3) |
-| **tick** | One scheduling round: each agent submits at most one envelope, run in fixed order. | C2 `tick`; barrier runs in the gateway (ADR-00), transport `TickFrame`; one frame per connection per tick (C2) | step, turn, cycle, round |
+| **tick** | One scheduling round: each agent submits at most one envelope, run in fixed order. | C2 `tick`; barrier runs in the gateway (ADR-00), transport `TickFrame{tick, epoch, view}`; one frame per connection per tick (C2) | step, turn, cycle, round |
 | **sequence number (seq)** | The gateway's own position number for each record; agents cannot choose it. | C2 `seq` (agent-sent `claimed_seq` is never used for ordering) | timestamp, index, offset, id |
 
 ## 2. The record and its audit
@@ -31,7 +31,7 @@ Owner: zoya · Reviewer: maya · 19 Nov 2026 · v2 · Inputs: CALL-01.md, contra
 | **write set** | Exactly which data an action changed, with before and after versions. | C2 `write_set: [WriteEntry]` (before/after ver + hash); actions write only changed objects (B1) | outputs, changes, diff, mutations |
 | **provenance graph** | The map linking every change to its author and every read to its source. | none; derived from C2 read/write sets in `ks.taint` (confirmed: no graph type) | DAG, lineage graph, dependency graph, knowledge graph |
 | **witness** | A separate process that countersigns the record's latest fingerprint every tick. | `ks.witness`; C2 `WitnessCheckpoint(seq, tick, head` [+ count, **v1.1**]`)`; `witness.jsonl` | notary, anchor, timestamp server, blockchain |
-| **verify** | The audit check anyone can run to detect edited, missing or forged records. | `ks.verify`; CLI `ks verify RUN --head` (L3); `VerifyReport` | validate, audit (as a verb), check, prove |
+| **verify** | The audit check anyone can run to detect edited, missing or forged records. | `ks.verify`; CLI `ks verify RUN --head` (L3); `VerifyReport`, `RunAnchor` (**v1.1**, F1) | validate, audit (as a verb), check, prove |
 | **tamper-evident** | Any edit up to the last witnessed point is detected; not prevented. | `ks.verify.Exit` (TAMPER) + `VerifyReport.first_bad` (a **seq**, not an index) + `last_witnessed_seq` | tamper-proof, immutable, unforgeable, secure log |
 | **reconciliation** | Rebuild state from the record and compare to live data, catching bypass writes. | `AlertKind.RECONCILE`, detector `reconcile`, `Exit.RECONCILE`, C3 `state_digest`; class U; names nobody, so suspends nobody (H3) | replay, consistency check, diffing |
 | **side store** | Separate store for sensitive values (e.g. IBANs); the record keeps only fingerprints. | C3 `SideStore` / `SideEntry`; run dir `sidestore/` | vault, PII store, cache |
@@ -69,7 +69,7 @@ Note: "kill switch" is the **project name only**. Never use it for an operation;
 | Term (locked) | Plain-English meaning (≤15 words) | Code name | Banned synonyms |
 |---|---|---|---|
 | **taint** | Mark on every data version that was written by, or derived from, the culprit. | C5 `TaintSet` (`RecoveryPlan.taint_set`); `ks.taint`. Seed = every culprit write in [t0_seq_est, suspend] (A8) | contamination, infection, poison, blast radius |
-| **recovery plan** | The proposed fix, step by step, shown as a dry-run diff before anything changes. | C5 `RecoveryPlan` {culprit, t0_seq, taint_set, steps, diff}; `ks.recovery`; bound to approval by `plan_hash` (G6) | rollback plan, remediation, playbook |
+| **recovery plan** | The proposed fix, step by step, shown as a dry-run diff before anything changes. | C5 `RecoveryPlan` {culprit, t0_seq_est, taint_set, steps, diff}; `ks.recovery`; bound to approval by `plan_hash` (G6) | rollback plan, remediation, playbook |
 | **dry-run diff** | Preview of exactly what the recovery plan would change, approved before it runs. | `RecoveryPlan.diff` (`DiffEntry`); CLI `ks recover --dry-run`. Demo lanes: restore · re-run · kept · independent (B3) | preview, simulation, what-if |
 | **taint-scoped revert** | Undo only the culprit's tainted changes; everyone else's work stays. | C5 step `restore` (confirmed: a taint-scoped revert = the set of `restore` steps); `RestoreStep.expect` = the culprit's after-version (B6) | rollback, undo (except in headline prose), restore, reset, roll back |
 | **kept** | Honest work recovery leaves untouched, with no redo. | dry-run diff lane `kept` (B3); score key `kept_without_redo` | preserved, spared, saved, whitelisted |
@@ -85,7 +85,7 @@ Note: "kill switch" is the **project name only**. Never use it for an operation;
 | Term (locked) | Plain-English meaning (≤15 words) | Code name | Banned synonyms |
 |---|---|---|---|
 | **oracle (S\*)** | Same seed, fault off; the culprit also stops from its suspension tick. | `ks.oracle`; run dir `oracle/`; A1 + CALL-02 X3a (A1′). Pure world: monitor, containment, recovery off; outbox dispatches at `release_tick`. Non-culprit suspensions are not mirrored | ground truth (in abstract), baseline, golden run, reference, "the run without the culprit", "culprit removed" |
-| **t0** | Moment the first bad effect lands, as judged by the oracle. | scorer: min tick over B ≥ `RunConfig.fault_tick` (scorer-only, A2). Planner estimate: `RecoveryPlan.t0_seq` (`t0_seq_est`, bounded backward walk over alert evidence; never reads RunConfig) | start of incident, fault time |
+| **t0** | Moment the first bad effect lands, as judged by the oracle. | scorer: min tick over B ≥ `RunConfig.fault_tick` (scorer-only, A2). Planner estimate: `RecoveryPlan.t0_seq_est` (bounded backward walk over alert evidence; never reads RunConfig) | start of incident, fault time |
 | **bad effects (B)** | Effects missing or different in S\*, fixed when recovery starts. | `ks.score`; frozen at t_rec (same tick for us and every baseline); keyed per (table, pk, field) in the harness ledger (A4) | damage set, harmful actions |
 | **good effects (G)** | Effects that match S\*, including the culprit's honest ones; fixed when recovery starts. | `ks.score`; frozen at t_rec | legitimate work, honest work set |
 | **residual damage (R)** | Share of bad effects still wrong at run end, held or flagged included. Target 0. | `ks.score` key `R` = {n,d}: \|{k ∈ keys(B): final(k) ≠ S\*(k)}\| / \|keys(B)\|, scored at T; compares values only (X4) | leftover damage, error rate, miss rate |
@@ -98,7 +98,7 @@ Note: "kill switch" is the **project name only**. Never use it for an operation;
 | **TTC** | Time from alert to the first denied culprit envelope. | `ks.score` key `ttc` | time to kill, time to stop, MTTC, containment time |
 | **post-alert tainted effects** | Bad effects by any agent after the alert, counted from the ledger. Target 0. | `ks.score` key `post_alert_tainted_effects` (A6); from the ledger, never from our taint or read sets (A5) | leakage, spread, blast radius |
 | **irreversible tainted effects released** | Bad payments or emails that actually left despite holds. Target 0. | `ks.score` key `irreversible_tainted_released` (A6); dispatched payment / email sink effects in B, never the gateway's class | escaped payments, leaks |
-| **seeded run** | One reproducible scenario run; same seed gives the same records, signatures aside. | C6 run dir; `ks.bench`; `ks repro A B` diffs `determinism_view()` (C4–C6) | trial, episode, simulation |
+| **seeded run** | One reproducible scenario run; same seed gives the same records, signatures aside. | C6 run dir; `ks.bench`; `ks repro A B` diffs `determinism_view()`, exit `Exit.DIVERGED` if they differ (C4–C6) | trial, episode, simulation |
 | **run dir** | The folder of outputs the scorer reads; nothing else counts. | C6 | results folder, artefacts |
 
 Note: "R" and "C" are overloaded (class R / class C vs residual damage R / collateral loss C). **Rule:** in the abstract and demo, always write the metric as "residual damage R" / "collateral loss C" on first use in each section, and the class as "class R" / "class C". Never bare "R" in a sentence that also mentions classes.
@@ -135,7 +135,7 @@ All ⚠ from v1 are closed except item 10.
 
 ## Changes v2 (ABS-04 review fixes + CALL-02 freeze, ABS-08, 19 Nov)
 
-- Code names now come from contracts 1.0.0 + CALL-02 resolutions, not maya.md §3 (Maya's ABS-04 review, applied row by row): culprit, new suspect row, alert fields (not signed), envelope (`expiry_tick`, `claimed_*`, `EnvelopeHeader`), act chain (`ActLink`), tick (gateway barrier, `TickFrame`), read set (`ReadEntry`), all five class rows (`ActionClass`), witness, verify / tamper-evident (`first_bad` is a seq), reconciliation, side store, outbox, lineage hold, hold window, sensitive field, invariant detector, taint, recovery plan, dry-run diff, write-write conflict, release, t0, metrics.
+- Code names now come from contracts 1.1.0 + CALL-02 resolutions, not maya.md §3 (Maya's ABS-04 review, applied row by row): culprit, new suspect row, alert fields (not signed), envelope (`expiry_tick`, `claimed_*`, `EnvelopeHeader`), act chain (`ActLink`), tick (gateway barrier, `TickFrame`), read set (`ReadEntry`), all five class rows (`ActionClass`), witness, verify / tamper-evident (`first_bad` is a seq), reconciliation, side store, outbox, lineage hold, hold window, sensitive field, invariant detector, taint, recovery plan, dry-run diff, write-write conflict, release, t0, metrics.
 - Accepted additions (workspace, trust boundary, idempotency key) moved into §1–§3 with Maya's code names. New rows: connection, operator (`ks.operator` replaces `ks.console`), field object, kept.
 - CALL-02: oracle S\* gloss = same seed, fault off, culprit stops from its suspension tick (X3a); B / G frozen at recovery start; G includes the culprit's honest work; R counts held-at-T and flagged items; C row mentions culprit's reverted work; new rows culprit-window loss (`c_culprit_window`), collateral stall, oracle-assisted.
 - Hero row: triage's edit is **kept** (no conflict). Write-write conflict is field-or-row; the honest conflict lives in F2+x. New rows F2+x and F2+c.

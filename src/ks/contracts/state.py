@@ -66,7 +66,7 @@ _FORM = re.compile(rf"^({TABLE_RE}):({PK_RE})(?:\.({FIELD_RE}))?$")
 def split_obj_id(obj: str) -> tuple[str, str, str | None]:
     """``"suppliers:S-17"`` -> ``("suppliers", "S-17", None)``; ``"suppliers:S-17.iban"`` ->
     ``("suppliers", "S-17", "iban")``. Raises ``ValueError`` for anything else (e.g. a dotted pk)."""
-    m = _FORM.match(obj) if isinstance(obj, str) and _OBJ.match(obj) else None
+    m = _FORM.fullmatch(obj) if isinstance(obj, str) and _OBJ.fullmatch(obj) else None
     if m is None:
         raise ValueError(f"invalid object id {obj!r} (table:pk or table:pk.field; no '.' in pk)")
     return m.group(1), m.group(2), m.group(3)

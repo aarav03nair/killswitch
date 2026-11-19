@@ -1270,6 +1270,36 @@
       "t": "19 Nov 11:06",
       "who": "maya",
       "msg": "moved CON-02 to in_review"
+    },
+    {
+      "t": "19 Nov 11:08",
+      "who": "anaya",
+      "msg": "reviewed ABS-08: done"
+    },
+    {
+      "t": "19 Nov 11:09",
+      "who": "maya",
+      "msg": "reviewed SEC-02: changes"
+    },
+    {
+      "t": "19 Nov 11:09",
+      "who": "kabir",
+      "msg": "reviewed CON-02: done"
+    },
+    {
+      "t": "19 Nov 11:09",
+      "who": "kabir",
+      "msg": "reviewed CON-01: done"
+    },
+    {
+      "t": "19 Nov 11:09",
+      "who": "kabir",
+      "msg": "moved SEC-03 to done"
+    },
+    {
+      "t": "19 Nov 11:09",
+      "who": "maya",
+      "msg": "reviewed ABS-04: done"
     }
   ]
 }

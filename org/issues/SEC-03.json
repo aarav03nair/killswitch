@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "kabir",
-  "status": "in_review",
+  "status": "done",
   "outcome": "Rule-by-contract verdict table so C1-C6 freeze with no security gaps",
   "acceptance": [
     "11x6 matrix: each day-one rule (CALL-01/kabir.md s4) vs each contract C1-C6 marked pass / gap / n.a. with a one-line reason",
@@ -41,6 +41,16 @@
       "t": "19 Nov 06:12",
       "who": "kabir",
       "msg": "→ in_review: report posted; CON-01 marked changes with B1-B4"
+    },
+    {
+      "t": "19 Nov 11:09",
+      "who": "kabir",
+      "msg": "B1–B4 closed in v1.1.0 (CON-02 signed; tests in tests/contracts/test_signoff_kabir.py). R1 and R4 closed. New F9: verify/gateway must check reexec_of across records: target is a sig_ok hold record with the same envelope_hash, an executed unhold action:<record_id> comes in between, and each hold is re-executed at most once. Open fix-before-S4: R2, R3, R5 (operator peercred), F4, F6, F7 test, F8, F9; witness.jsonl owner = witness uid."
+    },
+    {
+      "t": "19 Nov 11:09",
+      "who": "kabir",
+      "msg": "→ done: blockers closed"
     }
   ]
 }

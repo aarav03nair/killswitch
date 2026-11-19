@@ -85,6 +85,11 @@
       "t": "19 Nov 11:00",
       "who": "kabir",
       "msg": "THREAT-MODEL v4 per Call #2"
+    },
+    {
+      "t": "19 Nov 11:08",
+      "who": "panel",
+      "msg": "v4 signed: consistent with CALL-02/resolutions (ks.operator, c-0, SO_PEERCRED socket, anchor + verify --head, repro not a security run, field objects) and ADR-01 keys; no claim beyond CALL-01/02; C3 key-classes note resolved; ~1,716 words, mostly tables, ~2.5 pages, accepted."
     }
   ]
 }

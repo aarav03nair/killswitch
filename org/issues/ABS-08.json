@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "opus",
   "created_by": "zoya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "Kit files consistent with CALL-02: new D13 meaning, triage kept, S* definition",
   "acceptance": [
     "TERMS, GUARDRAILS, SKELETON, JURY-QA updated per CALL-02 follow-ups",
@@ -17,7 +17,7 @@
   "depends": [],
   "deliverable": "abstract/",
   "summary": "Kit aligned to CALL-02 freeze, notes and rules only (no pasteable prose); Changes notes in each file. TERMS v2: all of Maya's ABS-04 code-name fixes applied (culprit = RunConfig/RecoveryPlan.culprit, suspect row (console only), alert fields (not signed), envelope/act chain/tick/read set/ActionClass/witness/verify first_bad seq/reconcile/side store/outbox/holds/RunConfig fields/TaintSet/diff); accepted additions merged; new rows connection, operator (ks.operator replaces ks.console), field object, kept, culprit-window loss (c_culprit_window), collateral stall, oracle-assisted, F2+x, F2+c. S* = same seed, fault off, culprit stops from its suspension tick; B/G frozen at t_rec; R counts held/flagged; hero triage kept; write-write conflict field-or-row; release = fresh epoch; metric keys post_alert_tainted_effects / irreversible_tainted_released; s7 closed except collateral-stall key (tara). GUARDRAILS v4: F3, F9, W1, W6, F11/X29/s3 release wording, new L8 (F2+c) and L9 (F2+x) honesty notes, s1.5 D13-meaning row (six elements, Aarav words it, flag) + updated defs. SKELETON v3: 1a, 2b, 2e (triage kept, no flag), 3b (S*, D13 elements; MUSTs 55->56), baselines oracle-assisted. JURY-QA Q10 conflict line (kept; honest conflict in F2+x); stale Q4/Q5/Q12 pointers listed for anaya, not edited. SYNTHESIS s6 rewritten (S*, B/G at t_rec, held-at-T, collateral stall, c_culprit_window, oracle-assisted) + errata line. how-it-works 3c not touched (not in brief).",
-  "review": "",
+  "review": "[anaya · done] Checked TERMS, GUARDRAILS, SKELETON, JURY-QA and SYNTHESIS s6 against CALL-02 and my anaya.md s3-4. Hero = field objects with triage kept (no flag); S* = same seed, fault off, culprit stops from its suspension tick; F2+x and F2+c present; baselines oracle-assisted; c_culprit_window present; revised D13 meaning is carried as six elements with no pasteable sentence, so Aarav words it himself. No new outside numbers, so FACT-CARD still holds. Greps for flagged / triage / suspect / restore epoch / bare post_alert_tainted show no contradictions: every hit is either the kept-triage rule, the F2+x conflict case, an honest 'suspect = root_candidates[0], console only', or a changelog line. Nits, none blocking: (1) TERMS s7 item 6 says ADR-06 still has the old metric names, but ADR-06-metrics.md now uses the new ones, so drop that note. (2) Collateral stall key: ADR-06-metrics s2 defines 'stall' only as prose, not a score.json key. Name it collateral_stall, shaped {n,d} like R and C, and keep it apart from fp_cost.stall_ticks (honest-suspension ticks). Its formula S0_T vs S*_T compares the two oracles and so measures the culprit mirror, not stall imposed on honest work. It should compare the system run's final_T against the unmirrored S0 for non-culprit keys, as CALL-02 anaya.md s2.1 says. tara to fix in ADR-06, then TERMS s7 item 10 copies the key. how-it-works 3c is untouched, as scoped.",
   "log": [
     {
       "t": "19 Nov 06:33",
@@ -38,6 +38,11 @@
       "t": "19 Nov 10:59",
       "who": "zoya",
       "msg": "→ in_review"
+    },
+    {
+      "t": "19 Nov 11:08",
+      "who": "anaya",
+      "msg": "review: done"
     }
   ]
 }

@@ -300,3 +300,11 @@ def test_rundir_perms_agent_eacces(full_run):
     os.waitpid(pid, 0)
     assert len(files) >= 10
     assert out.decode() == "", f"agent uid could read: {out.decode()}"
+
+
+def test_obj_id_rejects_trailing_newline():
+    """Kabir sign-off probe: regex must fullmatch, so a trailing newline in a pk is rejected."""
+    import pytest
+    from ks.contracts.state import make_obj_id
+    with pytest.raises(ValueError):
+        make_obj_id("customers", "C-1\n")

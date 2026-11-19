@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "maya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "Contracts implement the CON-02 checklist + X1, X7, X8(F1) with tests; Kabir can sign",
   "acceptance": [
     "every checklist item in CALL-02/resolutions.md implemented with a test",
@@ -17,7 +17,7 @@
   "depends": [],
   "deliverable": "src/ks/contracts/",
   "summary": "Contracts 1.1.0 landed in src/ks/contracts/ (CONTRACTS_VERSION 1.1.0, schemas regenerated with new c5.approval, c5.recover_args, c6.run_anchor). Every CON-02 checklist item plus X1, X2, X7, X8-F1 and PMO S5 (barrier.deadline may carry conn_id, never an agent; reconcile can have empty evidence and names nobody) is implemented with a test in tests/contracts/test_con02_checklist.py. Kabir's sign-off tests are in tests/contracts/test_signoff_kabir.py: test_count_chain, test_rt8h_keyring_swap_detected_by_anchor, test_fresh_keys_differ, test_epoch_monotonic, test_expiry_cap_and_admitted_expiry (RT4-ready), test_depth_6kb_denied, test_pk_dot_rejected, test_repro_forces_unanchored_and_refuses_rogue, test_rundir_perms_agent_eacces (actually runs: root drops to uid 60001). Golden hashes re-pinned on purpose; each change is explained in the README changelog, and the format vectors did not change. Breaking for callers: split_obj_id now returns a 3-tuple, t0_seq is renamed t0_seq_est, TickFrame needs epoch and view, and Record needs reexec_of. pytest: 310 passed (was 231), also green under PYTHONHASHSEED 0, 1 and 999.",
-  "review": "",
+  "review": "[kabir · done] Signed, contracts 1.1.0. Suite green (310 passed, incl. test_rundir_perms_agent_eacces run as root, not skipped). All sign-off tests are real checks, not tautologies: test_count_chain (gap/restart/swapped head/truncation), RT8(h) (keys.json swapped on disk -> keyring_mismatch, config edit -> config_mismatch), test_fresh_keys_differ (two fresh-key runs: raw bytes differ, determinism_files equal), test_epoch_monotonic, expiry cap/RT4, test_depth_6kb_denied (loads/decode_frame/from_canonical/dumps), R1 pk-dot, R4 repro unanchored + refused with rogue, F1 modes. The one weak line: the final assert in test_epoch_monotonic (0 != max_epoch) checks nothing; gateway epoch test must cover it. 26 probes in /tmp/signoff/probe.py all fail closed, except as noted. reexec_of (M10): agents cannot set it (Envelope extra=forbid; submit frames carrying reexec_of in the frame or the envelope -> ContractError -> deny/schema). Records are gw_sig'd, record.jsonl 0600 gateway-only, so only the gateway writes it. Not abusable by a rogue agent. BUT the per-record validator only checks reexec_of < seq and sig_ok: a record with reexec_of=1 and expiry_tick=2^53-1 validates, and two records re-executing the same hold both validate (double exec; nonce is not re-checked). Closing that needs a cross-record check, so it is fix-before-S4 (F9, below), not a contract blocker. Follow-ups, non-blocking: README C6 still says record.jsonl 0640/witness gid while code+tests say 0600 (fix doc); make_obj_id/split_obj_id use Python '$', so 'C-1\\n' passes (ObjId rejects later, fail-closed; use fullmatch).",
   "log": [
     {
       "t": "19 Nov 06:33",
@@ -43,6 +43,16 @@
       "t": "19 Nov 11:07",
       "who": "pmo",
       "msg": "PMO alignment: record.jsonl 0600 gateway-only per ADR-00/02 integration pass (was 0640 witness-group); test updated"
+    },
+    {
+      "t": "19 Nov 11:09",
+      "who": "kabir",
+      "msg": "review: done"
+    },
+    {
+      "t": "19 Nov 11:10",
+      "who": "pmo",
+      "msg": "PMO: Kabir sign-off nits fixed — obj-id regex uses fullmatch (+test), README file modes aligned to 0600"
     }
   ]
 }
