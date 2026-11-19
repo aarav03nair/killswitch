@@ -7,7 +7,7 @@
   "reviewer": "panel",
   "model": "opus",
   "created_by": "kabir",
-  "status": "in_progress",
+  "status": "in_review",
   "outcome": "One-page threat model the jury reads before D11 live attacks: assets, trust boundaries, in/out of scope, claims we make and refuse",
   "acceptance": [
     "Lists assets (state, outbox, record+witness heads, 4 key classes, containment state, PII side store) and the 4 trust boundaries",
@@ -18,8 +18,8 @@
   ],
   "depends": [],
   "deliverable": "org/adr/THREAT-MODEL.md",
-  "summary": "",
-  "review": "",
+  "summary": "v2 of org/adr/THREAT-MODEL.md applies all 5 panel fixes and stays at 2 pages.\n(1) C6 reworded: containment holds and never cancels (release = un-hold + restore epoch). A held outbox item is cancelled only by an approved recovery-plan step (cancel_outbox) after the dry-run diff.\n(2) Live setup is fixed: the gateway runs as uid 0, the witness under its own uid, agents under a separate unprivileged uid (setuid to nobody checked here). Keys are generated in memory, PR_SET_DUMPABLE=0 is set on gateway/witness/signer, and agents get a path-less socketpair, a clean env and close_fds. If the uid cannot be separated, C1/C4 degrade: a key read from the rogue is the admitted gap and voids them for that run. RT2 stays the test.\n(3) Witness heads are kept in the witness's own uid-owned 0700 store, with a monotonic count, and echoed to the console and run summary. New row: truncating the record AND the heads is detected against the head printed at run end. A run with no printed head is out of scope (production: WORM).\n(4) New stall/fork/memory-bomb row: a per-tick deadline makes a missing envelope a no-op plus an anomaly, and per-agent rlimits apply; container limits are listed as the production mitigation.\n(5) New Control-action/recovery-key row: the key is gateway-held, used only on console approval, never in an agent process; the operator is trusted.\nNits: suspension/record per TERMS; side store mapped to F3. Changes v2 note added.",
+  "review": "[panel · changes] CHANGES (4 must-fix, 1 should-fix; this still fits on 2 pages). Assets, B1-B4, in/out of scope with HSM/WORM/uid mitigations, the RT1-RT12 mapping (all 12 present, every in-scope adversary covered) and D13 target labelling all pass. C1-C5 are CALL-01 wording verbatim.\n(1) C6 misplaces CALL-01 wording. 'We hold, never cancel' is CALL-01's release semantics for containment, not a recovery claim. As written, C6 says recovery never cancels, which contradicts the C5 RecoveryPlan step cancel_outbox and the demo, where the held payment is discarded in recovery. A jury watching the demo will catch it. Reword C6: 'Containment holds, never cancels (release = un-hold + restore epoch). Recovery appends compensating records; a held outbox item is cancelled only by an approved recovery-plan step (cancel_outbox) after the dry-run diff.'\n(2) The key-read gap is acceptable only if its consequence is stated. Under the shared-uid fallback, the jury's sanctioned live attack (arbitrary Python in the rogue subprocess, D11) can read gateway and witness keys. That is the out-of-scope 'both keys' case, so C1 and C4 fail and reconciliation does not see it. §7 currently draws the line at 'a host shell as the gateway's user', which is not the same thing. Add: which setup runs live (separate uid or not, fixed by day 1), and if the uid is shared, that a key read from the rogue subprocess is the admitted gap and voids C1/C4 for that run. RT2 stays the test.\n(3) Where do witness heads live? An insider who truncates or rolls back BOTH the record and the witness heads to an older valid prefix passes verify: the 'last witnessed head' just moves back. This is the truncation hole from PANEL-ENG-00 item 2. Fix: state that witness heads are stored by the witness process outside the insider's write access, and add a row for record + witness truncation or rollback. Either detect it (witness keeps its own monotonic store) or put it out of scope (production: WORM witness log).\n(4) Availability is not admitted. A rogue that sleeps or loops forever stalls the tick barrier, so every independent agent stops: the 'kill everything' outcome F6 claims to avoid. A fork or memory bomb is the same class. A hostile jury tries this first. Add a rogue row: per-tick deadline, a missing envelope counts as a no-op plus an anomaly. Or state availability and resource exhaustion as out of scope (production: container limits).\n(5) Should-fix: the recovery key and Control actions have no row. Assets list 'forge a repair', but nothing says who signs suspend, release, revoke or recover, or that the recovery key never enters an agent process. Add one line: gateway-held, used only on console approval of the dry-run diff, rules 2 and 10; the console operator is trusted.\nGaps: splitting under thresholds with no RT and no claim is ACCEPTABLE as stated (GUARDRAILS X30 backs it). Key reads: acceptable once (2) is done.\nNits: TERMS bans 'quarantine' (RT5, use 'suspension') and 'log' (rule 9, use 'record'). Map the PII side store asset to the F3 pytest.",
   "log": [
     {
       "t": "19 Nov 00:54",
@@ -30,6 +30,31 @@
       "t": "19 Nov 00:54",
       "who": "kabir",
       "msg": "→ in_progress"
+    },
+    {
+      "t": "19 Nov 00:56",
+      "who": "kabir",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:56",
+      "who": "kabir",
+      "msg": "→ in_review"
+    },
+    {
+      "t": "19 Nov 01:01",
+      "who": "panel",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 01:04",
+      "who": "kabir",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 01:04",
+      "who": "kabir",
+      "msg": "→ in_review: panel fixes applied"
     }
   ]
 }

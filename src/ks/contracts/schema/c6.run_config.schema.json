@@ -1,0 +1,129 @@
+{
+  "$id": "https://killswitch.local/schema/1.0.0/c6.run_config.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "``config.json``: everything needed to reproduce a seeded run, and what the scorer must know.",
+  "properties": {
+    "agents": {
+      "description": "Agents in tick-barrier order (agent_id order), sorted.",
+      "items": {
+        "pattern": "^[a-z][a-z0-9_]{0,31}$",
+        "type": "string"
+      },
+      "title": "Agents",
+      "type": "array"
+    },
+    "contract": {
+      "const": "ks.run_config/1",
+      "default": "ks.run_config/1",
+      "description": "Contract id.",
+      "title": "Contract",
+      "type": "string"
+    },
+    "contracts_version": {
+      "description": "``ks.contracts.CONTRACTS_VERSION`` the run was produced with.",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$",
+      "title": "Contracts Version",
+      "type": "string"
+    },
+    "culprit": {
+      "anyOf": [
+        {
+          "pattern": "^[a-z][a-z0-9_]{0,31}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Agent the fault is injected into (ground truth for the scorer only; never read by ks.monitor).",
+      "title": "Culprit"
+    },
+    "fault": {
+      "anyOf": [
+        {
+          "pattern": "^F[0-9]+\\+?$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Injected fault id, e.g. ``F2+``; ``None`` for a clean (oracle) run.",
+      "title": "Fault"
+    },
+    "hold_window_ticks": {
+      "description": "Hold window: ticks a new outbox item waits before release. 0 = no hold (demo toggle).",
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "title": "Hold Window Ticks",
+      "type": "integer"
+    },
+    "run_id": {
+      "description": "Run name (directory name by convention).",
+      "pattern": "^[A-Za-z0-9_.-]{1,64}$",
+      "title": "Run Id",
+      "type": "string"
+    },
+    "scenario": {
+      "description": "World scenario, e.g. ``acme``.",
+      "pattern": "^[A-Za-z0-9_.+-]{1,64}$",
+      "title": "Scenario",
+      "type": "string"
+    },
+    "seed": {
+      "description": "RNG seed; same seed => byte-identical deterministic files.",
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "title": "Seed",
+      "type": "integer"
+    },
+    "sensitive_fields": {
+      "description": "Fields whose change triggers an early hold of dependent outbox items, sorted.",
+      "items": {
+        "pattern": "^[a-z][a-z0-9_]{0,31}\\.[a-z][a-z0-9_]{0,63}$",
+        "type": "string"
+      },
+      "title": "Sensitive Fields",
+      "type": "array"
+    },
+    "start_ts_us": {
+      "description": "Logical time of tick 0.",
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "title": "Start Ts Us",
+      "type": "integer"
+    },
+    "tick_us": {
+      "description": "Logical microseconds per tick; ``Record.ts_us = start_ts_us + tick*tick_us + slot``.",
+      "maximum": 9007199254740991,
+      "minimum": 1,
+      "title": "Tick Us",
+      "type": "integer"
+    },
+    "ticks": {
+      "description": "Number of ticks to run.",
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "title": "Ticks",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "agents",
+    "contract",
+    "contracts_version",
+    "culprit",
+    "fault",
+    "hold_window_ticks",
+    "run_id",
+    "scenario",
+    "seed",
+    "sensitive_fields",
+    "start_ts_us",
+    "tick_us",
+    "ticks"
+  ],
+  "title": "RunConfig",
+  "type": "object"
+}

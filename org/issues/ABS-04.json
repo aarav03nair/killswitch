@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "zoya",
-  "status": "in_progress",
+  "status": "in_review",
   "outcome": "A glossary that fixes one public name per concept so the abstract, diagram, demo and contracts never use two words for one thing",
   "acceptance": [
     "Covers at least: envelope, read/write set, gateway, recorder, witness, verify, lineage hold, graded containment (suspend/revoke/release), taint-scoped revert, re-run vs replan, root candidates, oracle S*, R and C, TTI-detect/attribute, TTC",
@@ -16,7 +16,7 @@
   ],
   "depends": [],
   "deliverable": "abstract/TERMS.md",
-  "summary": "",
+  "summary": "abstract/TERMS.md: ~65 locked terms in 6 tables (actors/path, record/audit, classes+containment, recovery, metrics, demo). Each row: locked term, gloss <=15 words for a banking reader, code name from C1-C6/module list, banned synonyms. All acceptance terms covered. Key locks: 'suspend' (not quarantine), 'lineage hold', 'record' (not log), 'taint-scoped revert', 're-run' vs 're-plan', 'root candidates' (not culprit/root cause), 'kill switch' = project name only; R/C metric-vs-class overload rule. Sec 7 lists 9 contract gaps for maya: revert vs C5 'restore'; Alert.suspect vs culprit; no contract for provenance graph, witness checkpoint, side store, hold window/sensitive tag, metric field names, idempotency_key; Control.target must accept a connection id (D7); reconcile detector name.",
   "review": "",
   "log": [
     {
@@ -28,6 +28,16 @@
       "t": "19 Nov 00:55",
       "who": "zoya",
       "msg": "→ in_progress"
+    },
+    {
+      "t": "19 Nov 00:56",
+      "who": "zoya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:56",
+      "who": "zoya",
+      "msg": "→ in_review"
     }
   ]
 }

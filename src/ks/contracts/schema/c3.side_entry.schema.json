@@ -1,0 +1,57 @@
+{
+  "$defs": {
+    "JsonValue": {},
+    "SideDomain": {
+      "description": "What a side-store entry holds; selects the hash function.",
+      "enum": [
+        "value",
+        "args",
+        "result",
+        "raw"
+      ],
+      "title": "SideDomain",
+      "type": "string"
+    }
+  },
+  "$id": "https://killswitch.local/schema/1.0.0/c3.side_entry.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "A side-store entry: the raw value behind a hash in a record. Redactable (erasure keeps the hash).",
+  "properties": {
+    "contract": {
+      "const": "ks.side_entry/1",
+      "default": "ks.side_entry/1",
+      "description": "Contract id.",
+      "title": "Contract",
+      "type": "string"
+    },
+    "domain": {
+      "$ref": "#/$defs/SideDomain",
+      "description": "Which hash function produced ``hash``."
+    },
+    "hash": {
+      "description": "The hash records refer to.",
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Hash",
+      "type": "string"
+    },
+    "redacted": {
+      "description": "True after erasure; value is then ``None`` and the hash can no longer be checked.",
+      "title": "Redacted",
+      "type": "boolean"
+    },
+    "value": {
+      "$ref": "#/$defs/JsonValue",
+      "description": "Raw value (for ``raw``: lowercase hex of the received bytes). ``None`` once redacted."
+    }
+  },
+  "required": [
+    "contract",
+    "domain",
+    "hash",
+    "redacted",
+    "value"
+  ],
+  "title": "SideEntry",
+  "type": "object"
+}

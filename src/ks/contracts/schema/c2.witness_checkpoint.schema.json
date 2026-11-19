@@ -1,0 +1,64 @@
+{
+  "$id": "https://killswitch.local/schema/1.0.0/c2.witness_checkpoint.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Signed ``(seq, head, tick)`` from the separate witness process; one line per tick in ``witness.jsonl``.",
+  "properties": {
+    "contract": {
+      "const": "ks.witness/1",
+      "default": "ks.witness/1",
+      "description": "Contract id.",
+      "title": "Contract",
+      "type": "string"
+    },
+    "head": {
+      "description": "``Record.hash`` at ``seq``.",
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Head",
+      "type": "string"
+    },
+    "seq": {
+      "description": "Seq of the record whose hash is ``head``.",
+      "maximum": 9007199254740991,
+      "minimum": 1,
+      "title": "Seq",
+      "type": "integer"
+    },
+    "sig": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{128}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Witness Ed25519 over :meth:`signing_bytes`. ``None`` only before signing.",
+      "title": "Sig"
+    },
+    "tick": {
+      "description": "Tick witnessed.",
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "title": "Tick",
+      "type": "integer"
+    },
+    "witness_id": {
+      "description": "Witness principal (``ks.witness``); its key is not the gateway's.",
+      "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+      "title": "Witness Id",
+      "type": "string"
+    }
+  },
+  "required": [
+    "contract",
+    "head",
+    "seq",
+    "sig",
+    "tick",
+    "witness_id"
+  ],
+  "title": "WitnessCheckpoint",
+  "type": "object"
+}

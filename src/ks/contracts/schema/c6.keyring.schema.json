@@ -1,0 +1,63 @@
+{
+  "$defs": {
+    "KeyEntry": {
+      "additionalProperties": false,
+      "description": "One public key.",
+      "properties": {
+        "alg": {
+          "const": "ed25519",
+          "default": "ed25519",
+          "description": "Signature algorithm.",
+          "title": "Alg",
+          "type": "string"
+        },
+        "principal": {
+          "description": "Agent id or ``ks.*`` principal.",
+          "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+          "title": "Principal",
+          "type": "string"
+        },
+        "pub": {
+          "description": "Raw 32-byte Ed25519 public key, hex.",
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Pub",
+          "type": "string"
+        }
+      },
+      "required": [
+        "alg",
+        "principal",
+        "pub"
+      ],
+      "title": "KeyEntry",
+      "type": "object"
+    }
+  },
+  "$id": "https://killswitch.local/schema/1.0.0/c6.keyring.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "``keys.json``: public keys ``verify`` checks signatures against. Never private keys.",
+  "properties": {
+    "contract": {
+      "const": "ks.keyring/1",
+      "default": "ks.keyring/1",
+      "description": "Contract id.",
+      "title": "Contract",
+      "type": "string"
+    },
+    "keys": {
+      "description": "Sorted by principal, one per principal.",
+      "items": {
+        "$ref": "#/$defs/KeyEntry"
+      },
+      "title": "Keys",
+      "type": "array"
+    }
+  },
+  "required": [
+    "contract",
+    "keys"
+  ],
+  "title": "Keyring",
+  "type": "object"
+}

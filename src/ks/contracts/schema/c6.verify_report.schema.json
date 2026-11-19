@@ -1,0 +1,56 @@
+{
+  "$id": "https://killswitch.local/schema/1.0.0/c6.verify_report.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Last stdout line of ``ks verify`` (canonical JSON).",
+  "properties": {
+    "exit": {
+      "description": "Numeric exit code (an ``Exit`` value).",
+      "maximum": 255,
+      "minimum": 0,
+      "title": "Exit",
+      "type": "integer"
+    },
+    "first_bad": {
+      "anyOf": [
+        {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "seq (= 1-based line number) of the first bad record, or ``None``.",
+      "title": "First Bad"
+    },
+    "last_witnessed_seq": {
+      "description": "Highest seq covered by a valid witness checkpoint (0 = none). Tamper-evident up to here.",
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "title": "Last Witnessed Seq",
+      "type": "integer"
+    },
+    "ok": {
+      "description": "True iff exit code is Exit.OK.",
+      "title": "Ok",
+      "type": "boolean"
+    },
+    "reason": {
+      "description": "Short code, e.g. ``ok``, ``hash_mismatch``, ``gw_sig_invalid``, ``seq_gap``, ``witness_mismatch``.",
+      "pattern": "^[a-z][a-z0-9_]{0,63}$",
+      "title": "Reason",
+      "type": "string"
+    }
+  },
+  "required": [
+    "exit",
+    "first_bad",
+    "last_witnessed_seq",
+    "ok",
+    "reason"
+  ],
+  "title": "VerifyReport",
+  "type": "object"
+}

@@ -1,0 +1,532 @@
+{
+  "$defs": {
+    "ActionRef": {
+      "additionalProperties": false,
+      "description": "A recorded action, identified by its record.",
+      "properties": {
+        "action_id": {
+          "description": "Its action id.",
+          "pattern": "^[A-Za-z0-9_.:-]{1,64}$",
+          "title": "Action Id",
+          "type": "string"
+        },
+        "agent_id": {
+          "description": "Attributed principal of that record.",
+          "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+          "title": "Agent Id",
+          "type": "string"
+        },
+        "seq": {
+          "description": "Record seq.",
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "title": "Seq",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "action_id",
+        "agent_id",
+        "seq"
+      ],
+      "title": "ActionRef",
+      "type": "object"
+    },
+    "CancelOutboxStep": {
+      "additionalProperties": false,
+      "description": "Discard a held outbox item so it never leaves.",
+      "properties": {
+        "n": {
+          "description": "Position in ``steps`` (0-based); steps run in this order.",
+          "minimum": 0,
+          "title": "N",
+          "type": "integer"
+        },
+        "op": {
+          "const": "cancel_outbox",
+          "default": "cancel_outbox",
+          "description": "Step kind.",
+          "title": "Op",
+          "type": "string"
+        },
+        "outbox_id": {
+          "description": "Held item to cancel.",
+          "pattern": "^ob-[0-9]{6,16}$",
+          "title": "Outbox Id",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Short code, e.g. ``tainted_write``, ``tainted_read``, ``write_write_conflict``.",
+          "pattern": "^[a-z][a-z0-9_.-]{0,63}$",
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "n",
+        "op",
+        "outbox_id",
+        "reason"
+      ],
+      "title": "CancelOutboxStep",
+      "type": "object"
+    },
+    "CompensateStep": {
+      "additionalProperties": false,
+      "description": "Run the registered opposite action for a class C effect.",
+      "properties": {
+        "action": {
+          "$ref": "#/$defs/ActionRef",
+          "description": "Action being compensated."
+        },
+        "compensator": {
+          "description": "Registered compensator name, e.g. ``tickets.close``.",
+          "pattern": "^[a-z][a-z0-9_.-]{0,63}$",
+          "title": "Compensator",
+          "type": "string"
+        },
+        "n": {
+          "description": "Position in ``steps`` (0-based); steps run in this order.",
+          "minimum": 0,
+          "title": "N",
+          "type": "integer"
+        },
+        "op": {
+          "const": "compensate",
+          "default": "compensate",
+          "description": "Step kind.",
+          "title": "Op",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Short code, e.g. ``tainted_write``, ``tainted_read``, ``write_write_conflict``.",
+          "pattern": "^[a-z][a-z0-9_.-]{0,63}$",
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "compensator",
+        "n",
+        "op",
+        "reason"
+      ],
+      "title": "CompensateStep",
+      "type": "object"
+    },
+    "DiffEntry": {
+      "additionalProperties": false,
+      "description": "One line of the dry-run diff: object state now vs after the plan (hashes only).",
+      "properties": {
+        "current": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VersionRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Current head (``None`` if absent)."
+        },
+        "obj": {
+          "description": "Object.",
+          "pattern": "^[a-z][a-z0-9_]{0,31}:[A-Za-z0-9_.-]{1,128}$",
+          "title": "Obj",
+          "type": "string"
+        },
+        "planned_hash": {
+          "description": "Value hash after the plan (TOMBSTONE_HASH = deleted).",
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Planned Hash",
+          "type": "string"
+        }
+      },
+      "required": [
+        "current",
+        "obj",
+        "planned_hash"
+      ],
+      "title": "DiffEntry",
+      "type": "object"
+    },
+    "FlagStep": {
+      "additionalProperties": false,
+      "description": "Hand to a person: no provable safe fix (write-write conflict, dispatched I1/I2 effect).",
+      "properties": {
+        "action": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ActionRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Action concerned, if any."
+        },
+        "n": {
+          "description": "Position in ``steps`` (0-based); steps run in this order.",
+          "minimum": 0,
+          "title": "N",
+          "type": "integer"
+        },
+        "obj": {
+          "anyOf": [
+            {
+              "pattern": "^[a-z][a-z0-9_]{0,31}:[A-Za-z0-9_.-]{1,128}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Object concerned, if any.",
+          "title": "Obj"
+        },
+        "op": {
+          "const": "flag",
+          "default": "flag",
+          "description": "Step kind.",
+          "title": "Op",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Short code, e.g. ``tainted_write``, ``tainted_read``, ``write_write_conflict``.",
+          "pattern": "^[a-z][a-z0-9_.-]{0,63}$",
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "n",
+        "obj",
+        "op",
+        "reason"
+      ],
+      "title": "FlagStep",
+      "type": "object"
+    },
+    "ObjVer": {
+      "additionalProperties": false,
+      "description": "A specific version of an object (taint sets, evidence).",
+      "properties": {
+        "obj": {
+          "description": "Object id ``table:pk``.",
+          "pattern": "^[a-z][a-z0-9_]{0,31}:[A-Za-z0-9_.-]{1,128}$",
+          "title": "Obj",
+          "type": "string"
+        },
+        "ver": {
+          "description": "Version of that object.",
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "title": "Ver",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "obj",
+        "ver"
+      ],
+      "title": "ObjVer",
+      "type": "object"
+    },
+    "ReplanStep": {
+      "additionalProperties": false,
+      "description": "An LLM step that must be thought through again; queued for console approval. We build no re-planner.",
+      "properties": {
+        "action": {
+          "$ref": "#/$defs/ActionRef",
+          "description": "Action whose output is tainted."
+        },
+        "n": {
+          "description": "Position in ``steps`` (0-based); steps run in this order.",
+          "minimum": 0,
+          "title": "N",
+          "type": "integer"
+        },
+        "op": {
+          "const": "replan",
+          "default": "replan",
+          "description": "Step kind.",
+          "title": "Op",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Short code, e.g. ``tainted_write``, ``tainted_read``, ``write_write_conflict``.",
+          "pattern": "^[a-z][a-z0-9_.-]{0,63}$",
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "n",
+        "op",
+        "reason"
+      ],
+      "title": "ReplanStep",
+      "type": "object"
+    },
+    "RerunStep": {
+      "additionalProperties": false,
+      "description": "Re-execute a deterministic honest action on repaired state; outbox dedupes on idempotency_key.",
+      "properties": {
+        "action": {
+          "$ref": "#/$defs/ActionRef",
+          "description": "Original action; the re-run derives the same idempotency keys."
+        },
+        "n": {
+          "description": "Position in ``steps`` (0-based); steps run in this order.",
+          "minimum": 0,
+          "title": "N",
+          "type": "integer"
+        },
+        "op": {
+          "const": "rerun",
+          "default": "rerun",
+          "description": "Step kind.",
+          "title": "Op",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Short code, e.g. ``tainted_write``, ``tainted_read``, ``write_write_conflict``.",
+          "pattern": "^[a-z][a-z0-9_.-]{0,63}$",
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action",
+        "n",
+        "op",
+        "reason"
+      ],
+      "title": "RerunStep",
+      "type": "object"
+    },
+    "RestoreStep": {
+      "additionalProperties": false,
+      "description": "Taint-scoped revert of one object: write a new version equal to ``to`` (class R).",
+      "properties": {
+        "expect": {
+          "$ref": "#/$defs/VersionRef",
+          "description": "Must still be current (the culprit's after-version); otherwise the step fails closed."
+        },
+        "n": {
+          "description": "Position in ``steps`` (0-based); steps run in this order.",
+          "minimum": 0,
+          "title": "N",
+          "type": "integer"
+        },
+        "obj": {
+          "description": "Object to restore.",
+          "pattern": "^[a-z][a-z0-9_]{0,31}:[A-Za-z0-9_.-]{1,128}$",
+          "title": "Obj",
+          "type": "string"
+        },
+        "op": {
+          "const": "restore",
+          "default": "restore",
+          "description": "Step kind.",
+          "title": "Op",
+          "type": "string"
+        },
+        "reason": {
+          "description": "Short code, e.g. ``tainted_write``, ``tainted_read``, ``write_write_conflict``.",
+          "pattern": "^[a-z][a-z0-9_.-]{0,63}$",
+          "title": "Reason",
+          "type": "string"
+        },
+        "to": {
+          "$ref": "#/$defs/VersionRef",
+          "description": "Pre-taint version whose value is re-written (value from the side store)."
+        }
+      },
+      "required": [
+        "expect",
+        "n",
+        "obj",
+        "op",
+        "reason",
+        "to"
+      ],
+      "title": "RestoreStep",
+      "type": "object"
+    },
+    "TaintSet": {
+      "additionalProperties": false,
+      "description": "Everything written by, or derived from, the culprit after t0 (conservative: over-taint).",
+      "properties": {
+        "actions": {
+          "description": "Tainted actions (wrote or read tainted versions), sorted by seq.",
+          "items": {
+            "$ref": "#/$defs/ActionRef"
+          },
+          "title": "Actions",
+          "type": "array"
+        },
+        "outbox_ids": {
+          "description": "Outbox items whose lineage touches tainted versions, sorted.",
+          "items": {
+            "pattern": "^ob-[0-9]{6,16}$",
+            "type": "string"
+          },
+          "title": "Outbox Ids",
+          "type": "array"
+        },
+        "versions": {
+          "description": "Tainted object versions, sorted.",
+          "items": {
+            "$ref": "#/$defs/ObjVer"
+          },
+          "title": "Versions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "actions",
+        "outbox_ids",
+        "versions"
+      ],
+      "title": "TaintSet",
+      "type": "object"
+    },
+    "VersionRef": {
+      "additionalProperties": false,
+      "description": "A version plus the hash of its value (no raw value).",
+      "properties": {
+        "hash": {
+          "description": "``value_hash(value)`` of that version; the value itself is in the side store.",
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Hash",
+          "type": "string"
+        },
+        "ver": {
+          "description": "Version number.",
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "title": "Ver",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "hash",
+        "ver"
+      ],
+      "title": "VersionRef",
+      "type": "object"
+    }
+  },
+  "$id": "https://killswitch.local/schema/1.0.0/c5.recovery_plan.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "C5 plan, written to ``plans/<plan_id>.json``; approved by content hash.",
+  "properties": {
+    "alert_id": {
+      "description": "Alert the plan answers.",
+      "pattern": "^a-[0-9]{6,16}$",
+      "title": "Alert Id",
+      "type": "string"
+    },
+    "as_of_seq": {
+      "description": "Plan computed against state at this record seq; stale plans must be recomputed.",
+      "maximum": 9007199254740991,
+      "minimum": 1,
+      "title": "As Of Seq",
+      "type": "integer"
+    },
+    "contract": {
+      "const": "ks.recovery_plan/1",
+      "default": "ks.recovery_plan/1",
+      "description": "Contract id.",
+      "title": "Contract",
+      "type": "string"
+    },
+    "culprit": {
+      "description": "Agent being reverted, chosen by a person from the alert's root candidates.",
+      "pattern": "^[a-z][a-z0-9_]{0,31}$",
+      "title": "Culprit",
+      "type": "string"
+    },
+    "diff": {
+      "description": "Dry-run diff, sorted by obj, one entry per object the plan changes.",
+      "items": {
+        "$ref": "#/$defs/DiffEntry"
+      },
+      "title": "Diff",
+      "type": "array"
+    },
+    "plan_id": {
+      "description": "Planner-assigned id.",
+      "pattern": "^p-[0-9]{6,16}$",
+      "title": "Plan Id",
+      "type": "string"
+    },
+    "steps": {
+      "description": "Ordered steps; ``n`` equals position.",
+      "items": {
+        "discriminator": {
+          "mapping": {
+            "cancel_outbox": "#/$defs/CancelOutboxStep",
+            "compensate": "#/$defs/CompensateStep",
+            "flag": "#/$defs/FlagStep",
+            "replan": "#/$defs/ReplanStep",
+            "rerun": "#/$defs/RerunStep",
+            "restore": "#/$defs/RestoreStep"
+          },
+          "propertyName": "op"
+        },
+        "oneOf": [
+          {
+            "$ref": "#/$defs/RestoreStep"
+          },
+          {
+            "$ref": "#/$defs/RerunStep"
+          },
+          {
+            "$ref": "#/$defs/ReplanStep"
+          },
+          {
+            "$ref": "#/$defs/CancelOutboxStep"
+          },
+          {
+            "$ref": "#/$defs/CompensateStep"
+          },
+          {
+            "$ref": "#/$defs/FlagStep"
+          }
+        ]
+      },
+      "title": "Steps",
+      "type": "array"
+    },
+    "t0_seq": {
+      "description": "First tainted record seq (taint starts here).",
+      "maximum": 9007199254740991,
+      "minimum": 1,
+      "title": "T0 Seq",
+      "type": "integer"
+    },
+    "taint_set": {
+      "$ref": "#/$defs/TaintSet",
+      "description": "What is tainted."
+    }
+  },
+  "required": [
+    "alert_id",
+    "as_of_seq",
+    "contract",
+    "culprit",
+    "diff",
+    "plan_id",
+    "steps",
+    "t0_seq",
+    "taint_set"
+  ],
+  "title": "RecoveryPlan",
+  "type": "object"
+}

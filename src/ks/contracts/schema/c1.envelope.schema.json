@@ -1,0 +1,167 @@
+{
+  "$defs": {
+    "ActLink": {
+      "additionalProperties": false,
+      "description": "One hop of the act chain: a principal and the action of theirs that led here.",
+      "properties": {
+        "action_id": {
+          "description": "Their action that caused this one.",
+          "pattern": "^[A-Za-z0-9_.:-]{1,64}$",
+          "title": "Action Id",
+          "type": "string"
+        },
+        "principal": {
+          "description": "Who asked (agent id or ``ks.*``).",
+          "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+          "title": "Principal",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action_id",
+        "principal"
+      ],
+      "title": "ActLink",
+      "type": "object"
+    },
+    "JsonValue": {}
+  },
+  "$id": "https://killswitch.local/schema/1.0.0/c1.envelope.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "What travels on the socket: the header fields plus the raw ``args``.",
+  "properties": {
+    "act_chain": {
+      "description": "Full act chain, root first, immediate parent last; empty = self-initiated (``ks.act_chain``).\nAgent-declared: used to deny revoked ancestors, NEVER for taint (taint uses recorded read sets).",
+      "items": {
+        "$ref": "#/$defs/ActLink"
+      },
+      "title": "Act Chain",
+      "type": "array"
+    },
+    "action_id": {
+      "description": "Agent-chosen id, unique per agent (OTel ``gen_ai.tool.call.id``).",
+      "pattern": "^[A-Za-z0-9_.:-]{1,64}$",
+      "title": "Action Id",
+      "type": "string"
+    },
+    "agent_id": {
+      "description": "Claimed signer (OTel ``gen_ai.agent.id``). Trusted only if the record's ``sig_ok`` is true.",
+      "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+      "title": "Agent Id",
+      "type": "string"
+    },
+    "args": {
+      "additionalProperties": {
+        "$ref": "#/$defs/JsonValue"
+      },
+      "description": "Tool arguments (raw; may be sensitive). Must be canonical-serializable: no floats.",
+      "title": "Args",
+      "type": "object"
+    },
+    "claimed_seq": {
+      "anyOf": [
+        {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Agent-claimed sequence, kept for evidence only; never becomes the record ``seq``.",
+      "title": "Claimed Seq"
+    },
+    "claimed_ts_us": {
+      "anyOf": [
+        {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Agent-claimed time, kept for evidence only; ordering uses gateway ``seq``/``ts_us``.",
+      "title": "Claimed Ts Us"
+    },
+    "contract": {
+      "const": "ks.envelope/1",
+      "default": "ks.envelope/1",
+      "description": "Contract id.",
+      "title": "Contract",
+      "type": "string"
+    },
+    "epoch": {
+      "description": "Agent's credential epoch; stale -> ``deny/stale_epoch``, checked inside the write txn (``ks.agent.epoch``).",
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "title": "Epoch",
+      "type": "integer"
+    },
+    "expiry_tick": {
+      "description": "Last tick at which the envelope is valid; later -> ``deny/expired`` (``ks.envelope.expiry_tick``).",
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "title": "Expiry Tick",
+      "type": "integer"
+    },
+    "nonce": {
+      "description": "Anti-replay nonce, unique per agent_id (``ks.envelope.nonce``). Not used for dedupe.",
+      "pattern": "^[0-9a-f]{32}$",
+      "title": "Nonce",
+      "type": "string"
+    },
+    "parent_action_id": {
+      "anyOf": [
+        {
+          "pattern": "^[A-Za-z0-9_.:-]{1,64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Immediate parent action; equals ``act_chain[-1].action_id`` (OTel span link, ``ks.action.parent_id``).",
+      "title": "Parent Action Id"
+    },
+    "sig": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{128}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Ed25519 over :meth:`signing_bytes` (``ks.envelope.sig``). ``None`` only before signing.",
+      "title": "Sig"
+    },
+    "tool": {
+      "description": "Tool to run (OTel ``gen_ai.tool.name``; operation ``execute_tool``).",
+      "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$",
+      "title": "Tool",
+      "type": "string"
+    }
+  },
+  "required": [
+    "act_chain",
+    "action_id",
+    "agent_id",
+    "args",
+    "claimed_seq",
+    "claimed_ts_us",
+    "contract",
+    "epoch",
+    "expiry_tick",
+    "nonce",
+    "parent_action_id",
+    "sig",
+    "tool"
+  ],
+  "title": "Envelope",
+  "type": "object"
+}

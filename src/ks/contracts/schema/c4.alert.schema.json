@@ -1,0 +1,146 @@
+{
+  "$defs": {
+    "AlertKind": {
+      "enum": [
+        "invariant",
+        "scope",
+        "reconcile",
+        "signature",
+        "tamper",
+        "witness_stall",
+        "anomaly",
+        "rate"
+      ],
+      "title": "AlertKind",
+      "type": "string"
+    },
+    "ObjVer": {
+      "additionalProperties": false,
+      "description": "A specific version of an object (taint sets, evidence).",
+      "properties": {
+        "obj": {
+          "description": "Object id ``table:pk``.",
+          "pattern": "^[a-z][a-z0-9_]{0,31}:[A-Za-z0-9_.-]{1,128}$",
+          "title": "Obj",
+          "type": "string"
+        },
+        "ver": {
+          "description": "Version of that object.",
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "title": "Ver",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "obj",
+        "ver"
+      ],
+      "title": "ObjVer",
+      "type": "object"
+    }
+  },
+  "$id": "https://killswitch.local/schema/1.0.0/c4.alert.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "C4 Alert, appended to ``alerts.jsonl`` in the run dir.",
+  "properties": {
+    "alert_id": {
+      "description": "Monitor-assigned, ``a-000001`` upward.",
+      "pattern": "^a-[0-9]{6,16}$",
+      "title": "Alert Id",
+      "type": "string"
+    },
+    "conn_id": {
+      "anyOf": [
+        {
+          "pattern": "^c-[0-9]{1,6}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Submitting connection; set only for signature alerts (anti-framing: never the claimed agent).",
+      "title": "Conn Id"
+    },
+    "contract": {
+      "const": "ks.alert/1",
+      "default": "ks.alert/1",
+      "description": "Contract id.",
+      "title": "Contract",
+      "type": "string"
+    },
+    "detector": {
+      "description": "Rule id, e.g. ``inv.iban_checksum``, ``reconcile`` (``ks.alert.detector``).",
+      "pattern": "^[a-z][a-z0-9_.-]{0,63}$",
+      "title": "Detector",
+      "type": "string"
+    },
+    "evidence_seqs": {
+      "description": "Record seqs that are the evidence, ascending, non-empty.",
+      "items": {
+        "maximum": 9007199254740991,
+        "minimum": 1,
+        "type": "integer"
+      },
+      "title": "Evidence Seqs",
+      "type": "array"
+    },
+    "evidence_versions": {
+      "description": "Object versions found bad (taint seeds), sorted by (obj, ver).",
+      "items": {
+        "$ref": "#/$defs/ObjVer"
+      },
+      "title": "Evidence Versions",
+      "type": "array"
+    },
+    "hard": {
+      "description": "Hard evidence: containment may act automatically (suspend, never revoke).",
+      "title": "Hard",
+      "type": "boolean"
+    },
+    "kind": {
+      "$ref": "#/$defs/AlertKind",
+      "description": "Detector family; decides who may be named and whether ``hard`` is allowed."
+    },
+    "root_candidates": {
+      "description": "Ranked, most likely first. Not a verdict. Empty for signature/tamper/witness-stall alerts.",
+      "items": {
+        "pattern": "^[a-z][a-z0-9_]{0,31}$",
+        "type": "string"
+      },
+      "title": "Root Candidates",
+      "type": "array"
+    },
+    "seq": {
+      "description": "Highest record seq the detector had seen when it fired.",
+      "maximum": 9007199254740991,
+      "minimum": 1,
+      "title": "Seq",
+      "type": "integer"
+    },
+    "tick": {
+      "description": "Tick at which the alert was raised (TTI-detect input).",
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "title": "Tick",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "alert_id",
+    "conn_id",
+    "contract",
+    "detector",
+    "evidence_seqs",
+    "evidence_versions",
+    "hard",
+    "kind",
+    "root_candidates",
+    "seq",
+    "tick"
+  ],
+  "title": "Alert",
+  "type": "object"
+}

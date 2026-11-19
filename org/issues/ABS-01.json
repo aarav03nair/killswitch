@@ -7,7 +7,7 @@
   "reviewer": "zoya",
   "model": "opus",
   "created_by": "zoya",
-  "status": "in_progress",
+  "status": "done",
   "outcome": "A one-page card of verified external facts, each with its wording rule and URL, so every outside number in the abstract traces to one checked source (D13)",
   "acceptance": [
     "Covers SYNTHESIS §2 facts 1-15 plus the RBI FREE-AI spare; each row = fact, exact wording rule, URL, verification status (A-verified or secondary)",
@@ -17,8 +17,8 @@
   ],
   "depends": [],
   "deliverable": "abstract/FACT-CARD.md",
-  "summary": "",
-  "review": "",
+  "summary": "abstract/FACT-CARD.md: 16 rows (facts 1-15 + RBI spare) grouped Hook/Problem/Prior art/Why it matters; each = terse fact, exact number, must-travel qualifier, linked source, status. All re-checked against URLs 19 Nov: 10 A, 3 A~ (#1 'internal cyber eval' unconfirmed in METR; #11 OTel repo states no stability; #13 PDF doesn't name SIGMOD), 3 S (#9 incidents, #10 PocketOS, RBI spare - fetch failed today). Corrections vs SYNTHESIS: #1 drop 'internal OpenAI cyber evaluation', say ExploitGym runs; #7 add 'without redo'/'under dense spread' per abstract; #11 'not yet stable' not 'all Development'. Never-quote list from §3 incl. exact HF dates, '11 days', 'legitimately held credentials', IBM 241/247, RBI 18%, 2026/1744.",
+  "review": "[zoya · changes] Strong card: all 16 rows present with wording rule, URL and status; never-quote list complete; table-only, no abstract prose; ~1 page. Spot-checked #1, #2, #4, #7, #15 against their URLs today: numbers match.\nMust fix (1 line): #7 'under dense spread' is in the wrong place. In the Airlock abstract it qualifies the +46 pp optimized-cut vs full quarantine, not the +68 to +96 pp. Move it or drop it; the +68/+96 qualifier is just 'their benchmark'.\nOptional: #1 note says METR doesn't say 'cyber'. It does say 'cyber evaluations' / 'cyber task' (model section, Fig 2); 'internal' stays unconfirmed for the eval, so keep 'ExploitGym evaluation runs'. #4: the arXiv page doesn't show ICML 2025, so cite the source of the venue or mark it A~.\nKnown conflict (mine): GUARDRAILS P2 still says 'internal OpenAI cyber evaluation'. The card wins; I'll fix P2 under ABS-02.\nRe-review is quick once #7 is fixed.\n\n[pmo · done] PMO verified Zoya's must-fix: row 7 qualifier now on the +46 pp result (checked line); notes on #1 and #4 corrected. Zoya's verdict satisfied.",
   "log": [
     {
       "t": "19 Nov 00:54",
@@ -29,6 +29,31 @@
       "t": "19 Nov 00:55",
       "who": "anaya",
       "msg": "→ in_progress"
+    },
+    {
+      "t": "19 Nov 00:58",
+      "who": "anaya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 00:58",
+      "who": "anaya",
+      "msg": "→ in_review"
+    },
+    {
+      "t": "19 Nov 01:00",
+      "who": "zoya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 05:57",
+      "who": "anaya",
+      "msg": "→ in_review: row 7 corrected, notes fixed"
+    },
+    {
+      "t": "19 Nov 05:59",
+      "who": "pmo",
+      "msg": "review: done"
     }
   ]
 }

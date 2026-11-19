@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "zoya",
-  "status": "todo",
+  "status": "done",
   "outcome": "A list of the hardest jury questions with pointers to the evidence that answers each, so Aarav can pre-empt them in his own words",
   "acceptance": [
     "At least 7 questions, including: 'isn't this Airlock?', 'Wang already did agent undo', 'isn't this just logging?', 'LLMs can't be replayed', 'can an agent cheat the hold / forge the log?', 'what about irreversible effects?', 'would this have stopped the METR case?'",
@@ -18,13 +18,33 @@
     "ABS-01"
   ],
   "deliverable": "abstract/JURY-QA.md",
-  "summary": "",
-  "review": "",
+  "summary": "abstract/JURY-QA.md: 12 hostile questions (Airlock; Wang/Retro undo; logging/OTel; LLM non-determinism; gateway bypass; forgery/clock games; who watches the witness; hold-window cheating by agent or by us; irreversible effects; Dolt/git revert; real incidents + would-it-have-stopped-METR; wrong detection/suspending a good agent). Each: evidence pointers only (fact-card row, GUARDRAILS P/F/W/L/X, CALL-01 D#, THREAT-MODEL C#/B#/rule, RT#, SYN/RES section), a <=12-word key distinction, and traps. Security questions (Q5-Q8, Q11 METR part, Q12) carry a TM-scope line (in/out per CALL-01) for kabir to confirm. Plus a 7-row 'also likely' table and 6 cross-document inconsistencies (GUARDRAILS P2 + SYN §2 row 1 'internal cyber evaluation' vs fact-card #1 note; SYN 'all Development' vs #11; exact dates in SYN/RES-11; RES-11 §3 'Us' column superseded; 'ground truth'/RES-01 re-run wording superseded; RES-06 Dolt recommendation superseded by D5). No answer prose.",
+  "review": "[kabir · done] Security review vs THREAT-MODEL v2 + SPEC: TM-scope lines on Q5-Q8, Q11 (METR), Q12 are correct and match CALL-01 'Threat model, adopted' and TM §3. Distinctions are accurate (C2 caught-not-prevented, C4 connection-not-victim, C1 up to last witnessed head, C3 root candidates only, C5 recorded reads, D7 suspend-not-revoke). No pointer implies a refused claim: RT8 gateway-key note explicitly blocks 'survives gateway compromise' (X23), collusion is root candidates only, key reads are flagged as not caught by reconciliation. Pointers only, no scripted answer prose. Applied 3 small edits to JURY-QA.md: (1) Q5 trap on separate uid was stale ('ADR-00 has not confirmed'); now cites TM v2 Live setup (setuid checked 19 Nov), keeps C2 wording verbatim, and names the shared-uid consequence (key read voids C1/C4, unseen by reconciliation). (2) Q7 TM-scope 'in' adds the v2 condition: insider cannot write the witness head store. (3) Q7 new trap: record+heads rewound to an older prefix is caught only against the printed run-end head; no printed head = out of scope (TM §5 truncation row).",
   "log": [
     {
       "t": "19 Nov 00:54",
       "who": "zoya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 01:02",
+      "who": "anaya",
+      "msg": "→ in_progress"
+    },
+    {
+      "t": "19 Nov 01:05",
+      "who": "anaya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 01:05",
+      "who": "anaya",
+      "msg": "→ in_review: ready for kabir: confirm TM-scope lines on Q5-Q8, Q11, Q12"
+    },
+    {
+      "t": "19 Nov 05:58",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

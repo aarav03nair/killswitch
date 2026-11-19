@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=69"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ks"
+version = "0.1.0"
+description = "Project Kill Switch: authenticated provenance, containment and taint-scoped revert for multi-agent shared state"
+requires-python = ">=3.12"
+dependencies = [
+    "cryptography>=42",
+    "pydantic>=2.7",
+]
+
+[project.optional-dependencies]
+test = ["pytest>=8", "jsonschema>=4.20"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"ks.contracts" = ["schema/*.json", "README.md"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-ra"

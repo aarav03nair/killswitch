@@ -1,0 +1,101 @@
+{
+  "$defs": {
+    "ControlOp": {
+      "enum": [
+        "suspend",
+        "revoke",
+        "release",
+        "hold",
+        "unhold"
+      ],
+      "title": "ControlOp",
+      "type": "string"
+    }
+  },
+  "$id": "https://killswitch.local/schema/1.0.0/c4.control.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "C4 Control: one containment operation, recorded in clear on its record.",
+  "properties": {
+    "alert_id": {
+      "anyOf": [
+        {
+          "pattern": "^a-[0-9]{6,16}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Alert that caused it, if any.",
+      "title": "Alert Id"
+    },
+    "auto": {
+      "description": "True if issued without a human click (hard alert). Revoke is never auto.",
+      "title": "Auto",
+      "type": "boolean"
+    },
+    "contract": {
+      "const": "ks.control/1",
+      "default": "ks.control/1",
+      "description": "Contract id.",
+      "title": "Contract",
+      "type": "string"
+    },
+    "control_id": {
+      "description": "Issuer-assigned id.",
+      "pattern": "^k-[0-9]{6,16}$",
+      "title": "Control Id",
+      "type": "string"
+    },
+    "epoch": {
+      "anyOf": [
+        {
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "New epoch for agent targets of suspend/revoke/release; ``None`` otherwise.",
+      "title": "Epoch"
+    },
+    "issued_by": {
+      "description": "``ks.monitor``/``ks.gateway`` if auto; ``ks.console``/``ks.recovery`` if human-approved.",
+      "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+      "title": "Issued By",
+      "type": "string"
+    },
+    "op": {
+      "$ref": "#/$defs/ControlOp",
+      "description": "Operation (``ks.control.op``)."
+    },
+    "reason": {
+      "description": "Short code, e.g. ``hard_alert``, ``operator``, ``bad_sig``.",
+      "pattern": "^[a-z][a-z0-9_.-]{0,63}$",
+      "title": "Reason",
+      "type": "string"
+    },
+    "target": {
+      "description": "What it acts on: agent, connection, held action or outbox item (``ks.control.target``).",
+      "pattern": "^(agent:[a-z][a-z0-9_]{0,31}|conn:c-[0-9]{1,6}|action:r-[0-9]{6,16}|outbox:ob-[0-9]{6,16})$",
+      "title": "Target",
+      "type": "string"
+    }
+  },
+  "required": [
+    "alert_id",
+    "auto",
+    "contract",
+    "control_id",
+    "epoch",
+    "issued_by",
+    "op",
+    "reason",
+    "target"
+  ],
+  "title": "Control",
+  "type": "object"
+}

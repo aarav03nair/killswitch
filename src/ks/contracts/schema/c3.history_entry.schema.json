@@ -1,0 +1,56 @@
+{
+  "$id": "https://killswitch.local/schema/1.0.0/c3.history_entry.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "One element of ``StateView.history(obj)``, oldest first.",
+  "properties": {
+    "action_id": {
+      "description": "Action id from the writing envelope.",
+      "pattern": "^[A-Za-z0-9_.:-]{1,64}$",
+      "title": "Action Id",
+      "type": "string"
+    },
+    "author": {
+      "description": "Principal that wrote it.",
+      "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+      "title": "Author",
+      "type": "string"
+    },
+    "hash": {
+      "description": "Value hash of that version.",
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Hash",
+      "type": "string"
+    },
+    "obj": {
+      "description": "Object id.",
+      "pattern": "^[a-z][a-z0-9_]{0,31}:[A-Za-z0-9_.-]{1,128}$",
+      "title": "Obj",
+      "type": "string"
+    },
+    "seq": {
+      "description": "Record seq of the write.",
+      "maximum": 9007199254740991,
+      "minimum": 1,
+      "title": "Seq",
+      "type": "integer"
+    },
+    "ver": {
+      "description": "Version created.",
+      "maximum": 9007199254740991,
+      "minimum": 1,
+      "title": "Ver",
+      "type": "integer"
+    }
+  },
+  "required": [
+    "action_id",
+    "author",
+    "hash",
+    "obj",
+    "seq",
+    "ver"
+  ],
+  "title": "HistoryEntry",
+  "type": "object"
+}

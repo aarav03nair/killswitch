@@ -7,7 +7,7 @@
   "reviewer": "panel",
   "model": "opus",
   "created_by": "zoya",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "A skeleton Aarav fills in himself: problem -> fix -> why it matters, with a word budget and the points each section must land",
   "acceptance": [
     "Section headings in the organisers' order (problem -> fix -> why it matters, plus limits) with a word budget per section totalling 850-950, under the 1,000 cap",
@@ -20,13 +20,28 @@
     "ABS-04"
   ],
   "deliverable": "abstract/SKELETON.md",
-  "summary": "",
+  "summary": "abstract/SKELETON.md: 4 sections in the organisers' order (1 Problem 300 = gap 70 / blunt tools fail 110 / what exists 120; 2 Fix 330 = IBAN example 40 / mediated path 70 / identify 45 / contain 60 / recover 75 / audit 40; 3 Why it matters 170; 4 Limits + will-show 85) + title 15 = 900 words. ~125 note bullets, each <=12 words, no sentences, tagged to fact-card rows, P/F/W/L/X ids and TERMS words.\nD1: opens on the dependency gap; provenance named in 2b; 'selective undo' as the 2e payoff only; testimony vs evidence in 3a. D2: METR = blunt stop failed, card #1 qualifiers, never-quote items. D3: Airlock box (what the one clause must convey + forbidden comparisons; one mention only). D12: F2+ running example in 2a. D13: our numbers = definitions + targets (R/C/post-alert/irreversible/re-emitted = 0); TTI/TTC are definitions only.\nAlso: title keyword combos (no finished titles), a 5-step writing plan (Fix first → Problem → Why → Limits → title; GUARDRAILS §4 + TERMS Ctrl-F; save as abstract/DRAFT-R1.md and log on ABS-07). Flags carried in: #7 'dense spread' misplacement (ABS-01 changes) and card #1 overriding GUARDRAILS P2.",
   "review": "",
   "log": [
     {
       "t": "19 Nov 00:54",
       "who": "zoya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 01:00",
+      "who": "zoya",
+      "msg": "→ in_progress: started skeleton"
+    },
+    {
+      "t": "19 Nov 01:02",
+      "who": "zoya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 01:02",
+      "who": "zoya",
+      "msg": "→ in_review: skeleton ready for panel"
     }
   ]
 }

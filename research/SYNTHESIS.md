@@ -1,5 +1,7 @@
 # RES-SYN: Synthesis (framing, facts, principles, metrics, decisions)
 
+**Errata (19 Nov 2026):** rows 1, 2 and 11 of §2 were aligned to `abstract/FACT-CARD.md`, which is the governing source for every outside fact (D13); where this file differs, the fact card wins.
+
 Owner: anaya · 20 Nov 2026 · Inputs: RES-01..11, REVIEW-S1, STRAWMAN, PANEL-ENG-00, plus my own spot-checks (**A**). Bullets and facts only. Aarav writes every sentence of the abstract.
 
 ## 0. Working thesis: MODIFIED
@@ -29,8 +31,8 @@ Owner: anaya · 20 Nov 2026 · Inputs: RES-01..11, REVIEW-S1, STRAWMAN, PANEL-EN
 
 | # | Fact | Wording rule | Source | Status |
 |---|---|---|---|---|
-| 1 | ~1,200 agents on the board (8–13 Jul 2026), >70,000 messages+files, ~700 attacking HF by 11 Jul | "roughly"; "internal OpenAI cyber evaluation (ExploitGym)"; METR, "preliminary" | https://metr.org/blog/2026-08-26-openai-hugging-face-incident-investigation/ | RES-11; **A** verified |
-| 2 | Fresh Artifactory 6 Jul erased the board; new board 8 Jul 23:00 UTC, via cache abuse, "not credentials" | "about two days later"; never "legitimately held credentials" | METR | RES-11; **A** verified |
+| 1 | ~1,200 agents on the board (July 2026), >70,000 messages+files, ~700 attacking HF | "roughly"; "agents in OpenAI's ExploitGym evaluation runs" (not "internal"/"cyber"); METR, "preliminary" | https://metr.org/blog/2026-08-26-openai-hugging-face-incident-investigation/ | RES-11; **A** verified |
+| 2 | Fresh Artifactory erased the board; new board about two days later, via cache abuse, "not credentials" | "about two days later"; never "legitimately held credentials" | METR | RES-11; **A** verified |
 | 3 | OpenAI: early signals "should have triggered an earlier response" | Quote via Al Jazeera; say "July 2026" with no day (outlets conflict) | https://www.aljazeera.com/economy/2026/8/27/openai-says-it-detected-malign-activity-months-before-hugging-face-attack | RES-11; **A** verified |
 | 4 | Who&When ~53.5% agent, ~14.2% step | "best strategies, GPT-4o, different strategy per metric" | https://arxiv.org/abs/2505.00212 | RES-10; **A** arithmetic |
 | 5 | Random baseline 12–29% agent, 4–19% step | "by subset" | same, Table 1 | RES-10 |
@@ -39,7 +41,7 @@ Owner: anaya · 20 Nov 2026 · Inputs: RES-01..11, REVIEW-S1, STRAWMAN, PANEL-EN
 | 8 | Airlock: "Committed external effects are not rolled back"; memory "requires orthogonal rollback" | Add "by design" | same, Table A.2 S2, §5.2 | RES-11; **A** verified |
 | 9 | 7 public incidents: single-agent, human-detected, whole-backup or no recovery | "reportedly"; AIID IDs | RES-07; https://incidentdatabase.ai/cite/1469 | mostly secondary |
 | 10 | PocketOS: 9 s to delete; 3-month-old snapshot plus a weekend of rebuilding | "per the founder, as reported" | https://mondoo.com/blog/5-lessons-from-9-seconds-ai-agent-deleted-production-database | secondary |
-| 11 | OTel `gen_ai.*` all Development; no read/write attribute | "as of Nov 2026" | https://github.com/open-telemetry/semantic-conventions-genai | RES-04 |
+| 11 | OTel `gen_ai.*` not yet stable; no read/write attribute | "as of Nov 2026" | https://github.com/open-telemetry/semantic-conventions-genai | RES-04 |
 | 12 | MCP: "MUST NOT accept or transit any other tokens" | "draft spec" | https://modelcontextprotocol.io/specification/draft/basic/authorization | REVIEW-S1 |
 | 13 | Sagas (SIGMOD'87): compensation makes "no effort" to notify readers | paraphrase OK | https://www.cs.cornell.edu/andru/cs711/2002fa/reading/sagas.pdf | RES-02/10 |
 | 14 | Taser'05, Retro'10, Warp'11, Aire'13 undo an attacker while keeping legitimate work | "for OS/web apps; trusted log" | https://www.usenix.org/conference/osdi10/intrusion-recovery-using-selective-re-execution | RES-01/10 |

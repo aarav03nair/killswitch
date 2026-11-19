@@ -7,7 +7,7 @@
   "reviewer": "vikram",
   "model": "sonnet",
   "created_by": "zoya",
-  "status": "todo",
+  "status": "done",
   "outcome": "A single visual of the mechanism (agents -> gateway -> recorder/graph -> identify/contain/recover queries, with the witness outside the blast radius) that Aarav can study on his phone",
   "acceptance": [
     "One self-contained file (inline SVG/CSS, no external fonts, scripts or network calls); readable without zoom at 390px width and on desktop",
@@ -20,12 +20,32 @@
   ],
   "deliverable": "abstract/how-it-works.html",
   "summary": "",
-  "review": "",
+  "review": "[vikram · done] Checked vs CALL-01 D4/D8/D9/D12, TERMS, GUARDRAILS, THREAT-MODEL. Fixed: comms re-plan -> re-run (D9; re-plan kept only as a note for a future LLM step); top box names all 10 agents (graph caption notes intake/reporter/compliance not drawn); recover semantics corrected: supplier row was 'revert, then flag' -> 'flag, not restored' since triage's edit means current != crm's after-version, crm 'revert if unchanged', triage 'edit kept'; re-runs go through the outbox with idempotency keys; cancel (outbox item) shown only as an approved recovery-plan step after the dry-run diff, contain view says held not cancelled; contain view invoice 'lineage hold' -> 'already landed' (landed class C write is compensated, not held); hold rule now says 'recorded read set' (D8); caption 'agents never touch data' (overclaim) -> bypass caught by reconciliation (F2); witness now shows signs (seq, head, tick); duplicate SVG marker ids made unique (valid HTML); duplicate path removed. Proposed TERMS §7 additions: workspace, trust boundary, idempotency key.",
   "log": [
     {
       "t": "19 Nov 00:54",
       "who": "zoya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 00:58",
+      "who": "ishaan",
+      "msg": "→ in_progress"
+    },
+    {
+      "t": "19 Nov 00:58",
+      "who": "ishaan",
+      "msg": "→ in_progress"
+    },
+    {
+      "t": "19 Nov 01:00",
+      "who": "ishaan",
+      "msg": "→ in_review: abstract/how-it-works.html built: mediated path, F2+ provenance graph, identify/contain/recover panels, audit. Self-contained, no scripts/fonts/network, light+dark, viewBox 320 so text 12px at 360px. Terms outside TERMS.md: workspace (in THREAT-MODEL), trust boundary, untrusted/checked (THREAT-MODEL B1-B4). Needs vikram confirm vs ADR."
+    },
+    {
+      "t": "19 Nov 01:03",
+      "who": "vikram",
+      "msg": "review: done"
     }
   ]
 }

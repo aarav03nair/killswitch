@@ -1,0 +1,163 @@
+{
+  "$defs": {
+    "OutboxStatus": {
+      "description": "Outbox item lifecycle. We hold, never cancel, in containment; only recovery cancels.",
+      "enum": [
+        "queued",
+        "held",
+        "released",
+        "dispatched",
+        "cancelled"
+      ],
+      "title": "OutboxStatus",
+      "type": "string"
+    },
+    "ReadEntry": {
+      "additionalProperties": false,
+      "description": "One entry of a read set: what an adapter observed, captured by the gateway (OTel ``ks.read_set``).",
+      "properties": {
+        "hash": {
+          "description": "Value hash of the version read.",
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Hash",
+          "type": "string"
+        },
+        "obj": {
+          "description": "Object read.",
+          "pattern": "^[a-z][a-z0-9_]{0,31}:[A-Za-z0-9_.-]{1,128}$",
+          "title": "Obj",
+          "type": "string"
+        },
+        "ver": {
+          "description": "Version read.",
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "title": "Ver",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "hash",
+        "obj",
+        "ver"
+      ],
+      "title": "ReadEntry",
+      "type": "object"
+    }
+  },
+  "$id": "https://killswitch.local/schema/1.0.0/c3.outbox_item.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "C3 value of an ``outbox:<id>`` object: an irreversible effect waiting to leave.",
+  "properties": {
+    "action_class": {
+      "description": "``I1`` (containable) or ``I2`` (needs prior approval). Only I-class effects use the outbox.",
+      "enum": [
+        "I1",
+        "I2"
+      ],
+      "title": "Action Class",
+      "type": "string"
+    },
+    "action_id": {
+      "description": "Creating action.",
+      "pattern": "^[A-Za-z0-9_.:-]{1,64}$",
+      "title": "Action Id",
+      "type": "string"
+    },
+    "author": {
+      "description": "Principal whose action created the item (``gen_ai.agent.id``).",
+      "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+      "title": "Author",
+      "type": "string"
+    },
+    "contract": {
+      "const": "ks.outbox_item/1",
+      "default": "ks.outbox_item/1",
+      "description": "Contract id.",
+      "title": "Contract",
+      "type": "string"
+    },
+    "created_seq": {
+      "description": "Record seq that created the item.",
+      "maximum": 9007199254740991,
+      "minimum": 1,
+      "title": "Created Seq",
+      "type": "integer"
+    },
+    "dispatched_seq": {
+      "anyOf": [
+        {
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "type": "integer"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Record seq of the dispatch; set iff status is dispatched.",
+      "title": "Dispatched Seq"
+    },
+    "idempotency_key": {
+      "description": "Dedupe key from :func:`idempotency_key`; re-runs dedupe on this, never on nonce.",
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Idempotency Key",
+      "type": "string"
+    },
+    "lineage": {
+      "description": "Read set of the creating action (from the record, never agent-declared); drives lineage hold.",
+      "items": {
+        "$ref": "#/$defs/ReadEntry"
+      },
+      "title": "Lineage",
+      "type": "array"
+    },
+    "outbox_id": {
+      "description": "Gateway-assigned id; the object id is ``outbox:<outbox_id>``.",
+      "pattern": "^ob-[0-9]{6,16}$",
+      "title": "Outbox Id",
+      "type": "string"
+    },
+    "payload_hash": {
+      "description": "Value hash of the payload; payload in the side store.",
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Payload Hash",
+      "type": "string"
+    },
+    "release_tick": {
+      "description": "Earliest tick it may be released (created tick + hold window).",
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "title": "Release Tick",
+      "type": "integer"
+    },
+    "sink": {
+      "description": "Destination, e.g. ``payments``, ``email``.",
+      "pattern": "^[a-z][a-z0-9_.-]{0,63}$",
+      "title": "Sink",
+      "type": "string"
+    },
+    "status": {
+      "$ref": "#/$defs/OutboxStatus",
+      "description": "Lifecycle state."
+    }
+  },
+  "required": [
+    "action_class",
+    "action_id",
+    "author",
+    "contract",
+    "created_seq",
+    "dispatched_seq",
+    "idempotency_key",
+    "lineage",
+    "outbox_id",
+    "payload_hash",
+    "release_tick",
+    "sink",
+    "status"
+  ],
+  "title": "OutboxItem",
+  "type": "object"
+}

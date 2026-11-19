@@ -1,0 +1,587 @@
+{
+  "$defs": {
+    "ActLink": {
+      "additionalProperties": false,
+      "description": "One hop of the act chain: a principal and the action of theirs that led here.",
+      "properties": {
+        "action_id": {
+          "description": "Their action that caused this one.",
+          "pattern": "^[A-Za-z0-9_.:-]{1,64}$",
+          "title": "Action Id",
+          "type": "string"
+        },
+        "principal": {
+          "description": "Who asked (agent id or ``ks.*``).",
+          "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+          "title": "Principal",
+          "type": "string"
+        }
+      },
+      "required": [
+        "action_id",
+        "principal"
+      ],
+      "title": "ActLink",
+      "type": "object"
+    },
+    "ActionClass": {
+      "description": "Action class, fixed before the action runs (RES-02). Unknown values are rejected by the schema.",
+      "enum": [
+        "R",
+        "C",
+        "I1",
+        "I2",
+        "U"
+      ],
+      "title": "ActionClass",
+      "type": "string"
+    },
+    "Control": {
+      "additionalProperties": false,
+      "description": "C4 Control: one containment operation, recorded in clear on its record.",
+      "properties": {
+        "alert_id": {
+          "anyOf": [
+            {
+              "pattern": "^a-[0-9]{6,16}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Alert that caused it, if any.",
+          "title": "Alert Id"
+        },
+        "auto": {
+          "description": "True if issued without a human click (hard alert). Revoke is never auto.",
+          "title": "Auto",
+          "type": "boolean"
+        },
+        "contract": {
+          "const": "ks.control/1",
+          "default": "ks.control/1",
+          "description": "Contract id.",
+          "title": "Contract",
+          "type": "string"
+        },
+        "control_id": {
+          "description": "Issuer-assigned id.",
+          "pattern": "^k-[0-9]{6,16}$",
+          "title": "Control Id",
+          "type": "string"
+        },
+        "epoch": {
+          "anyOf": [
+            {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "New epoch for agent targets of suspend/revoke/release; ``None`` otherwise.",
+          "title": "Epoch"
+        },
+        "issued_by": {
+          "description": "``ks.monitor``/``ks.gateway`` if auto; ``ks.console``/``ks.recovery`` if human-approved.",
+          "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+          "title": "Issued By",
+          "type": "string"
+        },
+        "op": {
+          "$ref": "#/$defs/ControlOp",
+          "description": "Operation (``ks.control.op``)."
+        },
+        "reason": {
+          "description": "Short code, e.g. ``hard_alert``, ``operator``, ``bad_sig``.",
+          "pattern": "^[a-z][a-z0-9_.-]{0,63}$",
+          "title": "Reason",
+          "type": "string"
+        },
+        "target": {
+          "description": "What it acts on: agent, connection, held action or outbox item (``ks.control.target``).",
+          "pattern": "^(agent:[a-z][a-z0-9_]{0,31}|conn:c-[0-9]{1,6}|action:r-[0-9]{6,16}|outbox:ob-[0-9]{6,16})$",
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "alert_id",
+        "auto",
+        "contract",
+        "control_id",
+        "epoch",
+        "issued_by",
+        "op",
+        "reason",
+        "target"
+      ],
+      "title": "Control",
+      "type": "object"
+    },
+    "ControlOp": {
+      "enum": [
+        "suspend",
+        "revoke",
+        "release",
+        "hold",
+        "unhold"
+      ],
+      "title": "ControlOp",
+      "type": "string"
+    },
+    "Decision": {
+      "enum": [
+        "exec",
+        "deny",
+        "hold"
+      ],
+      "title": "Decision",
+      "type": "string"
+    },
+    "EnvelopeHeader": {
+      "additionalProperties": false,
+      "description": "The envelope with ``args`` replaced by ``args_hash``. This is what is signed and what records embed.",
+      "properties": {
+        "act_chain": {
+          "description": "Full act chain, root first, immediate parent last; empty = self-initiated (``ks.act_chain``).\nAgent-declared: used to deny revoked ancestors, NEVER for taint (taint uses recorded read sets).",
+          "items": {
+            "$ref": "#/$defs/ActLink"
+          },
+          "title": "Act Chain",
+          "type": "array"
+        },
+        "action_id": {
+          "description": "Agent-chosen id, unique per agent (OTel ``gen_ai.tool.call.id``).",
+          "pattern": "^[A-Za-z0-9_.:-]{1,64}$",
+          "title": "Action Id",
+          "type": "string"
+        },
+        "agent_id": {
+          "description": "Claimed signer (OTel ``gen_ai.agent.id``). Trusted only if the record's ``sig_ok`` is true.",
+          "pattern": "^(ks\\.)?[a-z][a-z0-9_]{0,31}$",
+          "title": "Agent Id",
+          "type": "string"
+        },
+        "args_hash": {
+          "description": "``args_hash(args)``; args themselves in the side store (OTel ``ks.tool.call.arguments_hash``).",
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Args Hash",
+          "type": "string"
+        },
+        "claimed_seq": {
+          "anyOf": [
+            {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Agent-claimed sequence, kept for evidence only; never becomes the record ``seq``.",
+          "title": "Claimed Seq"
+        },
+        "claimed_ts_us": {
+          "anyOf": [
+            {
+              "maximum": 9007199254740991,
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Agent-claimed time, kept for evidence only; ordering uses gateway ``seq``/``ts_us``.",
+          "title": "Claimed Ts Us"
+        },
+        "contract": {
+          "const": "ks.envelope_header/1",
+          "default": "ks.envelope_header/1",
+          "description": "Contract id.",
+          "title": "Contract",
+          "type": "string"
+        },
+        "epoch": {
+          "description": "Agent's credential epoch; stale -> ``deny/stale_epoch``, checked inside the write txn (``ks.agent.epoch``).",
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Epoch",
+          "type": "integer"
+        },
+        "expiry_tick": {
+          "description": "Last tick at which the envelope is valid; later -> ``deny/expired`` (``ks.envelope.expiry_tick``).",
+          "maximum": 9007199254740991,
+          "minimum": 0,
+          "title": "Expiry Tick",
+          "type": "integer"
+        },
+        "nonce": {
+          "description": "Anti-replay nonce, unique per agent_id (``ks.envelope.nonce``). Not used for dedupe.",
+          "pattern": "^[0-9a-f]{32}$",
+          "title": "Nonce",
+          "type": "string"
+        },
+        "parent_action_id": {
+          "anyOf": [
+            {
+              "pattern": "^[A-Za-z0-9_.:-]{1,64}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Immediate parent action; equals ``act_chain[-1].action_id`` (OTel span link, ``ks.action.parent_id``).",
+          "title": "Parent Action Id"
+        },
+        "sig": {
+          "anyOf": [
+            {
+              "pattern": "^[0-9a-f]{128}$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Ed25519 over :meth:`signing_bytes` (``ks.envelope.sig``). ``None`` only before signing.",
+          "title": "Sig"
+        },
+        "tool": {
+          "description": "Tool to run (OTel ``gen_ai.tool.name``; operation ``execute_tool``).",
+          "pattern": "^[a-z][a-z0-9_]*(\\.[a-z][a-z0-9_]*)+$",
+          "title": "Tool",
+          "type": "string"
+        }
+      },
+      "required": [
+        "act_chain",
+        "action_id",
+        "agent_id",
+        "args_hash",
+        "claimed_seq",
+        "claimed_ts_us",
+        "contract",
+        "epoch",
+        "expiry_tick",
+        "nonce",
+        "parent_action_id",
+        "sig",
+        "tool"
+      ],
+      "title": "EnvelopeHeader",
+      "type": "object"
+    },
+    "ReadEntry": {
+      "additionalProperties": false,
+      "description": "One entry of a read set: what an adapter observed, captured by the gateway (OTel ``ks.read_set``).",
+      "properties": {
+        "hash": {
+          "description": "Value hash of the version read.",
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Hash",
+          "type": "string"
+        },
+        "obj": {
+          "description": "Object read.",
+          "pattern": "^[a-z][a-z0-9_]{0,31}:[A-Za-z0-9_.-]{1,128}$",
+          "title": "Obj",
+          "type": "string"
+        },
+        "ver": {
+          "description": "Version read.",
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "title": "Ver",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "hash",
+        "obj",
+        "ver"
+      ],
+      "title": "ReadEntry",
+      "type": "object"
+    },
+    "Reason": {
+      "enum": [
+        "ok",
+        "bad_sig",
+        "schema",
+        "nonce_reused",
+        "expired",
+        "stale_epoch",
+        "suspended",
+        "revoked",
+        "revoked_ancestor",
+        "class_u",
+        "out_of_scope",
+        "over_quota",
+        "recovery_frozen",
+        "lineage_hold",
+        "sensitive_field",
+        "needs_approval"
+      ],
+      "title": "Reason",
+      "type": "string"
+    },
+    "VersionRef": {
+      "additionalProperties": false,
+      "description": "A version plus the hash of its value (no raw value).",
+      "properties": {
+        "hash": {
+          "description": "``value_hash(value)`` of that version; the value itself is in the side store.",
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Hash",
+          "type": "string"
+        },
+        "ver": {
+          "description": "Version number.",
+          "maximum": 9007199254740991,
+          "minimum": 1,
+          "title": "Ver",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "hash",
+        "ver"
+      ],
+      "title": "VersionRef",
+      "type": "object"
+    },
+    "WriteEntry": {
+      "additionalProperties": false,
+      "description": "One entry of a write set (OTel ``ks.write_set``).",
+      "properties": {
+        "after": {
+          "$ref": "#/$defs/VersionRef",
+          "description": "Version created; ``after.hash == TOMBSTONE_HASH`` for a delete."
+        },
+        "before": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VersionRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Version replaced; ``None`` = object did not exist (create)."
+        },
+        "obj": {
+          "description": "Object written.",
+          "pattern": "^[a-z][a-z0-9_]{0,31}:[A-Za-z0-9_.-]{1,128}$",
+          "title": "Obj",
+          "type": "string"
+        }
+      },
+      "required": [
+        "after",
+        "before",
+        "obj"
+      ],
+      "title": "WriteEntry",
+      "type": "object"
+    }
+  },
+  "$id": "https://killswitch.local/schema/1.0.0/c2.record.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "C2 Record. Field docs give the OTel mapping (span name ``execute_tool {tool}``).",
+  "properties": {
+    "action_class": {
+      "$ref": "#/$defs/ActionClass",
+      "description": "R | C | I1 | I2 | U, assigned before execution (``ks.action.class``)."
+    },
+    "conn_id": {
+      "description": "Gateway-assigned submitting connection (``ks.conn.id``); never agent-supplied.",
+      "pattern": "^c-[0-9]{1,6}$",
+      "title": "Conn Id",
+      "type": "string"
+    },
+    "contract": {
+      "const": "ks.record/1",
+      "default": "ks.record/1",
+      "description": "Contract id.",
+      "title": "Contract",
+      "type": "string"
+    },
+    "control": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/Control"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "The Control in clear, iff ``envelope.tool == \"ks.control\"`` and executed (``ks.control.*``)."
+    },
+    "decision": {
+      "$ref": "#/$defs/Decision",
+      "description": "exec | deny | hold (``ks.policy.decision``)."
+    },
+    "envelope": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/EnvelopeHeader"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Signed envelope header as received (claimed agent_id, act_chain, args_hash, sig). ``None`` iff unparseable."
+    },
+    "envelope_hash": {
+      "description": "``envelope.content_hash()``; for unparseable input, ``raw_hash(bytes)`` (raw in side store).",
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Envelope Hash",
+      "type": "string"
+    },
+    "gw_sig": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{128}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Gateway Ed25519 over :meth:`signing_bytes` (``ks.record.gw_sig``). ``None`` only before signing.",
+      "title": "Gw Sig"
+    },
+    "hash": {
+      "description": "sha256 of :meth:`signing_bytes` (``ks.record.hash``).",
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Hash",
+      "type": "string"
+    },
+    "outbox_ids": {
+      "description": "Outbox items created, in creation order (``ks.outbox_ids``). Empty unless exec.",
+      "items": {
+        "pattern": "^ob-[0-9]{6,16}$",
+        "type": "string"
+      },
+      "title": "Outbox Ids",
+      "type": "array"
+    },
+    "policy_rule": {
+      "anyOf": [
+        {
+          "pattern": "^[a-z][a-z0-9_.-]{0,63}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Policy rule id that decided, if any (``ks.policy.rule``).",
+      "title": "Policy Rule"
+    },
+    "prev_hash": {
+      "description": "``hash`` of record seq-1; GENESIS_HASH for seq 1 (``ks.record.prev_hash``).",
+      "pattern": "^[0-9a-f]{64}$",
+      "title": "Prev Hash",
+      "type": "string"
+    },
+    "read_set": {
+      "description": "Versions the adapter read, sorted by obj (``ks.read_set``). Empty on deny.",
+      "items": {
+        "$ref": "#/$defs/ReadEntry"
+      },
+      "title": "Read Set",
+      "type": "array"
+    },
+    "reason": {
+      "$ref": "#/$defs/Reason",
+      "description": "Why; ``ok`` for exec (``ks.policy.reason``; also ``error.type`` on deny)."
+    },
+    "record_id": {
+      "description": "``r-`` + seq zero-padded (``ks.record.id``).",
+      "pattern": "^r-[0-9]{6,16}$",
+      "title": "Record Id",
+      "type": "string"
+    },
+    "result_hash": {
+      "anyOf": [
+        {
+          "pattern": "^[0-9a-f]{64}$",
+          "type": "string"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "description": "Hash of the result returned to the agent (OTel ``gen_ai.tool.call.result``, hashed). Exec only.",
+      "title": "Result Hash"
+    },
+    "seq": {
+      "description": "Gateway sequence, 1.., no gaps (``ks.record.seq``).",
+      "maximum": 9007199254740991,
+      "minimum": 1,
+      "title": "Seq",
+      "type": "integer"
+    },
+    "sig_ok": {
+      "description": "Gateway verified ``envelope.sig`` against the claimed principal's key (``ks.envelope.sig_ok``).",
+      "title": "Sig Ok",
+      "type": "boolean"
+    },
+    "tick": {
+      "description": "Tick of execution (``ks.tick``).",
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "title": "Tick",
+      "type": "integer"
+    },
+    "ts_us": {
+      "description": "Gateway logical time from the tick, never wall clock (span start time).",
+      "maximum": 9007199254740991,
+      "minimum": 0,
+      "title": "Ts Us",
+      "type": "integer"
+    },
+    "write_set": {
+      "description": "Versions written, before/after ver+hash, sorted by obj (``ks.write_set``). Empty unless exec.",
+      "items": {
+        "$ref": "#/$defs/WriteEntry"
+      },
+      "title": "Write Set",
+      "type": "array"
+    }
+  },
+  "required": [
+    "action_class",
+    "conn_id",
+    "contract",
+    "control",
+    "decision",
+    "envelope",
+    "envelope_hash",
+    "gw_sig",
+    "hash",
+    "outbox_ids",
+    "policy_rule",
+    "prev_hash",
+    "read_set",
+    "reason",
+    "record_id",
+    "result_hash",
+    "seq",
+    "sig_ok",
+    "tick",
+    "ts_us",
+    "write_set"
+  ],
+  "title": "Record",
+  "type": "object"
+}
