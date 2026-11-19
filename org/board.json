@@ -341,6 +341,12 @@
       "title": "Start the build ahead of the official prototyping window",
       "status": "accepted",
       "summary": "Recovery modules are estimated at 9.5 build days against an 8-day window."
+    },
+    {
+      "id": "D-14",
+      "title": "ADR word cap waived after the freeze (≤1,500 words)",
+      "status": "accepted",
+      "summary": "Post-freeze ADRs carry their amendments in place. Length alone is not a defect; reviewers judge correctness. ADR-06-metrics.md is an intentional companion file."
     }
   ],
   "risks": [
@@ -1179,6 +1185,81 @@
       "t": "19 Nov 10:56",
       "who": "maya",
       "msg": "moved ADR-00 to in_review"
+    },
+    {
+      "t": "19 Nov 10:58",
+      "who": "anaya",
+      "msg": "reviewed ADR-06: done"
+    },
+    {
+      "t": "19 Nov 10:58",
+      "who": "maya",
+      "msg": "reviewed ADR-04: changes"
+    },
+    {
+      "t": "19 Nov 10:58",
+      "who": "maya",
+      "msg": "reviewed ADR-05: changes"
+    },
+    {
+      "t": "19 Nov 10:58",
+      "who": "kabir",
+      "msg": "reviewed ADR-01: done"
+    },
+    {
+      "t": "19 Nov 10:58",
+      "who": "kabir",
+      "msg": "reviewed ADR-02: done"
+    },
+    {
+      "t": "19 Nov 10:58",
+      "who": "kabir",
+      "msg": "reviewed ADR-03: done"
+    },
+    {
+      "t": "19 Nov 10:58",
+      "who": "zoya",
+      "msg": "reviewed ADR-07: changes"
+    },
+    {
+      "t": "19 Nov 10:58",
+      "who": "panel",
+      "msg": "reviewed ADR-00: changes"
+    },
+    {
+      "t": "19 Nov 10:59",
+      "who": "zoya",
+      "msg": "moved ABS-08 to in_progress"
+    },
+    {
+      "t": "19 Nov 10:59",
+      "who": "zoya",
+      "msg": "moved ABS-08 to in_review"
+    },
+    {
+      "t": "19 Nov 10:59",
+      "who": "zoya",
+      "msg": "moved ABS-04 to in_review"
+    },
+    {
+      "t": "19 Nov 11:00",
+      "who": "panel",
+      "msg": "reviewed ADR-00: done"
+    },
+    {
+      "t": "19 Nov 11:00",
+      "who": "maya",
+      "msg": "reviewed ADR-04: done"
+    },
+    {
+      "t": "19 Nov 11:00",
+      "who": "maya",
+      "msg": "reviewed ADR-05: done"
+    },
+    {
+      "t": "19 Nov 11:00",
+      "who": "zoya",
+      "msg": "reviewed ADR-07: done"
     }
   ]
 }

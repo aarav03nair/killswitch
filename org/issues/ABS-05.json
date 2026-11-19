@@ -45,6 +45,11 @@
       "t": "19 Nov 05:58",
       "who": "kabir",
       "msg": "review: done"
+    },
+    {
+      "t": "19 Nov 11:00",
+      "who": "pmo",
+      "msg": "PMO: 3 stale post-freeze references fixed (suspect, idempotency_key, release)"
     }
   ]
 }

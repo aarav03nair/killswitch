@@ -1,6 +1,7 @@
 # RES-SYN: Synthesis (framing, facts, principles, metrics, decisions)
 
 **Errata (19 Nov 2026):** rows 1, 2 and 11 of §2 were aligned to `abstract/FACT-CARD.md`, which is the governing source for every outside fact (D13); where this file differs, the fact card wins.
+**Errata (19 Nov 2026, ABS-08, zoya):** §6 aligned to the CALL-02 design freeze (S\* definition, B / G frozen at recovery start, held-at-T rule, collateral stall, `c_culprit_window`, oracle-assisted baselines, score keys). §7 item 13 is superseded by the revised D13 meaning in CALL-02.md and GUARDRAILS §1.5. Where this file differs from CALL-02/resolutions.md, the resolutions win.
 
 Owner: anaya · 20 Nov 2026 · Inputs: RES-01..11, REVIEW-S1, STRAWMAN, PANEL-ENG-00, plus my own spot-checks (**A**). Bullets and facts only. Aarav writes every sentence of the abstract.
 
@@ -89,12 +90,14 @@ Spare: RBI FREE-AI "Accountability cannot be delegated to the model and underlyi
 
 ## 6. Metrics to adopt
 
-- **Oracle:** t0 = oracle commit of the first bad effect. S\* = run with the culprit removed. **B** = faulty-run effects absent or different in S\*. **G** = honest effects matching S\*. Compare on the effect ledger and invariants, never on our taint graph.
-- **TTI-detect:** t0 → first alert. **TTI-attribute:** alert → correct agent_id and first bad action_id. Count false accusations.
-- **TTC (Panel):** alert → first denied culprit envelope (`seq`). Companion counts, both targeting 0: **post-alert tainted effects** (anyone) and **irreversible tainted effects released**. Also: exposure window, damage-in-window, collateral stall, false-positive cost.
-- **Recovery:** R = |B left|/|B|; C = |G lost|/|G|; revert precision and recall. Clean = (R = 0 and C = 0). CR only alongside them.
+- **Oracle (CALL-02 A1, X3a):** S\* = same seed and config, fault disabled (the culprit runs its honest step). Pure world: monitor, containment and recovery off; outbox dispatches at `release_tick`. The culprit slot also no-ops from the tick it was suspended in the faulty run (scorer-only; baselines share the same S\*). Non-culprit suspensions are not mirrored and still count in C. Rogue-slot runs: the slot no-ops from `fault_tick`. t0 = min tick over B, never before `fault_tick` (scorer-only, never seen by the TCB).
+- **B / G frozen at recovery start (t_rec):** same tick for us and every baseline. **B** = effects absent or different in S\*. **G** = effects matching S\*, which includes the culprit's honest writes before its suspension. R and C are then scored on the state at T. Compare on the harness effect ledger (per (table, pk, field) diff + sink deliveries), values only (not tick, seq, version or status), never on our taint graph.
+- **Held-at-T rule:** an item still held at T counts as left (this is what gives no-op R = 1); an unresolved flag counts as left; a dispatched B item always counts as left. The bench approver releases re-run items before T (assert T − t_rec ≥ L + H + 2), so a correctly re-held payment is not scored as residual damage (CALL-02 X4).
+- **TTI-detect:** t0 → first alert. **TTI-attribute:** alert → correct agent_id and first bad action_id. Alert ticks come from chained `ks.alert` records, never from unsigned `alerts.jsonl` (X8). Count false accusations.
+- **TTC (Panel):** alert → first denied culprit envelope (`seq`). Companion counts, both targeting 0 and taken from the ledger, not from our recorder: **post-alert tainted effects** (`post_alert_tainted_effects`, anyone) and **irreversible tainted effects released** (`irreversible_tainted_released`). Also: exposure window, damage-in-window, **collateral stall** (delay that holds and recovery impose on honest work, measured against the unmirrored S\* and reported apart from C), false-positive cost.
+- **Recovery:** R = |B left|/|B|; C = |G lost|/|G|; revert precision and recall. Split out **`c_culprit_window`**: the culprit's honest work in (t_inject+1, suspend], reverted by design (the TCB never learns `fault_tick`) and counted in C. Hero precondition makes it 0 (guard test); bench F2+c makes it > 0, reported. Clean = (R = 0 and C = 0, every invariant holding at T). CR only alongside them.
 - **Re-plan cost:** re-run or re-planned honest actions / |G|, approvals requested, re-emitted effects (= 0). Also Airlock's "kept without redo".
-- **Protocol:** ≥20 seeded runs; median, p95, max. Baselines: snapshot, revert-culprit-only, no-op. Hold 0 vs > 0. A probe keeps attacking after containment.
+- **Protocol:** ≥20 seeded runs; median, p95, max. Baselines: snapshot and revert-culprit-only, both labelled **oracle-assisted** (given t0; revert-culprit-only works per object), plus no-op. Hold 0 vs > 0. Bench variants F2+x (honest write-write conflict, R > 0) and F2+c (culprit in-window work, C > 0). A probe keeps attacking after containment.
 
 ## 7. Call #1 decisions (recommended answers)
 

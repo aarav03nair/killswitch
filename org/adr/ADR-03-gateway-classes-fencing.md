@@ -16,7 +16,7 @@ Agents reach shared state only through the gateway (B2 TCB). Recovery needs a cl
 6. classify per action instance. An agent-signed envelope with a `ks.*` tool gives `deny/out_of_scope`
 7. policy (below)
 8. one **`BEGIN IMMEDIATE`** transaction. It first takes `seq` (execute order, ADR-00 T5), then re-reads epoch and the full deny-list (step 5 is a fast path only), then executes
-9. after commit: append the sealed record (`seq` already fixed; gateway sets `ts`, `record_id`), then enqueue outbox items. A crash between commit and append aborts the run and verify reports RECONCILE; never silent.
+9. after commit: append the sealed record (`seq` already fixed; gateway sets `ts`, `record_id`), then enqueue outbox items. The exec record's `write_set` covers the outbox object versions created by the enqueue, so reconciliation stays clean. A crash between commit and append aborts the run and verify reports RECONCILE; never silent.
 
 The step-8 re-check closes RT5. The suspend commits as a Control in the same store, so a write either commits before it (`seq < q`) or sees it and gets `deny/suspended` or `stale_epoch`. The real window is between steps 5 and 8 (hook `GatewayHooks.between_check_and_txn`). Presigned envelopes die at 5 or 8.
 
@@ -102,3 +102,4 @@ C1 (expiry 8, nonce, epoch), C2 (`Decision`, `Reason`, `late_frame`, `policy_rul
 - G4, D5, D4: `ks.dispatch` records; connection deny-list; release = fresh epoch, suspension holds only (M3-M5).
 - G5, G7, E1, D2, C2: seq at txn start, `between_check_and_txn`, system-id rules, expiry before nonce, `late_frame` (M6-M8).
 - B1/X1/X2: field objects and read rules. G6: approval binding. IBAN marking dropped from `crm.update_supplier`.
+- Integration pass: outbox enqueue (step 9) is covered by the exec record's `write_set` (outbox object versions).

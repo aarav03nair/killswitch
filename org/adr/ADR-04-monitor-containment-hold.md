@@ -27,7 +27,7 @@ A checksum-valid EVIL IBAN passes `iban_checksum`; `beneficiary_changed_then_pai
 - Two or more distinct writers, or none: no suspend. The monitor holds by lineage and escalates to the incident console.
 - The suspect is `root_candidates[0]`, derived and never stored.
 - Evidence conventions: `beneficiary_changed_then_paid` puts the **payee field object only** (for the hero, `suppliers:S-17.iban`, writer crm) in `evidence_versions`; the payment goes in `evidence_seqs`, so the payer is never a writer of evidence. `inv.pii_egress` seeds the queued `outbox:<id>` version, written by the emailing agent. `reconcile` has empty `root_candidates` and `evidence_seqs=(alert.seq,)`. The `scope` detector cites the denied record.
-- The walk's seed is the earliest `t0_seq_est`; RunConfig is never read.
+- The bounded backward walk seeds from the alert's `evidence_versions` (ADR-05 §4, CALL-02 X3); `t0_seq_est` is its output, not its seed. An agent's recorded read set includes that tick's `TickFrame.view` entries (ADR-05 §3, resolution I1). RunConfig is never read.
 
 **3. Hard versus soft, and who gets suspended** (D7). Auto-action needs `hard` and a kind in `HARD_ALLOWED`.
 - SCOPE and I-class INVARIANT (including `iban_checksum`, `pii_egress`): auto-suspend `root_candidates[0]`.
@@ -73,3 +73,4 @@ A checksum-valid EVIL IBAN passes `iban_checksum`; `beneficiary_changed_then_pai
 - D4, D1: release = fresh strictly monotonic epoch, suspension holds only (Maya 3, Kabir).
 - Unhold semantics and policy-time hold = the `hold/lineage_hold` record (Maya 4). D5 connection deny-list; E1 system-id rules; E2 signer `ks.operator`.
 - X1/X2: field objects are the evidence granularity. Same-name metric: `irreversible_tainted_released` (Maya 9).
+- Integration pass: walk seeds from `evidence_versions`, `t0_seq_est` is the output; read set includes `TickFrame.view` entries.

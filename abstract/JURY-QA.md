@@ -59,7 +59,7 @@ anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md
 - **Key distinction:** Deterministic steps re-run; LLM steps re-planned with human approval.
 - **Notes:**
   - The **oracle S\*** itself depends on determinism: that is why finale agents are deterministic (D9), not a convenience.
-  - Re-runs go through the outbox with idempotency keys, so no effect is sent twice (F10; target "re-emitted effects = 0", §1.5; T§7 gap 7: `idempotency_key` not yet a contract field).
+  - Re-runs go through the outbox with idempotency keys, so no effect is sent twice (F10; target "re-emitted effects = 0", §1.5).
   - Neutral context only: Airlock's controlled comparison grids also use deterministic workers and ground-truth alerts (RES-11 §2, Evaluation).
 - **Traps:**
   - "Replay" as our verb: banned synonym of re-run (T§4). We do not replay LLMs.
@@ -76,7 +76,7 @@ anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md
 - **Key distinction:** Bypass is caught by reconciliation; prevention needs per-agent uid.
 - **Traps:**
   - "Impossible", "keys unreachable": say "caught", and "enforced in production (uid/container), detected here by reconciliation" (F2; C2 exact wording).
-  - Claiming we **attribute** the bypass write: an off-gateway write has no author; `Alert.suspect` may be null; RT1 only asserts no honest agent is suspended (SPEC RT1 open point).
+  - Claiming we **attribute** the bypass write: an off-gateway write has no author; root_candidates is empty (names nobody); RT1 only asserts no honest agent is suspended (SPEC RT1 open point).
   - Claiming reconciliation detects a key **read**: it detects unmediated writes only (C2 "refuse" column).
   - Covert channels / reading data around the gateway: out of scope, no claim (THREAT-MODEL §3).
   - "≤1 tick" stated as a result: it is RT1's pass target.
@@ -147,6 +147,8 @@ anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md
   - Quoting RES-06 §4's "Dolt as substrate" recommendation: overridden by D5.
   - Dolt performance numbers: RES-06 never ran Dolt (F4/§4 caveat). The git run is one toy example, not a benchmark (RES-06 §5).
   - Overclaiming conflict handling: a write-write conflict is **flagged**, not merged (T§4; F9).
+  - Hero conflict line (CALL-02): triage's edit on the same supplier is **kept**, no flag; the IBAN is its own field object, so they share no datum (W6; CALL-02 B1–B3). Do not call it a conflict.
+  - "So you never get a conflict?": an honest one exists in bench **F2+x** (triage edits the price row crm wrote → row-level write-write conflict → flag, unresolved, residual damage R > 0). Show it, do not hide it (L9; CALL-02 B5). Conflicts are field-level only for sensitive fields, row-level elsewhere (F9).
 
 ## Q11. "Any real incident where this happened? Would this have stopped the METR / OpenAI–Hugging Face case?"
 
@@ -167,7 +169,7 @@ anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md
 ## Q12. "What if detection is wrong and you suspend a good agent? Or miss the bad one?"
 
 - **TM scope:** **in** (rogue tricking auto-suspend of an honest agent, RT11; buggy-agent false positive). Semantic influence **out** (we over-taint).
-- **Evidence (false positive):** F7, F8, L2, X17, X18 · D7 · C4 · rule 10 (`release` = un-hold + restore epoch) · RT11 (framing DoS: FP cost reported, recomputed, not thresholded; `false_accusations` counted against us), RT1 (unattributable mismatch suspends no honest agent), RT3 (connection, not victim), RT9 (root candidate needs a click) · T§3 (suspend, revoke, release) · §1.5 collateral loss C (target 0) · SYN §6 (false accusations, FP cost).
+- **Evidence (false positive):** F7, F8, L2, X17, X18 · D7 · C4 · rule 10 (`release` = fresh epoch; lifts suspension holds only, CALL-02 D4) · RT11 (framing DoS: FP cost reported, recomputed, not thresholded; `false_accusations` counted against us), RT1 (unattributable mismatch suspends no honest agent), RT3 (connection, not victim), RT9 (root candidate needs a click) · T§3 (suspend, revoke, release) · §1.5 collateral loss C (target 0) · SYN §6 (false accusations, FP cost).
 - **Evidence (miss):** F5, X30 · SYN §4 principle 6 · T§3 invariant detector · §1.5 TTI-detect (definition only) · THREAT-MODEL §5 splitting row · neutral context: Airlock's safety is also relative to the alert's declared source set (RES-11 §4 Airlock #7).
 - **Key distinction:** Suspend is reversible; revoke needs a human; false positives scored.
 - **Traps:**
@@ -198,3 +200,8 @@ anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md
 4. RES-11 §3 "Us" column is STRAWMAN-era (per-agent revoke, "cancel in-flight", "single process", "signed chain head"): superseded by D6–D8 and C6 (per-action lineage hold, separate subprocesses, witness, hold never cancel). Do not cite it as our design.
 5. RES-11 §5 safe #3 and RES-01 use "ground truth"; T§5 locks "oracle (S\*)". RES-01 §5 "do not re-run agents" is superseded by D4.
 6. RES-06 §1/§4 recommends Dolt as substrate; superseded by D5.
+
+## Changes (ABS-08, zoya, 19 Nov; CALL-02 freeze)
+
+- Q10: hero conflict line updated: triage's edit is **kept**, no flag; the honest conflict lives in bench F2+x (R > 0), with field-or-row granularity. Nothing else edited.
+- Resolved by PMO (19 Nov) after CALL-02: Q5 trap cites `Alert.suspect` (no such field; suspect = `root_candidates[0]`, TERMS §1); Q4 note cites "T§7 gap 7: `idempotency_key` not yet a contract field" (resolved: C3 `OutboxItem.idempotency_key`); Q12 cites rule 10 "`release` = un-hold + restore epoch" (CALL-02 D4: fresh epoch, lifts suspension only).

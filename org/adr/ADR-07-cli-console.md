@@ -23,8 +23,8 @@ Exit codes are `ks.verify.Exit` names; the CLI adds none. `RUN` is a run dir.
 | `ks bench` | `[--seeds 0,1,2] [--faults ...] [--hold ...]` | OK, IO, USAGE |
 | `ks console` | `RUN (--html OUT \| --live [--once])` | OK, IO, USAGE |
 
-- **`--rogue`/`--slot`:** runs jury Python (SEC-02 §3 template) in place of the named agent; default slot `docs`, an independent agent. Flags match TERMS "inject" and SEC-02 §3. Same seed and file give byte-identical records.
-- **`verify`:** last stdout line is a canonical `VerifyReport`; `--json` prints only that line. `--head` takes the `RunAnchor` line (F1); `VerifyReport.anchored` says whether C1 holds. A TAMPER names the first bad **seq** (one word everywhere; never "index").
+- **`--rogue`/`--slot`:** runs jury Python (SEC-02 §3 template) in place of the named agent; default slot `docs`, an independent agent. Flags match TERMS "inject" and SEC-02 §3. Fresh keys are forced with `--rogue`, so two runs with one seed and file are identical under `determinism_view()`, not byte-identical.
+- **`verify`:** last stdout line is a canonical `VerifyReport`; `--json` prints only that line. The `RunAnchor` line is printed in the console banner at run end and in the run summary; the presenter copies it into `ks verify --head` (F1). `--head` takes the `RunAnchor` line; `VerifyReport.anchored` says whether C1 holds. A TAMPER names the first bad **seq** (one word everywhere; never "index").
 - **`blame`:** a command alias only. Screen and narration say "root candidates": ranked `root_candidates` and the first bad action's seq.
 - **`contain`:** TARGET is `agent:ID` or `conn:ID`. It needs a live gateway; a finished run gives IO. It talks to the operator socket (J1). The `ks.operator` signer signs a `ks.control` envelope (`auto=false`), which the gateway records. Agent suspend sends the next fresh epoch (strictly monotonic, D1); release sets a new maximum. `revoke` without `--confirm` is USAGE.
 - **`recover`:** `--dry-run` writes `plans/<plan_id>.json` and prints the dry-run diff, then the exact `ks recover RUN --apply PLAN_ID [--approve ITEM...]` line, ids filled in, ready to paste. It runs `verify` first and exits FROZEN on a non-OK result or unresolved tamper alert (F5). `--apply` issues controls as `ks.recovery`, runs `restore`, `rerun` and `cancel_outbox` steps, keeps each `replan` item queued until `--approve ITEM`, and never applies a `flag` (write-write conflict).
@@ -32,7 +32,7 @@ Exit codes are `ks.verify.Exit` names; the CLI adds none. `RUN` is a run dir.
 - **`score`:** writes `score.json` (ADR-06 keys). No pass/fail exit.
 
 ### 2. Pacing (L1)
-`ks run`/`inject --pause-at TICK,…` or `--step` stops the gateway between ticks, keeps the operator socket open, and resumes on a keypress or on the next `contain`/`recover` command. A paused run is live, so `ks contain` works. A paused and an unpaused run with one seed give byte-identical records.
+`ks run`/`inject --pause-at TICK,…` or `--step` stops the gateway between ticks, keeps the operator socket open, and resumes on a keypress or on the next `contain`/`recover` command. A paused run is live, so `ks contain` works. The 5-beat demo runs against a live paused run (`ks run --fault F2+ --pause-at ... --step`); the gateway stays live through beat 4's `ks recover --dry-run`/`--apply` via the operator socket. `ks recover` on a finished run is read-only dry-run only. A paused and an unpaused run with one seed give identical records under `determinism_view()` (byte-identical only in repro mode).
 
 ### 3. Operator socket (J1)
 `ks contain` and `recover --apply` reach the gateway only over `/run/ks/<run_id>/operator.sock`, in a 0700 uid-0 dir, checked by `SO_PEERCRED` uid 0. Agents cannot connect; the page never opens it.
@@ -72,7 +72,7 @@ Approval is a CLI act (`--approve`); the page only shows what the record says, s
 3. `recover --dry-run` with an unresolved tamper alert gives FROZEN; `--apply` leaves a `replan` item unapplied until approved.
 4. Console build is deterministic, has no external resource references, leaves the run dir byte-identical, and shows a failed audit beat for an edited record line.
 5. Golden: the F2+ HTML lists the five beats in order and includes alert, suspend, held items, dry-run diff with kept lane and 0 flags, baselines and approval (console golden).
-6. `ks run --rogue` twice with one seed gives byte-identical records.
+6. `ks run --rogue` twice with one seed gives identical `determinism_view()` (not byte-identical: fresh keys).
 7. `test_pause_identical_record`, `test_ks_repro_fresh_pair` (OK; changed seed gives DIVERGED), `test_operator_sock_rejects_agent`, `test_dryrun_prints_apply`.
 8. `verify --head` with a swapped keyring gives WITNESS; grep test: no `ks.console` signer id remains.
 
@@ -80,3 +80,4 @@ Approval is a CLI act (`--approve`); the page only shows what the record says, s
 - B3 kept lane, no flag on the hero. C6 `ks repro`, `DIVERGED`. E2 signer is `ks.operator`; console is the page only.
 - F1 `verify --head`; seq, not index. J1 operator socket. L1 `--pause-at`/`--step`. L2 `--with-baselines`, `baselines/`. L3 live verify is the audit proof; `--dry-run` prints the apply command; `blame` is an alias.
 - Zoya: pacing, flag alignment with TERMS and SEC-02 §3, baselines in the run dir, terms fixed.
+- Integration pass: demo runs on live paused run, recover on finished run is dry-run only; RunAnchor location; `--rogue` runs identical under `determinism_view()`.

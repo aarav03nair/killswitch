@@ -1,11 +1,21 @@
 """C5 RecoveryPlan: taint set, ordered steps, and a hash-only dry-run diff.
 
-A **taint-scoped revert** is the set of ``restore`` steps in a plan: each restores one object to a
-pre-taint version, and only if the object is still at the culprit's after-version (write-write
-conflict rule; otherwise the planner emits ``flag`` or ``rerun``). Restores append a new version;
-history is never edited. Steps run as envelopes from ``ks.recovery`` (tool ``ks.recover.<op>``),
-after the console approves the plan by its :meth:`~RecoveryPlan.content_hash`.
-Recovery is refused (``deny/recovery_frozen``) while a tamper alert is open.
+A **taint-scoped revert** is the set of ``restore`` steps in a plan: each restores one object (row or
+field object) to a pre-taint version, and only if the object is still at the culprit's after-version
+(write-write conflict rule; otherwise the planner emits ``flag``). There is no restore over a tainted
+head (B6; the 1.0 draft "M13" is dropped). Restores append a new version; history is never edited.
+
+**Approval binding (G6, SEC-03 F5).** The operator approves a plan with a recorded ``ks.approve`` envelope
+(signed by ``ks.operator``) whose args are :class:`Approval` ``{plan_id, plan_hash, steps}``, ``plan_hash`` =
+:meth:`RecoveryPlan.content_hash`. Every step then runs as a ``ks.recover.<op>`` envelope signed by
+``ks.recovery`` with args :class:`RecoverArgs` ``{plan_id, plan_hash, n, step}``; verify checks each against a
+prior approval that lists ``n`` and against the plan file's hash. A step whose ``expect`` is no longer the
+head is ``hold/stale_plan`` (M8); the plan must be recomputed. Plan approval blocks the tick barrier:
+tick ``plan_tick + decision_latency_ticks`` does not open until the decision arrives (C1).
+
+**Freeze (M12, F5).** ``ks recover`` (dry-run or apply) runs ``verify`` first. Exit is FROZEN if verify != OK
+**or** a tamper/witness-stall alert is open in the (chained ``ks.alert``) records. A freeze lasts for the
+rest of the run; v1 has no resolve action. Recovery envelopes are ``deny/recovery_frozen`` meanwhile.
 """
 
 from __future__ import annotations
@@ -15,6 +25,8 @@ from typing import Annotated, ClassVar, Literal, Union
 
 from pydantic import Field, StringConstraints, field_validator, model_validator
 
+from .ids import RECOVER_TOOL_PREFIX
+
 from ._base import Document, Value
 from .hashing import Domain
 from .ids import ActionId, AgentId, Hash, PrincipalId, Seq, Token
@@ -22,8 +34,12 @@ from .state import ObjId, ObjVer, VersionRef, _sorted_unique
 
 __all__ = [
     "StepOp", "RestoreStep", "RerunStep", "ReplanStep", "CancelOutboxStep", "CompensateStep", "FlagStep",
-    "Step", "ActionRef", "TaintSet", "DiffEntry", "RecoveryPlan",
+    "Step", "ActionRef", "TaintSet", "DiffEntry", "RecoveryPlan", "APPROVE_TOOL", "Approval", "RecoverArgs",
+    "recover_tool",
 ]
+
+APPROVE_TOOL = "ks.approve"
+"""Envelope tool of a plan approval; signed by ``ks.operator`` on ``c-0``."""
 
 _OB = Annotated[str, StringConstraints(strict=True, pattern=r"^ob-[0-9]{6,16}$")]
 
@@ -63,13 +79,19 @@ class RestoreStep(_Step):
     obj: ObjId
     """Object to restore."""
     expect: VersionRef
-    """Must still be current (the culprit's after-version); otherwise the step fails closed."""
+    """The culprit's after-version (B6). Must still be the head, otherwise the step fails closed
+    (``hold/stale_plan``); an honest later write makes it a ``flag`` at plan time instead."""
     to: VersionRef
     """Pre-taint version whose value is re-written (value from the side store)."""
 
 
 class RerunStep(_Step):
-    """Re-execute a deterministic honest action on repaired state; outbox dedupes on idempotency_key."""
+    """Re-execute a deterministic honest action on repaired state; outbox dedupes on idempotency_key (M14).
+
+    Executes the original tool and args (side store, ARGS domain) for ``action.agent_id``/``action_id``.
+    Idempotency keys derive from those, not from the ``ks.recovery`` envelope, so a re-run payment updates
+    the same ``outbox:<id>`` (v+1, back on hold). ``OutboxItem.author`` stays the original agent.
+    Redacted args make the step a ``flag``."""
 
     op: Literal["rerun"] = "rerun"
     """Step kind."""
@@ -172,8 +194,10 @@ class RecoveryPlan(Document):
     """Alert the plan answers."""
     culprit: AgentId
     """Agent being reverted, chosen by a person from the alert's root candidates."""
-    t0_seq: Seq
-    """First tainted record seq (taint starts here)."""
+    t0_seq_est: Seq
+    """Estimated first tainted seq (A2, X3): the earliest write by ``culprit`` in the bounded backward closure
+    of the alerts' ``evidence_versions``. An estimate from the record only; the planner never reads
+    ``RunConfig.fault_tick`` (scorer-only). Taint seed (A8): every culprit write in [t0_seq_est, suspend]."""
     as_of_seq: Seq
     """Plan computed against state at this record seq; stale plans must be recomputed."""
     taint_set: TaintSet
@@ -192,9 +216,18 @@ class RecoveryPlan(Document):
     def _steps(self) -> RecoveryPlan:
         if [s.n for s in self.steps] != list(range(len(self.steps))):
             raise ValueError("step n must equal its position")
-        if self.t0_seq > self.as_of_seq:
-            raise ValueError("t0_seq must be <= as_of_seq")
+        if self.t0_seq_est > self.as_of_seq:
+            raise ValueError("t0_seq_est must be <= as_of_seq")
         return self
+
+    def approval(self, steps: tuple[int, ...] | None = None) -> Approval:
+        """The ``ks.approve`` args binding this plan (all steps by default)."""
+        return Approval(plan_id=self.plan_id, plan_hash=self.content_hash(),
+                        steps=tuple(range(len(self.steps))) if steps is None else tuple(steps))
+
+    def recover_args(self, n: int) -> RecoverArgs:
+        """The ``ks.recover.<op>`` args for step ``n``; the envelope tool is ``recover_tool(step.op)``."""
+        return RecoverArgs(plan_id=self.plan_id, plan_hash=self.content_hash(), n=n, step=self.steps[n])
 
     @property
     def needs_approval(self) -> tuple[int, ...]:
@@ -203,3 +236,43 @@ class RecoveryPlan(Document):
 
 
 
+
+
+def recover_tool(op: StepOp | str) -> str:
+    """``ks.recover.<op>``."""
+    return RECOVER_TOOL_PREFIX + StepOp(op).value
+
+
+class Approval(Value):
+    """Args of a ``ks.approve`` envelope (G6): the operator approves these steps of exactly this plan."""
+
+    plan_id: Annotated[str, StringConstraints(strict=True, pattern=r"^p-[0-9]{6,16}$")]
+    """Plan approved."""
+    plan_hash: Hash
+    """``RecoveryPlan.content_hash()`` of the approved plan file."""
+    steps: tuple[Annotated[int, Field(strict=True, ge=0)], ...]
+    """Step numbers approved, ascending, unique."""
+
+    @field_validator("steps")
+    @classmethod
+    def _s(cls, v):
+        return _sorted_unique(v, lambda n: n, "approved step")
+
+
+class RecoverArgs(Value):
+    """Args of a ``ks.recover.<op>`` envelope: one step of an approved plan (G6)."""
+
+    plan_id: Annotated[str, StringConstraints(strict=True, pattern=r"^p-[0-9]{6,16}$")]
+    """Plan the step belongs to."""
+    plan_hash: Hash
+    """Must equal the approved ``plan_hash``."""
+    n: Annotated[int, Field(strict=True, ge=0)]
+    """Step number; must be listed in the approval."""
+    step: Step
+    """The step itself, identical to ``plan.steps[n]``."""
+
+    @model_validator(mode="after")
+    def _n(self) -> RecoverArgs:
+        if self.step.n != self.n:
+            raise ValueError("step.n must equal n")
+        return self

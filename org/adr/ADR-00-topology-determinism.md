@@ -28,7 +28,7 @@ Key isolation, verbatim: **"enforced in production (uid/container), detected her
 2. *Open*: send `TickFrame(n, epoch, view)` to every live connection. `epoch` is None while suspended or revoked (D3). `view` = `[ViewEntry{obj, ver, hash, value}]` from the scenario's per-agent scope (≤ `MAX_VIEW_ENTRIES` = 64), ids per `row_obj_id`/`field_obj_id`; entries join that tick's read_set, and a row entry omitting a sensitive field reads only the row (I1, X1, X2).
 3. *Collect* **exactly one frame per connection, FIFO** (C2), until every live connection delivered one or `--tick-deadline-ms` passes (wall clock, default 2000; demo 250).
    - A frame tagged ≠ n becomes `deny/late_frame` in that agent's execute slot. Surplus frames stay queued.
-   - A missing frame becomes a no-op plus a soft `barrier.deadline` anomaly (empty `evidence_seqs`, agent in `root_candidates`). After 3 consecutive misses the connection gets EOF: an anomaly, not a suspend, no epoch bump (K4).
+   - A missing frame becomes a no-op plus a soft `barrier.deadline` anomaly (carries `conn_id`; empty `evidence_seqs`, evidence and `root_candidates`: it names a connection, never an agent). After 3 consecutive misses the connection gets EOF: an anomaly, not a suspend, no epoch bump (K4).
    - EOF means no-op from then on.
 4. *Execute* in `agent_id` order, then send `ReplyFrame`s. Execution is sequential: an action at seq s sees a version written at seq w iff s > w, so same-tick earlier writes reach adapter reads but not the view (M2).
 5. *Dispatch* due outbox items as `ks.dispatch` records (at most 32, carried over). *Monitor* runs detectors and reconciliation and queues alerts and Controls for n+1.
@@ -49,7 +49,7 @@ Key isolation, verbatim: **"enforced in production (uid/container), detected her
 - **Keys** (C3): `RunConfig.key_mode = fresh|repro`. *Fresh* (live, security runs): random keys in gateway memory; the witness makes its own. *Repro* (tests, bench): `HKDF(secret, salt=seed, info="ks/key/v1/"‖principal)`, deterministic Ed25519, from `--repro-secret FILE` (0600 uid 0, outside the run dir). Repro forces `anchored=false`, is refused with `--rogue`, is banned for D11/RT2/RT8, and is labelled "not a security run" (X7).
 - **Replay** (C1, X6): `ks run --decisions RUN` replays recorded operator Controls at their recorded ticks. The source must pass `verify --head`, approvals must match `plan_hash`, and it is refused with `--rogue`.
 
-**Run-dir.** Modes per SEC-03 F1 (X8, contracts K7): run dir 0711; `record.jsonl` 0640, group = witness gid; side store 0700/0600; agents get EACCES on every run-dir file. After `RunConfig.ticks`: agents get EOF, SIGKILL, then **kill by uid** (K2); a final checkpoint; the console prints the `RunAnchor` (ADR-02). After exit the dir is evidence only (dead-run dry-runs write outside it, C7); keys die with the gateway, so recovery executes only live.
+**Run-dir.** Modes per SEC-03 F1 (X8, contracts K7): run dir 0711; `record.jsonl` 0600, gateway only (the witness is pushed `(seq, head, tick)` and never reads it); side store 0700/0600; agents get EACCES on every run-dir file. After `RunConfig.ticks`: agents get EOF, SIGKILL, then **kill by uid** (K2); a final checkpoint; the console prints the `RunAnchor` (ADR-02). After exit the dir is evidence only (dead-run dry-runs write outside it, C7); keys die with the gateway, so recovery executes only live.
 
 ## Consequences
 
@@ -78,3 +78,4 @@ Consumes the contracts v1.1.0 names landed by CON-02 (not edited here): `RunConf
 - **D3** epoch. **E4**, **E2** witness key, `ks.operator`. **F6** witness stall. **I1**, **X1/X2** view and read rule. **J1** operator socket. **K1–K4** I/O, kill by uid, oom/nice, EOF after 3 misses. **M1** RNG. **M2** snapshot, visibility. **X8** run-dir modes. **X9** noted, no design change. X4, X5: not ADR-00.
 - Panel must-fixes: **M1** → C1; **M2** → A1/A3; **M3** → C2; **M4** → K1, F6; **M5** → K2–K4; **M6** → C3–C5, E4; **M7** → J1. Should-fixes: **S1** → M1; **S2**, **S4**, **S6** → C7; **S3** → M2; **S5** → C4.
 - Trimmed: run-dir creation, append-only steps (ADR-02).
+- Integration pass: `barrier.deadline` anomaly has `conn_id` and empty `root_candidates`; `record.jsonl` is 0600 gateway-only.

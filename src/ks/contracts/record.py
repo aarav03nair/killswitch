@@ -2,7 +2,16 @@
 
 Only the gateway writes records (rule 8). Chain: ``prev_hash`` of seq 1 is GENESIS_HASH; ``hash`` is
 sha256 of :meth:`Record.signing_bytes` (all fields except ``hash`` and ``gw_sig``); ``gw_sig`` is the
-gateway's Ed25519 over the same bytes. The witness countersigns ``(seq, head, tick)`` every tick.
+gateway's Ed25519 over the same bytes. The witness countersigns ``(seq, head, tick, count)`` every tick.
+
+**Frames (C2 resolution).** One frame per connection per tick, FIFO. A frame tagged with the wrong tick is
+``deny/late_frame`` in that agent's slot; surplus frames wait, so a flooder only delays itself.
+**System records (E1/K4).** ``c-0`` carries in-gateway system envelopes only; a system ``agent_id`` with a
+verified signature is only ever on ``c-0`` and every c-0 envelope claims a system principal. ``ks.*`` tools
+execute only for the principals in ``ids.SYSTEM_TOOLS``; an agent's ``ks.*`` envelope is always denied.
+**seq (G5)** is assigned at the start of the ``BEGIN IMMEDIATE`` txn and the record appended after commit.
+**Determinism (C5).** :func:`determinism_view` drops the key-dependent fields, so fresh-key runs of the
+same seed compare equal.
 
 Attribution rule (Q9): use :attr:`Record.attributed_agent`. It is ``None`` when ``sig_ok`` is false,
 so a forged-signature denial is never counted against the agent it claims to be.
@@ -18,12 +27,14 @@ from pydantic import StringConstraints, field_validator, model_validator
 
 from ._base import Document
 from .control import CONTROL_TOOL, Control
-from .envelope import EnvelopeHeader
+from .envelope import MAX_EXPIRY_TICKS, EnvelopeHeader
 from .hashing import Domain, GENESIS_HASH, args_hash
-from .ids import ConnId, Hash, LogicalUs, PrincipalId, RecordId, Seq, Sig, Tick, Token, record_id_for
+from .ids import (RECOVER_TOOL_PREFIX, SYSTEM_CONN, SYSTEM_PRINCIPALS, ConnId, Hash, LogicalUs, PrincipalId,
+                  RecordId, Seq, Sig, Tick, Token, record_id_for, system_tool_signers)
 from .state import ReadEntry, WriteEntry, _sorted_unique
 
-__all__ = ["Decision", "ActionClass", "Reason", "REASONS_FOR", "Record", "WitnessCheckpoint", "GENESIS_HASH"]
+__all__ = ["Decision", "ActionClass", "Reason", "REASONS_FOR", "Record", "WitnessCheckpoint", "GENESIS_HASH",
+           "RECORD_KEY_FIELDS", "WITNESS_KEY_FIELDS", "determinism_view", "witness_chain_problems"]
 
 
 class Decision(StrEnum):
@@ -45,30 +56,36 @@ class ActionClass(StrEnum):
 class Reason(StrEnum):
     OK = "ok"
     # deny
-    BAD_SIG = "bad_sig"                  # missing/invalid signature; suspends the connection, never the agent
+    BAD_SIG = "bad_sig"
+    """Missing/invalid signature; suspends the connection, never the agent. Also (K14) when ``args_hash`` !=
+    hash(raw args) (spliced args), and for a system ``agent_id`` on an agent connection (never verified there)."""
     SCHEMA = "schema"                    # unparseable or unknown keys; envelope is None
     NONCE_REUSED = "nonce_reused"
-    EXPIRED = "expired"
+    EXPIRED = "expired"                  # expiry_tick outside [tick, tick + MAX_EXPIRY_TICKS]
+    LATE_FRAME = "late_frame"            # frame tagged with an earlier or a future tick (C2, K3)
     STALE_EPOCH = "stale_epoch"
     SUSPENDED = "suspended"
     REVOKED = "revoked"
     REVOKED_ANCESTOR = "revoked_ancestor"  # a principal in act_chain is revoked/suspended
     CLASS_U = "class_u"
     OUT_OF_SCOPE = "out_of_scope"
-    OVER_QUOTA = "over_quota"
-    RECOVERY_FROZEN = "recovery_frozen"  # recovery action while a tamper alert is open
+    OVER_QUOTA = "over_quota"            # per-connection budget exceeded (SEC-03 F8); never ``expired``
+    RECOVERY_FROZEN = "recovery_frozen"  # recovery action while frozen (verify != OK or tamper/stall alert, M12)
     # hold
     LINEAGE_HOLD = "lineage_hold"
     SENSITIVE_FIELD = "sensitive_field"
-    NEEDS_APPROVAL = "needs_approval"
+    NEEDS_APPROVAL = "needs_approval"   # I2 effects and approval-gated steps
+    STALE_PLAN = "stale_plan"           # ks.recover.* step whose ``expect`` is no longer the head (M8)
 
 
 REASONS_FOR = {
     Decision.EXEC: frozenset({Reason.OK}),
     Decision.DENY: frozenset({Reason.BAD_SIG, Reason.SCHEMA, Reason.NONCE_REUSED, Reason.EXPIRED,
-                              Reason.STALE_EPOCH, Reason.SUSPENDED, Reason.REVOKED, Reason.REVOKED_ANCESTOR,
-                              Reason.CLASS_U, Reason.OUT_OF_SCOPE, Reason.OVER_QUOTA, Reason.RECOVERY_FROZEN}),
-    Decision.HOLD: frozenset({Reason.LINEAGE_HOLD, Reason.SENSITIVE_FIELD, Reason.NEEDS_APPROVAL}),
+                              Reason.LATE_FRAME, Reason.STALE_EPOCH, Reason.SUSPENDED, Reason.REVOKED,
+                              Reason.REVOKED_ANCESTOR, Reason.CLASS_U, Reason.OUT_OF_SCOPE, Reason.OVER_QUOTA,
+                              Reason.RECOVERY_FROZEN}),
+    Decision.HOLD: frozenset({Reason.LINEAGE_HOLD, Reason.SENSITIVE_FIELD, Reason.NEEDS_APPROVAL,
+                              Reason.STALE_PLAN}),
 }
 """Which reasons each decision may carry."""
 
@@ -109,7 +126,8 @@ class Record(Document):
     action_class: ActionClass
     """R | C | I1 | I2 | U, assigned before execution (``ks.action.class``)."""
     read_set: tuple[ReadEntry, ...]
-    """Versions the adapter read, sorted by obj (``ks.read_set``). Empty on deny."""
+    """Versions the adapter read **plus every ``TickFrame.view`` entry delivered to the agent this tick** (I1),
+    sorted by obj (``ks.read_set``). Field objects per C3 X2. Empty on deny."""
     write_set: tuple[WriteEntry, ...]
     """Versions written, before/after ver+hash, sorted by obj (``ks.write_set``). Empty unless exec."""
     outbox_ids: tuple[OutboxId, ...]
@@ -118,6 +136,9 @@ class Record(Document):
     """Hash of the result returned to the agent (OTel ``gen_ai.tool.call.result``, hashed). Exec only."""
     control: Control | None
     """The Control in clear, iff ``envelope.tool == "ks.control"`` and executed (``ks.control.*``)."""
+    reexec_of: Seq | None
+    """Seq of the ``hold`` record whose envelope this record re-executes after ``unhold action:<record_id>``
+    (M10); same ``envelope_hash``, nonce/expiry not re-checked. ``None`` for a normal admission."""
     prev_hash: Hash
     """``hash`` of record seq-1; GENESIS_HASH for seq 1 (``ks.record.prev_hash``)."""
     hash: Hash
@@ -167,6 +188,40 @@ class Record(Document):
             raise ValueError("control present only on ks.control envelopes")
         if is_ctl and self.decision == Decision.EXEC and self.control is None:
             raise ValueError("executed ks.control record must carry the Control")
+        env = self.envelope
+        if env is None:
+            if self.reexec_of is not None:
+                raise ValueError("reexec_of needs an envelope")
+            return self
+        # N1: a verified record has a signature
+        if self.sig_ok and env.sig is None:
+            raise ValueError("sig_ok requires envelope.sig")
+        # M10: re-execution of a held envelope
+        if self.reexec_of is not None and (self.reexec_of >= self.seq or not self.sig_ok):
+            raise ValueError("reexec_of must be an earlier seq of a verified (held) envelope")
+        # F3 / K2: an admitted envelope was within its expiry window at this tick
+        if self.sig_ok and self.decision in (Decision.EXEC, Decision.HOLD) and self.reexec_of is None \
+                and not (self.tick <= env.expiry_tick <= self.tick + MAX_EXPIRY_TICKS):
+            raise ValueError("admitted envelope must satisfy tick <= expiry_tick <= tick + MAX_EXPIRY_TICKS")
+        system = env.agent_id in SYSTEM_PRINCIPALS
+        # E1/K4/X7: system agent_id <=> c-0, both directions
+        if system and self.sig_ok and self.conn_id != SYSTEM_CONN:
+            raise ValueError("a system agent_id is verified only on c-0 (else deny/bad_sig, unverified)")
+        if self.conn_id == SYSTEM_CONN and not system:
+            raise ValueError("c-0 carries system envelopes only")
+        ks_tool = env.tool.startswith("ks.")
+        if ks_tool and not system and self.decision != Decision.DENY:
+            raise ValueError("an agent ks.* envelope is always denied (out_of_scope)")
+        if self.sig_ok and self.decision == Decision.EXEC and system:
+            if env.agent_id not in system_tool_signers(env.tool):
+                raise ValueError(f"{env.agent_id} may not execute {env.tool}")
+        if env.tool.startswith(RECOVER_TOOL_PREFIX) and self.decision != Decision.DENY \
+                and env.agent_id != "ks.recovery":
+            raise ValueError("ks.recover.* runs only as ks.recovery")
+        if self.control is not None and self.control.issued_by != env.agent_id:
+            raise ValueError("control.issued_by must equal envelope.agent_id")
+        if self.reason == Reason.STALE_PLAN and not env.tool.startswith(RECOVER_TOOL_PREFIX):
+            raise ValueError("stale_plan is only for ks.recover.* steps")
         return self
 
     # --- construction / integrity -------------------------------------------------------------
@@ -205,7 +260,9 @@ class Record(Document):
 
 
 class WitnessCheckpoint(Document):
-    """Signed ``(seq, head, tick)`` from the separate witness process; one line per tick in ``witness.jsonl``."""
+    """Signed ``(seq, head, tick, count)`` from the separate witness process; one line per tick in ``witness.jsonl``.
+    No-op ticks repeat ``(seq, head)`` with a new ``count``. Stall (F6): the gateway waits to the deadline,
+    proceeds and raises a ``witness_stall`` alert; heads live in ``<run>/witness-heads/`` (0700, witness uid)."""
 
     CONTRACT: ClassVar[str] = "ks.witness/1"
     DOMAIN: ClassVar[bytes] = Domain.WITNESS
@@ -221,8 +278,54 @@ class WitnessCheckpoint(Document):
     """Tick witnessed."""
     head: Hash
     """``Record.hash`` at ``seq``."""
+    count: Seq
+    """Signed line counter (B1/F2): 1 on the first line, +1 per line, strictly; the RunAnchor repeats the last."""
     sig: Sig | None
     """Witness Ed25519 over :meth:`signing_bytes`. ``None`` only before signing."""
 
+    @model_validator(mode="after")
+    def _wid(self) -> Self:
+        if self.witness_id != "ks.witness":
+            raise ValueError("witness_id must be ks.witness")
+        return self
+
     def with_sig(self, sig: str) -> WitnessCheckpoint:
         return WitnessCheckpoint.model_validate({**self.to_obj(), "sig": sig})
+
+
+def witness_chain_problems(checkpoints) -> list[str]:
+    """Structural checks of ``witness.jsonl`` in order (signatures and heads vs records belong to ks.verify):
+    ``count`` = line number from 1, ``tick`` strictly increasing, ``seq`` non-decreasing, an unchanged seq
+    repeats its head. Problems are ``"<line>: <code>"`` with codes from the VerifyReport vocabulary."""
+    probs: list[str] = []
+    prev: WitnessCheckpoint | None = None
+    for i, w in enumerate(checkpoints, start=1):
+        if w.count != i:
+            probs.append(f"{i}: count_mismatch")
+        if prev is not None:
+            if w.tick <= prev.tick or w.seq < prev.seq or (w.seq == prev.seq and w.head != prev.head):
+                probs.append(f"{i}: witness_mismatch")
+        prev = w
+    return probs
+
+
+RECORD_KEY_FIELDS = ("hash", "prev_hash", "gw_sig", "envelope.sig")
+"""Record fields that depend on key material; dropped by :func:`determinism_view` (C5)."""
+WITNESS_KEY_FIELDS = ("head", "sig")
+"""WitnessCheckpoint fields that depend on key material; dropped by :func:`determinism_view` (C5)."""
+
+
+def determinism_view(doc: Record | WitnessCheckpoint) -> dict[str, Any]:
+    """C5 projection: a Record without ``{hash, prev_hash, gw_sig, envelope.sig}``, a WitnessCheckpoint without
+    ``{head, sig}``. Two runs of the same seed compare equal under this view even with fresh keys (T1b,
+    ``ks repro``). Any other document is returned whole (``to_obj()``)."""
+    obj = doc.to_obj()
+    if isinstance(doc, Record):
+        for f in ("hash", "prev_hash", "gw_sig"):
+            obj.pop(f)
+        if obj["envelope"] is not None:
+            obj["envelope"].pop("sig")
+    elif isinstance(doc, WitnessCheckpoint):
+        for f in WITNESS_KEY_FIELDS:
+            obj.pop(f)
+    return obj

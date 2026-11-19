@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "zoya",
-  "status": "changes",
+  "status": "in_review",
   "outcome": "A glossary that fixes one public name per concept so the abstract, diagram, demo and contracts never use two words for one thing",
   "acceptance": [
     "Covers at least: envelope, read/write set, gateway, recorder, witness, verify, lineage hold, graded containment (suspend/revoke/release), taint-scoped revert, re-run vs replan, root candidates, oracle S*, R and C, TTI-detect/attribute, TTC",
@@ -43,6 +43,16 @@
       "t": "19 Nov 06:18",
       "who": "maya",
       "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 10:59",
+      "who": "zoya",
+      "msg": "Maya's corrections applied in ABS-08"
+    },
+    {
+      "t": "19 Nov 10:59",
+      "who": "zoya",
+      "msg": "→ in_review"
     }
   ]
 }

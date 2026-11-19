@@ -1,11 +1,11 @@
 # SKELETON: abstract outline for Aarav to fill in (ABS-06)
 
-zoya · 19 Nov 2026 · v2 (panel fixes) · Inputs: FACT-CARD.md (ABS-01), GUARDRAILS.md (ABS-02), TERMS.md (ABS-04), CALL-01.md D1/D2/D3/D12/D13, CALL-01/zoya.md §2, research/RES-08.md (headline, ref [19]).
+zoya · 19 Nov 2026 · v3 (CALL-02 freeze) · Inputs: FACT-CARD.md (ABS-01), GUARDRAILS.md v4 (ABS-02), TERMS.md v2 (ABS-04), CALL-01.md D1/D2/D3/D12/D13, CALL-02.md (hero decision, revised D13 meaning, S\*), CALL-01/zoya.md §2, research/RES-08.md (headline, ref [19]).
 
 **What this is.** Headings, word budgets and note-form points only. No line here is a sentence to paste; Aarav writes every word (CHARTER).
 **Tag key.** `#n` = fact-card row (R = RBI spare) · `P/F/W/L/X` = GUARDRAILS row · `§1.5` = GUARDRAILS own-number table · `T:` = locked TERMS word to use · `D` = CALL-01 decision.
 **Priority key.** `MUST` = land it · `IF-ROOM` = add only while the section total still holds · `Guard:` lines = checks, not points; they cost no words and carry no tag · `Scores:` lines = which of the brief's three scores the subsection answers.
-**Before writing.** D1 is marked ⚑: confirm the layered headline (gap → provenance → selective undo → testimony vs evidence).
+**Before writing.** D1 is marked ⚑: confirm the layered headline (gap → provenance → selective undo → testimony vs evidence). CALL-02 hero decision and revised D13 meaning are also ⚑ (GUARDRAILS W6, §1.5 first row).
 
 ## Word budget (organisers' order: problem → fix → why it matters, plus limits)
 
@@ -14,9 +14,9 @@ zoya · 19 Nov 2026 · v2 (panel fixes) · Inputs: FACT-CARD.md (ABS-01), GUARDR
 | 0 Title + subtitle | 15 | 0 |
 | 1 Problem (1a 100 · 1b 90 · 1c 110) | 300 | 19 (6 · 6 · 7) |
 | 2 Fix (2b 80 · 2c 45 · 2d 65 · 2e 95 · 2f 45) | 330 | 21 (5 · 3 · 4 · 6 · 3) |
-| 3 Why it matters (3a 60 · 3b 70 · 3c 40) | 170 | 10 (4 · 4 · 2) |
+| 3 Why it matters (3a 60 · 3b 70 · 3c 40) | 170 | 11 (4 · 5 · 2) |
 | 4 Limits + what we will show (45 + 40) | 85 | 5 (3 · 2) |
-| **Total** | **900** (allowed range 850–950; hard cap 1,000) | **55** (cap 60) |
+| **Total** | **900** (allowed range 850–950; hard cap 1,000) | **56** (cap 60) |
 
 **Binding rule.** Section totals are binding; subsections are ±15 words; bullet order inside a subsection is free. ABS-07 reviewers enforce section totals and MUST coverage, not micro-budgets.
 
@@ -44,8 +44,10 @@ Guard: avoid first, novel, tamper-proof, kill (as an operation), rollback [X1 ·
 - MUST their work: honest AND built on the bad write [P1 · T: culprit, honest agent]
 - MUST → "undo crm" undefined: dependency problem ≠ snapshot problem [P1 · D1]
 - IF-ROOM dependency risk → source = literature, not incidents; say so [P1 · D2 · X6]
+- IF-ROOM triage later edits the same supplier, honestly → that edit must survive the undo [W6 · CALL-02 hero · T: honest agent]
 
 Guard: ×10 price change → in the data, out of the story [D12]
+Guard: triage = honest and **kept**; ✗ "conflict" / "flagged" in the hero [W6]
 Guard: words agent, culprit, honest agent; never bot / victim [T §1]
 
 ### 1b. Blunt tools fail (90; the hook evidence, D2)
@@ -94,7 +96,7 @@ Guard: ✗ better, leaks, sim-only, bare "cannot undo", second mention [X2 X3 X4
 - MUST walk the IBAN example from 1a into the gateway [D12 · W6]
 - MUST provenance → named here as the organising idea [D1]
 - MUST every action → gateway, as a signed action envelope [F2 · T: gateway, action envelope]
-- MUST adapters → read set + write set, row level; agents never self-report [F3 · D8 · T: read set, write set]
+- MUST adapters → read set + write set, row level; sensitive fields (IBAN) at field level; agents never self-report [F3 · D8 · CALL-02 B1 · T: read set, write set, field object]
 - MUST outcome: provenance graph, change → author, read → source [T: provenance graph]
 - IF-ROOM bypass writes → caught by reconciliation [F2 · T: reconciliation]
 - IF-ROOM agent signature + gateway signature; gateway assigns seq [F4 · T: sequence number (seq)]
@@ -103,6 +105,7 @@ Guard: ✗ better, leaks, sim-only, bare "cannot undo", second mention [X2 X3 X4
 Guard: bypass → "caught", ✗ "impossible" [F2]
 Guard: signature ⇒ which key signed; ≠ intent [F4]
 Guard: declared lineage ignored [D8]
+Guard: field objects are generic (sensitive-field config), ✗ "IBAN-specific" [F3]
 
 ### 2c. Identify (45)
 
@@ -129,10 +132,11 @@ Guard: ✗ kill · quarantine · block · cancel (as containment) [T §3 · X29]
 
 ### 2e. Recover (95; selective undo = the payoff, D1)
 
-Scores: brief's clean recovery → residual damage R 0 + collateral loss C 0 (defined in 3b) [CHARTER]
+Scores: brief's clean recovery → residual damage R 0 + collateral loss C 0, hero targets (defined in 3b) [CHARTER · D13]
 
 - MUST payoff = selective undo: taint-scoped revert, only writes still at the culprit's after-version [D1 · F9 · T: taint-scoped revert]
-- MUST triage later edits the same crm row → write-write conflict → flag, no overwrite [F9 · T: write-write conflict, flag]
+- MUST triage edited the same supplier → its edit kept, no redo; only the bank account restored; no flag [W6 · F9 · CALL-02 B2/B3 · T: kept]
+- IF-ROOM conflict only when an honest agent later changed the same data (field or row) → flag, a person decides [F9 · L9 · T: write-write conflict, flag]
 - MUST dependants: deterministic → re-run via outbox, idempotency keys; LLM → re-plan, approval [F10 · D4 · X25 · T: re-run, re-plan]
 - MUST irreversible: hold window → compensate or report; ✗ reverse [F11 · X14 · L1 · T: compensate]
 - MUST held payment → cancel (outbox item), a step in the approved recovery plan [F11 · T: cancel (outbox item), recovery plan]
@@ -142,6 +146,7 @@ Scores: brief's clean recovery → residual damage R 0 + collateral loss C 0 (de
 - IF-ROOM recovery plan → dry-run diff → approval → run [T: dry-run diff]
 
 Guard: "selective undo" in headline prose only; elsewhere taint-scoped revert [D1 · T §4]
+Guard: ✗ triage "flagged" / "conflict" in the hero; the conflict case is bench F2+x, Q&A only [W6 · L9]
 
 ### 2f. Audit (45)
 
@@ -164,18 +169,20 @@ Guard: detect ≠ prevent · ✗ Merkle · ✗ blockchain [X15 X16]
 
 Guard: "within the threat model" on every such claim [W2 · L4]
 
-### 3b. Scored, not self-graded (70; D13)
+### 3b. Scored, not self-graded (70, may use its +15 for the D13 clauses; D13 as revised in CALL-02 ⚑)
 
 - MUST brief's three scores: no agreed measurement in the standards we checked → we define checkable ones [RES-08 headline · W7]
 - MUST TTI-detect t0 → alert · TTI-attribute alert → culprit · TTC alert → first denied envelope [§1.5 · D13 · CHARTER]
-- MUST recovery scored vs oracle (S\*) = same run, culprit removed; not our taint graph [W1 · T: oracle (S*)]
-- MUST residual damage R, collateral loss C (in full) · targets 0 → clean recovery [§1.5 · D13 · T §5 note · T: clean recovery]
-- IF-ROOM targets 0: post-alert tainted, irreversible tainted released, re-emitted effects [§1.5]
+- MUST recovery scored vs oracle (S\*) = same seed, fault off, culprit stops from its suspension tick; not our taint graph [W1 · CALL-02 X3a · T: oracle (S*)]
+- MUST targets, to be measured · hero scenario only · residual damage R 0, collateral loss C 0 (in full) · post-alert tainted effects 0 · irreversible tainted effects released 0 → clean recovery [§1.5 D13 row, elements 1–4 · T §5 note · T: clean recovery]
+- MUST D13 clauses: honest agent's later change to the same data → a person decides → residual damage · culprit's own work between fault and suspension → reverted → collateral loss [§1.5 D13 row, elements 5–6 · F9 · L8]
+- IF-ROOM target 0: re-emitted effects [§1.5]
 - IF-ROOM re-plan and re-run cost → reported openly [W3 · X27]
 
 Guard: TTI/TTC = definitions only; no seconds [§1.5 · D13 · X21]
 Guard: alongside containment-style metrics, not instead; no second Airlock name [W1 · D3]
 Guard: label "target"; future tense [D13]
+Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" for S\* [§1.5 D13 row · W1]
 
 ### 3c. Path to banking (40)
 
@@ -203,7 +210,7 @@ Guard: key isolation, if mentioned → enforced in production, detected here [L5
 ### What we will show (40; future tense, D13)
 
 - MUST ≥20 seeded runs · median, p95, max · "planned" [§1.5 · T: seeded run]
-- MUST baselines: snapshot · revert-culprit-only · no-op [§1.5 · T: snapshot baseline, revert-culprit-only baseline]
+- MUST baselines: snapshot · revert-culprit-only (both oracle-assisted: given t0) · no-op [§1.5 · W1 · T: snapshot baseline, revert-culprit-only baseline, oracle-assisted]
 - IF-ROOM hold window 0 vs >0; escaped payment at 0 → residual damage [D10 · T: hold window]
 - IF-ROOM threat model published before the jury's break attempts [F13 · D11]
 
@@ -232,3 +239,12 @@ Guard: prototype from 25 Nov → ✗ achieved / showed / measured [GUARDRAILS te
 - `Scores:` line under 2c / 2d / 2e maps Identify / Contain / Recover 1:1 to the brief's time-to-identify / time-to-contain / clean recovery.
 - Should-fix: 3a tags the brief's "audited, not only demoed" [CHARTER]; 3b adds the RES-08 headline bullet (no agreed measurement in the standards we checked → we define checkable ones), filed as GUARDRAILS W7.
 - Nits: 1b → "✗ internal / cyber [#1]" (stale "card #1 overrides P2" flag dropped, P2 fixed in ABS-02 v2); 2d → "reconciliation mismatch (class U)"; 3c NIST MANAGE 4.3 tagged RES-08 [19]. Writing plan steps 1, 2 and 4 updated for the 1a move and MUST check.
+
+## Changes v3 (CALL-02 design freeze, ABS-08, 19 Nov)
+
+- 1a: IF-ROOM triage point (honest edit on the same supplier must survive); Guards: triage kept, no "conflict" / "flagged" in the hero, ×10 stays in the data.
+- 2b: read / write sets add field level for sensitive fields (field objects); Guard against "IBAN-specific".
+- 2e: triage line now **kept, no flag** (CALL-02 B2/B3); conflict demoted to IF-ROOM, field-or-row, honest case in bench F2+x; Scores line says hero targets.
+- 3b: S\* = same seed, fault off, culprit stops from its suspension tick; targets bullet carries D13 elements 1–4 (post-alert and irreversible targets promoted from IF-ROOM); new MUST for D13 clauses 5–6; new Guard (✗ "same field", ✗ unconditional C = 0, ✗ "culprit removed"). 3b may use its +15.
+- What we will show: snapshot and revert-culprit-only labelled oracle-assisted.
+- MUSTs 55 → 56 (3b 4 → 5); cap 60 holds.

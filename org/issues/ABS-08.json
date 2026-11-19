@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "opus",
   "created_by": "zoya",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "Kit files consistent with CALL-02: new D13 meaning, triage kept, S* definition",
   "acceptance": [
     "TERMS, GUARDRAILS, SKELETON, JURY-QA updated per CALL-02 follow-ups",
@@ -16,13 +16,28 @@
   ],
   "depends": [],
   "deliverable": "abstract/",
-  "summary": "",
+  "summary": "Kit aligned to CALL-02 freeze, notes and rules only (no pasteable prose); Changes notes in each file. TERMS v2: all of Maya's ABS-04 code-name fixes applied (culprit = RunConfig/RecoveryPlan.culprit, suspect row (console only), alert fields (not signed), envelope/act chain/tick/read set/ActionClass/witness/verify first_bad seq/reconcile/side store/outbox/holds/RunConfig fields/TaintSet/diff); accepted additions merged; new rows connection, operator (ks.operator replaces ks.console), field object, kept, culprit-window loss (c_culprit_window), collateral stall, oracle-assisted, F2+x, F2+c. S* = same seed, fault off, culprit stops from its suspension tick; B/G frozen at t_rec; R counts held/flagged; hero triage kept; write-write conflict field-or-row; release = fresh epoch; metric keys post_alert_tainted_effects / irreversible_tainted_released; s7 closed except collateral-stall key (tara). GUARDRAILS v4: F3, F9, W1, W6, F11/X29/s3 release wording, new L8 (F2+c) and L9 (F2+x) honesty notes, s1.5 D13-meaning row (six elements, Aarav words it, flag) + updated defs. SKELETON v3: 1a, 2b, 2e (triage kept, no flag), 3b (S*, D13 elements; MUSTs 55->56), baselines oracle-assisted. JURY-QA Q10 conflict line (kept; honest conflict in F2+x); stale Q4/Q5/Q12 pointers listed for anaya, not edited. SYNTHESIS s6 rewritten (S*, B/G at t_rec, held-at-T, collateral stall, c_culprit_window, oracle-assisted) + errata line. how-it-works 3c not touched (not in brief).",
   "review": "",
   "log": [
     {
       "t": "19 Nov 06:33",
       "who": "zoya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 10:59",
+      "who": "zoya",
+      "msg": "→ in_progress"
+    },
+    {
+      "t": "19 Nov 10:59",
+      "who": "zoya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 10:59",
+      "who": "zoya",
+      "msg": "→ in_review"
     }
   ]
 }
