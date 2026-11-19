@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "Aarav can run the real demo on his Mac via Docker Desktop/OrbStack with full per-agent isolation",
   "acceptance": [
     "multi-arch Dockerfile (python:3.13-slim) runs as root inside the container so per-agent uids work; no network needed at runtime",
@@ -18,7 +18,7 @@
   "depends": [],
   "deliverable": "Dockerfile",
   "summary": "Fixes: prctl/oom/proc guarded to Linux in spawn.py (BOOT, set_nondumpable, set_oom_score_adj, pids_with_uids); run.py forces degraded off Linux, so native verify reports isolation=degraded, attribution VOID, exit 0. Full suite native: 458 pass, 4 skip (need root). Added make smoke (UNEXECUTED: docker/OrbStack not installed). Base pinned python:3.13.1-slim-bookworm (tag not pulled/verified, no digest). Dockerfile wording now credits per-agent uids. README notes rundir.py chown-to-60000 bind-mount risk as untested. demo.sh hero-path switch (F2+) left as TODO.",
-  "review": "[kabir · changes] Static review only: Docker is not installed on Aarav's Mac, so the image has never been built or run anywhere. (1) BLOCKER, README claim false: native 'degraded mode' crashes, it does not warn. src/ks/runtime/run.py calls set_nondumpable() unconditionally, and spawn.py set_nondumpable/BOOT call ctypes.CDLL(None).prctl, which does not exist on Darwin -> AttributeError. Reproduced with 'ks run --shared-uid'; 13 skeleton tests fail natively. Fix: guard prctl/oom/proc on sys.platform=='linux', and in BOOT skip prctl only when not Linux (forces isolation=degraded). Or change the README to say native is unsupported. (2) AC4 not met: no smoke test. Add 'make smoke' (build, run, verify, assert exit 0 and isolation=per_agent_uid in --json). (3) Unverified: rundir.py chowns witness.jsonl and witness-heads to uid 60000 on the ./runs bind mount. Docker Desktop virtiofs/OrbStack chown semantics might break witness writes. The smoke test must cover this. (4) Pin the base image (python:3.13-slim@sha256 or at least 3.13.x-slim-bookworm). Default caps (SETUID/SETGID/KILL/CHOWN) look sufficient, and the prctl dumpable flag needs no cap. oom -1000 silently fails without SYS_RESOURCE (fine). The ptrace EPERM startup check is not implemented in code. (5) Dockerfile comment 'Isolation comes from the container boundary' contradicts C2 wording; say per-agent uids inside the container. (6) demo.sh still runs the skeleton, not F2+ (AC2 partial, TODO acknowledged). --network none is correct.",
+  "review": "[kabir · changes] Static review only: Docker is not installed on Aarav's Mac, so the image has never been built or run anywhere. (1) BLOCKER, README claim false: native 'degraded mode' crashes, it does not warn. src/ks/runtime/run.py calls set_nondumpable() unconditionally, and spawn.py set_nondumpable/BOOT call ctypes.CDLL(None).prctl, which does not exist on Darwin -> AttributeError. Reproduced with 'ks run --shared-uid'; 13 skeleton tests fail natively. Fix: guard prctl/oom/proc on sys.platform=='linux', and in BOOT skip prctl only when not Linux (forces isolation=degraded). Or change the README to say native is unsupported. (2) AC4 not met: no smoke test. Add 'make smoke' (build, run, verify, assert exit 0 and isolation=per_agent_uid in --json). (3) Unverified: rundir.py chowns witness.jsonl and witness-heads to uid 60000 on the ./runs bind mount. Docker Desktop virtiofs/OrbStack chown semantics might break witness writes. The smoke test must cover this. (4) Pin the base image (python:3.13-slim@sha256 or at least 3.13.x-slim-bookworm). Default caps (SETUID/SETGID/KILL/CHOWN) look sufficient, and the prctl dumpable flag needs no cap. oom -1000 silently fails without SYS_RESOURCE (fine). The ptrace EPERM startup check is not implemented in code. (5) Dockerfile comment 'Isolation comes from the container boundary' contradicts C2 wording; say per-agent uids inside the container. (6) demo.sh still runs the skeleton, not F2+ (AC2 partial, TODO acknowledged). --network none is correct.\n\n[kabir · done] Re-review after real run. make smoke on OrbStack (arm64): build OK, base python:3.13.1-slim-bookworm resolved to sha256:031ebf3c...; ks run isolation per-agent uids; ks verify --json --head <printed RunAnchor> -> anchored=true, exit 0, isolation=per_agent_uid, last_witnessed_seq=20. Makefile anchor parsing works unchanged. Bind-mount chown to 60000 OK on OrbStack; README updated (tested on OrbStack, Docker Desktop untested, THREAT-MODEL wording kept). Native suite (.venv): 515 passed, 8 skipped. Open, not blocking: demo.sh still skeleton, not F2+ (AC2 partial, TODO); Dockerfile FROM tag not digest-pinned (digest recorded here).",
   "log": [
     {
       "t": "19 Nov 12:21",
@@ -64,6 +64,11 @@
       "t": "19 Nov 16:41",
       "who": "pmo",
       "msg": "→ in_review: make smoke executed on Aarav's Mac (OrbStack, arm64, docker 29.8.2): smoke OK, isolation=per_agent_uid, exit 0; bind-mount chown to 60000 worked. Note verify ran without --head (anchored:false)."
+    },
+    {
+      "t": "19 Nov 17:25",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

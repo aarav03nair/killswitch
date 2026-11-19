@@ -404,41 +404,6 @@
   ],
   "activity": [
     {
-      "t": "19 Nov 01:01",
-      "who": "panel",
-      "msg": "reviewed ABS-02: changes"
-    },
-    {
-      "t": "19 Nov 01:01",
-      "who": "panel",
-      "msg": "reviewed SEC-01: changes"
-    },
-    {
-      "t": "19 Nov 01:02",
-      "who": "anaya",
-      "msg": "moved ABS-05 to in_progress"
-    },
-    {
-      "t": "19 Nov 01:02",
-      "who": "zoya",
-      "msg": "moved ABS-06 to in_review"
-    },
-    {
-      "t": "19 Nov 01:02",
-      "who": "zoya",
-      "msg": "moved ABS-02 to in_review"
-    },
-    {
-      "t": "19 Nov 01:03",
-      "who": "vikram",
-      "msg": "reviewed ABS-03: done"
-    },
-    {
-      "t": "19 Nov 01:04",
-      "who": "kabir",
-      "msg": "moved SEC-01 to in_review"
-    },
-    {
       "t": "19 Nov 01:05",
       "who": "anaya",
       "msg": "moved ABS-05 to in_review"
@@ -1402,6 +1367,41 @@
       "t": "19 Nov 16:41",
       "who": "pmo",
       "msg": "moved B3-39 to in_review"
+    },
+    {
+      "t": "19 Nov 17:24",
+      "who": "nisha",
+      "msg": "moved B3-11 to in_progress"
+    },
+    {
+      "t": "19 Nov 17:25",
+      "who": "arjun",
+      "msg": "moved B3-08 to in_review"
+    },
+    {
+      "t": "19 Nov 17:25",
+      "who": "kabir",
+      "msg": "reviewed B3-39: done"
+    },
+    {
+      "t": "19 Nov 17:26",
+      "who": "kabir",
+      "msg": "reviewed B3-08: done"
+    },
+    {
+      "t": "19 Nov 17:28",
+      "who": "maya",
+      "msg": "moved B3-10 to in_review"
+    },
+    {
+      "t": "19 Nov 17:29",
+      "who": "kabir",
+      "msg": "reviewed B3-10: done"
+    },
+    {
+      "t": "19 Nov 17:29",
+      "who": "nisha",
+      "msg": "moved B3-11 to in_review"
     }
   ]
 }

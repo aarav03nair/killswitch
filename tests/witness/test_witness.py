@@ -83,6 +83,7 @@ def _fds_on(*paths):
     hits = []
     for n in os.listdir("/proc/self/fd"):
         fp = f"/proc/self/fd/{n}"
+        link = ""
         try:
             link = os.readlink(fp)
             st = os.stat(fp)

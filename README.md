@@ -24,12 +24,14 @@ at runtime (the demo uses `--network none`).
 **Warning:** running natively on macOS (outside Docker) is degraded isolation. Per-agent uid
 separation is unavailable, so per-agent attribution is VOID. Use the container for the real demo.
 
-`make smoke` builds the image, runs and verifies in the container, and asserts exit 0 with
-`isolation=per_agent_uid`.
+`make smoke` builds the image, runs in the container, then runs `ks verify --head` with the printed
+RunAnchor and asserts exit 0, `isolation=per_agent_uid` and `anchored=true`. The record is
+tamper-evident up to the last witnessed head; keep the RunAnchor outside the run directory.
 
-Known risk (untested until `make smoke` has run on Docker/OrbStack): `src/ks/contracts/rundir.py`
-chowns `witness.jsonl` and `witness-heads/` to uid 60000, which may fail or behave differently on a
-macOS bind mount (virtiofs). If so, use a named volume instead of `./runs`.
+Bind mount: `src/ks/contracts/rundir.py` chowns `witness.jsonl` and `witness-heads/` to uid 60000.
+Tested on OrbStack (arm64, 19 Nov 2026): the chown and witness writes work on the `./runs` bind mount.
+Docker Desktop (virtiofs) is not yet tested; if `make smoke` fails there, use a named volume instead
+of `./runs`.
 
 Note: `scripts/demo.sh` currently runs the skeleton (`--agents 2 --ticks 10`); it switches to
 `--fault F2+ --pause-at ... --step` once the hero path exists (TODO in the script).

@@ -9,13 +9,16 @@ from __future__ import annotations
 import os
 import shutil
 import socket
+import subprocess
 import sys
 import tempfile
+import time
 from pathlib import Path
 
 import pytest
 
-from ks.contracts import Exit, RunDir, canonical
+from ks.contracts import (Exit, NoopFrame, RunDir, TickFrame, WitnessInit, WitnessPub, canonical, decode_frame,
+                          decode_witness_frame, encode_frame)
 from ks.runtime.setup import (WORLD_TICKS_UNTIL_STATE, IsolationError, default_out, default_run_id, hero_tick,
                               isolation_problems, scenario)
 from ks.runtime.spawn import WITNESS_UID, agent_uid, pids_with_uids, proc_uid, spawn_child
@@ -98,10 +101,30 @@ def _probe(uid: int, targets: list[int]) -> dict:
     return canonical.loads_line(line)
 
 
+def _uids(pid: int) -> tuple[str, list[int]]:
+    """(State letter, [real, effective, saved, fs] uids) from /proc/<pid>/status."""
+    st = dict(l.split(":", 1) for l in Path(f"/proc/{pid}/status").read_text().splitlines() if ":" in l)
+    return st["State"].split()[0], [int(x) for x in st["Uid"].split()]
+
+
+def _ready(sock: socket.socket, send: bytes, want: type) -> None:
+    """Handshake: the child answers from its own main(), i.e. after exec and after BOOT's prctl."""
+    sock.settimeout(10.0)
+    sock.sendall(send)
+    line = sock.makefile("rb").readline()
+    frame = decode_witness_frame(line) if want is WitnessPub else decode_frame(line)
+    assert isinstance(frame, want), frame
+
+
 @linux_root
 def test_cross_uid_ptrace_eperm_and_nondumpable_after_exec():
     """Agents i, j and the witness spawned exactly as ks run does; agent i's ptrace on j and on the witness is
-    EPERM, and every child is non-dumpable after exec (/proc/<pid> owned by root although its uid is not)."""
+    EPERM, and every child is non-dumpable after exec.
+
+    Dumpable readback: with dumpable != 1 the kernel reports the per-process files under /proc/<pid> (status,
+    fd, environ, mem) as owned by root instead of the task's euid. The /proc/<pid> directory itself is exempt
+    (fs/proc/base.c task_dump_owner skips mode S_IFDIR|0555) and always shows the euid, so it cannot be used.
+    A dumpable control under an agent uid proves the readback tells the two cases apart."""
     socks, procs = [], []
     try:
         for i in (0, 1):
@@ -113,17 +136,29 @@ def test_cross_uid_ptrace_eperm_and_nondumpable_after_exec():
                                       "--hero-tick", "30"], uid=agent_uid(i), pass_socks=[gc, sc], agent=True))
             gc.close(), sc.close()
             socks += [g, s]
+            _ready(g, encode_frame(TickFrame(tick=0, epoch=None, view=())), NoopFrame)
         w, wc = socket.socketpair()
         procs.append(spawn_child("ks.witness.server", [str(wc.fileno())], uid=WITNESS_UID, pass_socks=[wc],
                                  agent=False))
         wc.close()
         socks.append(w)
-        import time
-        time.sleep(1.0)  # past BOOT's prctl
+        _ready(w, encode_frame(WitnessInit(key_seed=None)), WitnessPub)
+        expect = {procs[0].pid: agent_uid(0), procs[1].pid: agent_uid(1), procs[2].pid: WITNESS_UID}
+        for p in procs:  # alive, not a zombie, and on its uid in all four slots
+            assert p.poll() is None
+            state, uids = _uids(p.pid)
+            assert state != "Z" and uids == [expect[p.pid]] * 4, (p.pid, state, uids)
+        for p in procs:  # dumpable = 0 after exec
+            for f in ("status", "fd"):
+                assert os.stat(f"/proc/{p.pid}/{f}").st_uid == 0, (p.pid, f)
+        control = subprocess.Popen([sys.executable, "-c", "import time; time.sleep(30)"], user=agent_uid(2),
+                                   group=agent_uid(2), extra_groups=[], env={}, cwd="/")
+        procs.append(control)
+        deadline = time.monotonic() + 10
+        while proc_uid(control.pid) != agent_uid(2) and time.monotonic() < deadline:
+            time.sleep(0.01)
+        assert os.stat(f"/proc/{control.pid}/status").st_uid == agent_uid(2)  # dumpable control
         a_j, wit = procs[1].pid, procs[2].pid
-        assert proc_uid(a_j) == agent_uid(1) and proc_uid(wit) == WITNESS_UID
-        for p in procs:  # dumpable = 0 after exec: the kernel makes /proc/<pid> root-owned
-            assert os.stat(f"/proc/{p.pid}").st_uid == 0
         got = _probe(agent_uid(0), [a_j, wit])
         assert got["uid"] == agent_uid(0)
         assert got["results"] == {str(a_j): "EPERM", str(wit): "EPERM"}
