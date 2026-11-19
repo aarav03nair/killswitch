@@ -7,7 +7,7 @@
   "reviewer": "anaya",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "Deterministic 10-agent demo world, fault injectors F1–F7 plus hero F2+ (IBAN swap, price ×10, triage conflict), oracle S* and the scorer reading only the C6 run dir; due 24 Nov (sameer consults on metrics)",
   "acceptance": [
     "ADR file ≤900 words with sections Context, Decision, Consequences, Interface touched (which of C1–C6), Tests that prove it",
@@ -19,13 +19,33 @@
     "CON-01"
   ],
   "deliverable": "org/adr/ADR-06-world-faults-oracle.md",
-  "summary": "",
+  "summary": "ADR-06 written (<=900 words): 10-agent dependency world, F1-F7+F2+ with injection points and live/pytest split, oracle S* on effect ledger+invariants, score.json field names, 3 baselines, hold 0 vs >0, >=20-seed protocol. Flag: SPEC Q6/TERMS use post_alert_tainted_effects / irreversible_tainted_released; ADR uses issue names post_alert_tainted / irreversible_released.",
   "review": "",
   "log": [
     {
       "t": "19 Nov 00:54",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 06:04",
+      "who": "tara",
+      "msg": "→ in_progress: drafting"
+    },
+    {
+      "t": "19 Nov 06:04",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 06:04",
+      "who": "tara",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "19 Nov 06:06",
+      "who": "pmo",
+      "msg": "PMO decision: use TERMS/SPEC names post_alert_tainted_effects and irreversible_tainted_released in score.json"
     }
   ]
 }

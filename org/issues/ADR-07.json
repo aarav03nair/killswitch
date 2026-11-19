@@ -7,7 +7,7 @@
   "reviewer": "zoya",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "ks CLI surface (run, inject, verify, suspend/release/revoke, recover --dry-run, score) and the console/timeline the demo and jury use; due 24 Nov",
   "acceptance": [
     "ADR file ≤900 words with sections Context, Decision, Consequences, Interface touched (which of C1–C6), Tests that prove it",
@@ -18,13 +18,28 @@
     "CON-01"
   ],
   "deliverable": "org/adr/ADR-07-cli-console.md",
-  "summary": "",
+  "summary": "ADR-07 written (org/adr/ADR-07-cli-console.md, under 900 words). Defines 9 ks commands with args and Exit codes (no new codes), contain via signed ks.console Controls (revoke needs --confirm), recover dry-run/apply with replan approval queue, and a static single-file HTML incident console plus --live terminal view, both read-only on the run dir. Timeline follows the 5 F2+ beats. Open: release epoch reply field (maya), score pass/fail exit (tara).",
   "review": "",
   "log": [
     {
       "t": "19 Nov 00:54",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 06:04",
+      "who": "ishaan",
+      "msg": "→ in_progress: started"
+    },
+    {
+      "t": "19 Nov 06:05",
+      "who": "ishaan",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 06:05",
+      "who": "ishaan",
+      "msg": "→ in_review: ready for review"
     }
   ]
 }

@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "Hash-chained C2 record written only by the gateway, a separate witness process taking a signed (seq, head, tick) every tick, ks verify, and a redactable side store for values; due 24 Nov",
   "acceptance": [
     "ADR file ≤900 words with sections Context, Decision, Consequences, Interface touched (which of C1–C6), Tests that prove it",
@@ -19,13 +19,33 @@
     "CON-01"
   ],
   "deliverable": "org/adr/ADR-02-recorder-witness-verify.md",
-  "summary": "",
+  "summary": "ADR-02 written (<=900 words): gateway-only append-only JSONL chain with gw sig; separate-uid witness signing (seq,head,tick) per tick plus stall alert; ks verify order (IO, chain/sigs/gaps=TAMPER, witness=WITNESS, printed head, reconcile=RECONCILE) with first_bad; redactable side store; claim 'tamper-evident up to last witnessed head', no Merkle. Tests map to RT7 a-d, RT8 e-g, tail truncation. Open: WitnessCheckpoint lacks the 'count' field THREAT-MODEL v3 relies on.",
   "review": "",
   "log": [
     {
       "t": "19 Nov 00:54",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 06:04",
+      "who": "arjun",
+      "msg": "→ in_progress: started"
+    },
+    {
+      "t": "19 Nov 06:04",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 06:04",
+      "who": "arjun",
+      "msg": "→ in_review: ready for review"
+    },
+    {
+      "t": "19 Nov 06:06",
+      "who": "pmo",
+      "msg": "PMO decision: WitnessCheckpoint gains a monotonic 'count' field in contracts v1.1 (maya, after SEC-03)"
     }
   ]
 }

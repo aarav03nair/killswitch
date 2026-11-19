@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "How agents sign C1 envelopes without holding keys (signer handle), what the gateway verifies (sig, nonce, expiry, epoch, act chain), and what happens on failure; due 24 Nov",
   "acceptance": [
     "ADR file ≤900 words with sections Context, Decision, Consequences, Interface touched (which of C1–C6), Tests that prove it",
@@ -19,13 +19,28 @@
     "CON-01"
   ],
   "deliverable": "org/adr/ADR-01-identity-envelope.md",
-  "summary": "",
+  "summary": "ADR-01 written (850 words): in-memory Ed25519 keys, signer handle over socketpair signing headers only, commit-then-sign with args_hash and shared canonical serializer, nonce/expiry_tick/epoch replay checks, act_chain with MAX_ACT_DEPTH used only for ancestor denial, 7-step verification order, bad sig suspends conn never claimed agent, SPIFFE ids as production mapping. Tests map to RT2, RT3, RT3b, RT4, RT6.",
   "review": "",
   "log": [
     {
       "t": "19 Nov 00:54",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 06:04",
+      "who": "arjun",
+      "msg": "→ in_progress: drafting ADR"
+    },
+    {
+      "t": "19 Nov 06:04",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 06:04",
+      "who": "arjun",
+      "msg": "→ in_review: ready for kabir"
     }
   ]
 }

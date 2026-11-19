@@ -39,7 +39,7 @@ Owner: zoya · Reviewer: panel · 19 Nov 2026 · Inputs: abstract/FACT-CARD.md (
 | F8 | Anti-framing: a bad signature suspends the **submitting connection**, never the claimed agent | D7; C4; RT3 | Pairs well with the jury break (F12) |
 | F9 | Recovery = taint-scoped revert: only writes whose current value is still the culprit's after-version; otherwise re-run or flag; append-only records | Principle 8; C6 | Over-taint rather than under-taint (conservative, D4) |
 | F10 | Dependants: deterministic steps re-run through the outbox with idempotency keys (no re-emitted effects); LLM steps become a re-plan queued for approval | D4; principle 9 | The finale has no LLM agent (D9). Re-plan is a queued item, not autonomous repair |
-| F11 | Irreversible effects: hold window in the outbox, then compensate or report, never reverse | D10; C6; RES-11 §5 must-not #3 | Containment holds and never cancels (`release` = un-hold + restore epoch). Discarding a held item is a recovery-plan step after the dry-run diff |
+| F11 | Irreversible effects: hold window in the outbox, then compensate or report, never reverse | D10; C6; RES-11 §5 must-not #3 | Containment holds and never cancels (`release` = un-hold + restore epoch). Discarding a held item is an approved recovery-plan step after the dry-run diff |
 | F12 | Tamper-evident **up to the last witnessed head**: hash chain + separate witness process signing (seq, head, tick) every tick + `verify` (chain, signatures, witness heads, seq gaps, reconciliation) | D6; C1 | Use this exact scope. A stalled witness head raises an alert. No Merkle proofs |
 | F13 | The jury can try to break it live: `ks inject`, rogue agent with arbitrary Python, direct `state.db` bypass, log-line edit, full chain rewrite → `verify`; threat model published first | D11; THREAT-MODEL §7 | F3 (exfiltration) is a pytest, not live. Pass values are targets |
 
@@ -50,9 +50,10 @@ Owner: zoya · Reviewer: panel · 19 Nov 2026 · Inputs: abstract/FACT-CARD.md (
 | W1 | Recovery is **scored against an oracle** (the run without the culprit, S\*), never against our own taint graph | Principle 10; SYNTHESIS §6; RES-11 §5 safe #3 | Recovery metrics sit next to Airlock-style containment metrics, not in place of them |
 | W2 | The audit holds even against the audited agent, within the stated threat model | D6; THREAT-MODEL §3 | Always attach "within the threat model" (host compromise is out of scope) |
 | W3 | Re-plan / redo cost reported openly, because Airlock's "kept without redo" metric penalises re-runs | RES-11 §1 watch-out 2; SYNTHESIS §6 | Pairs with "re-emitted effects = 0" (target) |
-| W4 | **Maps to** AI Act Art 12(1) (automatic logs) and Art 14(4)(e) (stop "in a safe state"), NIST AI RMF MANAGE 4.3, RBI FREE-AI Sutra 5 ("Accountability cannot be delegated to the model and underlying algorithm") | FACT-CARD #15; FACT-CARD row R (spare, status S) | "Maps to" only. Article numbers only, no amending-regulation number. High-risk dates 2 Dec 2027 (Annex III) / 2 Aug 2028 (Annex I). RBI quote: open the RBI report and check the exact words before printing (press paraphrases them); if not checked, omit it |
+| W4 | **Maps to** AI Act Art 12(1) (automatic logs) and Art 14(4)(e) (stop "in a safe state"), NIST AI RMF MANAGE 4.3, RBI FREE-AI Sutra 5 ("Accountability cannot be delegated to the model and underlying algorithm") | FACT-CARD #15; RES-08 ref [19] (NIST AI RMF MANAGE 4.3, not on the card); FACT-CARD row R (spare, status S) | "Maps to" only. NIST MANAGE 4.3 as a reference only, no number. Article numbers only, no amending-regulation number. High-risk dates 2 Dec 2027 (Annex III) / 2 Aug 2028 (Annex I). RBI quote: open the RBI report and check the exact words before printing (press paraphrases them); if not checked, omit it |
 | W5 | Enterprise path: OTel export, policy-as-code; Dolt and agentgateway are **production twins** | D5; SYNTHESIS §5; CHARTER | A twin is a stated path, not an integration |
 | W6 | A banking-readable scenario: crm swaps a supplier IBAN; billing, payments and comms consume it; triage later edits crm (write-write conflict); inventory and docs stay independent | D12 (hero F2+) | It is the scenario we will show, not a real incident. The ×10 price change stays in the data, not in the story |
+| W7 | The brief's three scores (time-to-identify, time-to-contain, clean recovery) have **no agreed measurement** in the standards we checked; we define checkable ones, scored against the oracle | RES-08 headline (NIST SP 800-61r3 has no mean-time metrics; Google SRE on mean-time stats) | Always "in the standards we checked"; never "no standard exists". Our definitions are §1.5; no seconds (D13) |
 
 ### 1.4 Limits to state (stating them builds credibility; one short line in the abstract)
 
@@ -175,3 +176,9 @@ Write "residual damage R" and "collateral loss C" in full on first use, so they 
 - RES-10 DROP 5 leftovers added: frontier gating (X12), "Mohammadi et al." and the 29 May 2026 Atomix date (X11).
 - W4: RBI quote is status S (check the report's exact words or omit); Art 14(4)(e) stop "in a safe state".
 - §3 "cancelled (payment)" row reworded: containment never cancels; `cancel_outbox` is an approved recovery-plan step after the dry-run diff (CALL-01 release semantics, maya.md C5), so the locked TERMS term is no longer banned.
+
+## Changes v3 (ABS-06 panel nits, 19 Nov)
+
+- F11: discarding a held item is an **approved** recovery-plan step after the dry-run diff.
+- W4: NIST AI RMF MANAGE 4.3 now sourced to RES-08 ref [19] (not on the FACT-CARD); reference only, no number.
+- New W7: the brief's three scores have no agreed measurement in the standards we checked; we define checkable ones (source RES-08 headline). Used in SKELETON 3b.

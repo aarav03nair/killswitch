@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "The single mediated path: per-instance classification R/C/I1/I2/U (U denied, fail-closed), policy incl. early hold on sensitive-tagged fields, outbox for I-class, epoch + deny-list checked inside the write txn; due 24 Nov",
   "acceptance": [
     "ADR file ≤900 words with sections Context, Decision, Consequences, Interface touched (which of C1–C6), Tests that prove it",
@@ -19,13 +19,28 @@
     "CON-01"
   ],
   "deliverable": "org/adr/ADR-03-gateway-classes-fencing.md",
-  "summary": "",
+  "summary": "ADR-03 written: 9-step gateway pipeline with in-txn epoch/deny-list re-check; per-instance classification, catalogue of demo tools by class, unknown -> U -> deny; I1 via outbox, I2 needs approval; generic early hold on RunConfig.sensitive_fields; dispatcher re-checks holds; all denials recorded with Reason; adapters emit read/write sets. Tests map to RT1 and RT5. No contract changes.",
   "review": "",
   "log": [
     {
       "t": "19 Nov 00:54",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 06:04",
+      "who": "nisha",
+      "msg": "→ in_progress: started"
+    },
+    {
+      "t": "19 Nov 06:04",
+      "who": "nisha",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 06:04",
+      "who": "nisha",
+      "msg": "→ in_review: ready for review"
     }
   ]
 }

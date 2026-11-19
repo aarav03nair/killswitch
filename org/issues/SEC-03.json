@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "kabir",
-  "status": "todo",
+  "status": "in_progress",
   "outcome": "Rule-by-contract verdict table so C1-C6 freeze with no security gaps",
   "acceptance": [
     "11x6 matrix: each day-one rule (CALL-01/kabir.md s4) vs each contract C1-C6 marked pass / gap / n.a. with a one-line reason",
@@ -26,6 +26,11 @@
       "t": "19 Nov 00:54",
       "who": "kabir",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 06:04",
+      "who": "kabir",
+      "msg": "→ in_progress"
     }
   ]
 }

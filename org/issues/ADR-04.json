@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "Data-invariant detectors (IBAN checksum, price delta vs frozen baseline, ledger balance, beneficiary-changed-then-paid), attribution by write_set lookup, suspend→revoke/release, per-action lineage hold from recorded read sets; due 24 Nov (tara consults on detectors)",
   "acceptance": [
     "ADR file ≤900 words with sections Context, Decision, Consequences, Interface touched (which of C1–C6), Tests that prove it",
@@ -19,13 +19,33 @@
     "CON-01"
   ],
   "deliverable": "org/adr/ADR-04-monitor-containment-hold.md",
-  "summary": "",
+  "summary": "ADR-04 written (888 words): 7-detector catalogue, detect-then-attribute via backward taint, hard/soft policy (bad sig->conn only, tamper->freeze, no suspend), suspend->new epoch, per-action lineage hold from recorded read sets, release=unhold+epoch restore, revoke console-only, hold_window_ticks. Note: contract Alert has no suspect field; suspect = root_candidates[0]. Tests map RT9-RT12.",
   "review": "",
   "log": [
     {
       "t": "19 Nov 00:54",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 06:04",
+      "who": "nisha",
+      "msg": "→ in_progress"
+    },
+    {
+      "t": "19 Nov 06:04",
+      "who": "nisha",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 06:04",
+      "who": "nisha",
+      "msg": "→ in_review"
+    },
+    {
+      "t": "19 Nov 06:06",
+      "who": "pmo",
+      "msg": "PMO: accepted — 'suspect' is derived as root_candidates[0]; no contract field"
     }
   ]
 }
