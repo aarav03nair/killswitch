@@ -27,6 +27,11 @@
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 21:07",
+      "who": "pmo",
+      "msg": "→ todo: From kabir's B3-15 re-review (non-blocking): a skeleton-run record with a non-empty read_set or outbox_ids still verifies OK (should fail like write_set); verify never checks sidestore/ (side entries vs record hashes). Probes: scratchpad/p15b/test_probe15b.py."
     }
   ]
 }

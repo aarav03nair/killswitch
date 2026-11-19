@@ -7,7 +7,7 @@
   "reviewer": "panel",
   "model": "sonnet",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "Read/write sets come from the state txn, not tool self-reports; mismatches and refusals become recorded denials, never unrecorded raises",
   "acceptance": [
     "Gateway takes read_set/write_set from the StateTxn; an Execution whose sets disagree with the txn is a recorded deny (test with a lying adapter)",
@@ -19,7 +19,7 @@
     "B3-11"
   ],
   "deliverable": "src/ks/gateway/",
-  "summary": "",
+  "summary": "Done: run.py wires store (workspace/state.db), seq-1 seed, WorldPolicy; 1-tick cap lifted. Gateway takes write_set from writes_at and verifies reads vs store; lying sets, dispatcher COMMIT (authorizer + post-check), outbox before B3-23, unhashable result are recorded TOOL_ERROR denies. View joins read_set (view_reads/tool_reads kept apart; same obj twice: tool read wins). Seed db-lock releases seq 1. Policy denies '.'/':' ids (p.object_id). Spy allowlist + AST check; gateway crash test; world repro past hero_tick (40 ticks) with equal anchors. Left: gateway-built OutboxItems (B3-23). 716 local, 724 container, make smoke OK.",
   "review": "",
   "log": [
     {
@@ -41,6 +41,31 @@
       "t": "19 Nov 16:33",
       "who": "pmo",
       "msg": "→ todo: From kabir's B3-10 review: when the 1-tick cap is lifted, extend test_world_repro_same_seed_byte_identical past hero_tick with a non-empty record and equal RunAnchors (B3-10 repro item carried forward)."
+    },
+    {
+      "t": "19 Nov 17:51",
+      "who": "pmo",
+      "msg": "→ todo: From kabir's final B3-11 review (non-blocking): (1) a db lock while writing the seq-1 seed record leaves seq 1 reserved; next admit fails closed with no records. Release it like other txn failures. (2) a dispatcher that COMMITs itself then raises leaves a write behind a TOOL_ERROR deny (verify catches it as reconcile_mismatch per B3-43 review); gateway should forbid dispatcher-side commit."
+    },
+    {
+      "t": "19 Nov 21:01",
+      "who": "pmo",
+      "msg": "→ todo: From kabir's B3-14 review (non-blocking): wire WorldPolicy into src/ks/runtime/run.py alongside the store/seed (runtime still defaults to AllowAll; nothing else tracks it). Policy itself must deny object ids containing '.' or ':' rather than relying on the tool raising (probe: set_risk_note supplier='S-17.iban')."
+    },
+    {
+      "t": "19 Nov 21:03",
+      "who": "nisha",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "19 Nov 21:10",
+      "who": "nisha",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 21:10",
+      "who": "nisha",
+      "msg": "→ in_review: ready"
     }
   ]
 }

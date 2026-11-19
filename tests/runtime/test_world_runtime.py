@@ -19,7 +19,7 @@ import pytest
 
 from ks.contracts import (Exit, NoopFrame, RunDir, TickFrame, WitnessInit, WitnessPub, canonical, decode_frame,
                           decode_witness_frame, encode_frame)
-from ks.runtime.setup import (WORLD_TICKS_UNTIL_STATE, IsolationError, default_out, default_run_id, hero_tick,
+from ks.runtime.setup import (IsolationError, default_out, default_run_id, hero_tick,
                               isolation_problems, scenario)
 from ks.runtime.spawn import WITNESS_UID, agent_uid, pids_with_uids, proc_uid, spawn_child
 from ks.world.agents import AGENT_IDS
@@ -49,8 +49,11 @@ def secret(base) -> Path:
     return p
 
 
-def world_run(out: Path, *extra: str, seed: int = 7):
-    return ks("run", "--scenario", "world", "--ticks", WORLD_TICKS_UNTIL_STATE, "--seed", seed, "--out", out,
+WORLD_TICKS = 40  # past hero_tick (30..60 of 120 ticks scale: h in [T/4, T/2] = 10..20)
+
+
+def world_run(out: Path, *extra: str, seed: int = 7, ticks: int = WORLD_TICKS):
+    return ks("run", "--scenario", "world", "--ticks", ticks, "--seed", seed, "--out", out,
               *extra)
 
 
@@ -70,9 +73,10 @@ def test_world_run_spawns_adr06_agents(base):
     else:  # native macOS / non-root: degraded, attribution void, still runs
         assert cfg.isolation == "degraded" and "per-agent attribution is VOID" in p.stdout
     # all 10 agent processes ran ks.world.agents.step on their view and answered before the deadline
-    assert [canonical.loads_line(l)["missed"] for l in (out / "timing.jsonl").read_bytes().splitlines(True)] == [[]]
-    # every ADR-06 agent is idle at tick 0, so nothing is recorded or witnessed yet (WORLD_TICKS_UNTIL_STATE)
-    assert "no witnessed head" in p.stdout and (out / "record.jsonl").read_bytes() == b""
+    assert all(canonical.loads_line(l)["missed"] == [] for l in (out / "timing.jsonl").read_bytes().splitlines(True))
+    # B3-41: the seed record is seq 1 and the agents' actions follow; a head was witnessed
+    assert "no witnessed head" not in p.stdout and (out / "record.jsonl").read_bytes() != b""
+    assert (out / "workspace" / "state.db").exists()
     code, rep = ks_verify(out)
     assert code == Exit.OK and rep.isolation == cfg.isolation
 
@@ -81,8 +85,7 @@ def test_world_scenario_arguments():
     assert scenario("world", agents=None, seed=1, ticks=1).agent_ids == AGENT_IDS
     with pytest.raises(ValueError, match="exactly 10"):
         scenario("world", agents=3, seed=1, ticks=1)
-    with pytest.raises(ValueError, match="state txn"):  # TODO(B3-11/B3-41): lift with the gateway's state txn
-        scenario("world", agents=None, seed=1, ticks=WORLD_TICKS_UNTIL_STATE + 1)
+    assert scenario("world", agents=None, seed=1, ticks=500).agent_ids == AGENT_IDS  # no 1-tick cap (B3-41)
     with pytest.raises(ValueError, match="unknown scenario"):
         scenario("acme", agents=None, seed=1, ticks=1)
     assert scenario("skeleton", agents=None, seed=1, ticks=5).agent_ids == ("agent_00", "agent_01")
@@ -220,7 +223,8 @@ def test_world_repro_same_seed_byte_identical(base, secret):
         anchors.append(p.stdout.strip().splitlines()[-1])
     a, b = (_raw_deterministic_files(r) for r in runs)
     assert a == b and {"config.json", "record.jsonl", "witness.jsonl"} <= a.keys()
-    assert anchors[0] == anchors[1]  # both "no witnessed head" until the world writes (B3-11)
+    assert anchors[0] == anchors[1] and "no witnessed head" not in anchors[0]  # equal RunAnchors, non-empty record
+    assert (runs[0] / "record.jsonl").read_bytes() != b"" and a["record.jsonl"] == b["record.jsonl"]
     assert RunDir(runs[0]).config().run_id == "world-s11"
 
 

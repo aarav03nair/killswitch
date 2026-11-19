@@ -1,5 +1,5 @@
 {
-  "$id": "https://killswitch.local/schema/1.2.0/c5.approval.schema.json",
+  "$id": "https://killswitch.local/schema/1.3.0/c5.approval.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Args of a ``ks.approve`` envelope (G6): the operator approves these steps of exactly this plan.",

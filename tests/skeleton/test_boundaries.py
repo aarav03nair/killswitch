@@ -108,6 +108,9 @@ def test_open_fills_view_from_provider(gw):  # noqa: F811  B3-40
     assert seen == [("agent_00", 3), ("agent_01", 3)] and g.delivered["agent_00"] == (entry,)
 
 
+from ks.contracts import Decision, Reason  # noqa: E402
+
+
 def test_execution_outbox_defaults_empty_and_is_not_dropped(gw):  # noqa: F811  B3-40
     g, keys = gw
     assert Execution(None).outbox == ()
@@ -117,8 +120,8 @@ def test_execution_outbox_defaults_empty_and_is_not_dropped(gw):  # noqa: F811  
             return Execution(None, outbox=(OutboxRequest("email", ActionClass.I1, {"to": "x"}),))
 
     g.dispatcher = Emits()
-    with pytest.raises(NotImplementedError):  # until B3-11 creates OutboxItems, never silently dropped
-        g.admit("c-1", _frame(keys))
+    r = g.admit("c-1", _frame(keys)).record  # until B3-23 creates OutboxItems: a recorded deny, never dropped
+    assert (r.decision, r.reason, r.outbox_ids) == (Decision.DENY, Reason.TOOL_ERROR, ())
 
 
 def test_sets_refuses_write_without_txn(gw):  # noqa: F811  B3-40 panel change (1)
@@ -127,14 +130,14 @@ def test_sets_refuses_write_without_txn(gw):  # noqa: F811  B3-40 panel change (
     g, keys = gw
     w = record_exec().write_set[0]
     assert isinstance(w, WriteEntry)
-    with pytest.raises(ValueError, match="without a state txn"):
-        Gateway._sets(Execution(None, write_set=(w,)), None)
+    with pytest.raises(Exception, match="without a state txn"):
+        g._sets(Execution(None, write_set=(w,)), None, 'agent_00')
 
     class Writes(SkeletonDispatcher):
         def execute(self, env, txn):
             return Execution(None, write_set=(w,))
 
     g.dispatcher = Writes()
-    with pytest.raises(ValueError, match="without a state txn"):  # B3-41 turns this into a recorded deny
-        g.admit("c-1", _frame(keys))
-    assert Gateway._sets(Execution(None), None) == ((), ())
+    r = g.admit("c-1", _frame(keys)).record  # B3-41: a recorded deny
+    assert (r.decision, r.reason, r.write_set) == (Decision.DENY, Reason.TOOL_ERROR, ())
+    assert g._sets(Execution(None), None, "agent_00") == ((), ())

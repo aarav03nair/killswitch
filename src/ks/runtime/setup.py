@@ -20,17 +20,15 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ks.rng import draw_int
 
 __all__ = ["SCENARIOS", "Scenario", "scenario", "default_run_id", "default_out", "hero_tick", "isolation_problems",
            "refuse_existing", "IsolationError", "WORLD_TICKS_UNTIL_STATE"]
 
 SCENARIOS = ("skeleton", "world")
 
-WORLD_TICKS_UNTIL_STATE = 1
-"""TODO(B3-11/B3-41): the gateway passes ``txn=None`` to the dispatcher, so a state-writing world tool would hit
-the gateway's fail-stop. Every ADR-06 agent is idle at tick 0, so a world run is capped at 1 tick until the
-gateway wires the ks.state txn and the seed record (D-SEQ1 in ks/ARCHITECTURE.md). Then delete this cap."""
+WORLD_TICKS_UNTIL_STATE = None
+"""B3-41: the 1-tick world cap is lifted (the gateway wires the state txn, seed record and WorldPolicy). Kept as
+None so old imports resolve; there is no cap."""
 
 
 class IsolationError(RuntimeError):
@@ -58,8 +56,8 @@ class Scenario:
 def hero_tick(seed: int, ticks: int) -> int:
     """h in [T/4, T/2] (ADR-06-metrics: t_inject seeded in [T/4, T/2]), one ks.rng draw. A scenario parameter
     every agent gets, set even with the fault off so S* and the faulty run share one honest schedule."""
-    lo, hi = ticks // 4, max(ticks // 4, ticks // 2)
-    return lo + draw_int(seed, "world/hero_tick", 0, hi - lo + 1)
+    from ks.inject import t_inject_for  # single source of truth for t_inject (B3-17)
+    return t_inject_for(seed, ticks)
 
 
 def scenario(name: str, *, agents: int | None, seed: int, ticks: int) -> Scenario:
@@ -74,9 +72,6 @@ def scenario(name: str, *, agents: int | None, seed: int, ticks: int) -> Scenari
         from ks.world.registry import SENSITIVE_FIELDS
         if agents not in (None, len(AGENT_IDS)):
             raise ValueError(f"the world scenario has exactly {len(AGENT_IDS)} agents (ADR-06)")
-        if ticks > WORLD_TICKS_UNTIL_STATE:
-            raise ValueError(f"the world scenario runs at most {WORLD_TICKS_UNTIL_STATE} tick until the gateway "
-                             "wires the state txn (B3-11/B3-41)")
         return Scenario("world", AGENT_IDS, SENSITIVE_FIELDS, "ks.world.agents",
                         ("--hero-tick", str(hero_tick(seed, ticks))))
     raise ValueError(f"unknown scenario {name!r} (one of {', '.join(SCENARIOS)})")

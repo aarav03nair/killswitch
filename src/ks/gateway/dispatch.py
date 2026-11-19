@@ -9,7 +9,8 @@ Who owns read/write sets: the gateway, never the tool. ``txn`` is the gateway's 
 ADR-05). A dispatcher reads and writes only through it, and once it is wired the gateway takes ``read_set`` and
 ``write_set`` from the txn and refuses an ``Execution`` whose sets disagree (``Gateway._sets``). Until then
 (``txn is None``, skeleton tools touch no state) the gateway accepts the dispatcher's sets and they must be
-empty for a write. TODO(B3-41): wire StateTxn and the cross-check.
+empty for a write. The gateway now passes a ``GatewayTxn`` (store inside ``BEGIN IMMEDIATE`` + seq) when it has
+a store. TODO(B3-41): take the sets from the store (``ks.gateway.txn.writes_at``) and deny on disagreement.
 
 ``Execution.outbox`` carries I1/I2 effect *requests*; the gateway (outbox owner) assigns ids, hashes the payload,
 attaches lineage from the record's read set and creates the ``OutboxItem``s. A tool never sends an effect itself.
@@ -23,12 +24,29 @@ from typing import Any, Protocol, runtime_checkable
 
 from ks.contracts import ActionClass, Envelope, ReadEntry, ViewEntry, WriteEntry
 
-__all__ = ["Execution", "OutboxRequest", "StateSnapshot", "StateTxn", "ToolDispatcher", "ViewProvider"]
+__all__ = ["GatewayTxn", "Execution", "OutboxRequest", "StateSnapshot", "StateTxn", "ToolDispatcher", "ViewProvider"]
 
-StateTxn = Any
-"""Placeholder for the ks.state execution transaction (vikram); the skeleton passes ``None``."""
-StateSnapshot = Any
-"""Placeholder for a read-only ks.state view at the start of a tick; the skeleton passes ``None``."""
+@dataclass(frozen=True)
+class GatewayTxn:
+    """The execution transaction (step 13): the store inside the gateway's ``BEGIN IMMEDIATE`` and the record
+    ``seq`` this action's writes carry (taken at txn start, G5). ``None`` is passed when the gateway has no store
+    (skeleton scenario)."""
+
+    store: Any
+    seq: int
+
+
+StateTxn = GatewayTxn
+"""The ks.state execution transaction (or ``None`` without a store)."""
+
+
+@dataclass(frozen=True)
+class StateSnapshot:
+    """What ``ViewProvider.view`` gets (M2): the store and ``visible_to`` = the first seq of the tick (an int:
+    the seq the tick's first record takes), so writes of this tick are invisible. ``None`` without a store."""
+
+    store: Any
+    visible_to: int
 
 
 @dataclass(frozen=True)

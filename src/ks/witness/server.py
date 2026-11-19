@@ -38,6 +38,8 @@ class Witness:
                 return last
             if m.tick <= last.tick or m.seq < last.seq:
                 return None  # never anchor a regressing head, nor a second head for one tick
+            if m.seq == last.seq and m.head != last.head:
+                return None  # equivocation: a seq already signed with one head never gets a second (B3-42)
         cp = WitnessCheckpoint(witness_id="ks.witness", seq=m.seq, tick=m.tick, head=m.head,
                                count=1 if last is None else last.count + 1, sig=None)
         cp = cp.with_sig(sign_hex(self._key, cp.signing_bytes()))

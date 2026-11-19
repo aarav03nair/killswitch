@@ -121,3 +121,44 @@ def test_shared_uid_run_as_root_uses_one_unprivileged_uid(tmp_path):
     assert uids == {SHARED_AGENT_UID} and 0 not in uids
     assert any("DEGRADED" in l for l in out) and any("per-agent attribution is VOID" in l for l in out)
     assert verify(res.rundir.path, res.anchor).ok
+
+
+# --- B3-42 -----------------------------------------------------------------------------------------------------
+def test_signer_drip_without_newline_counts_and_closes_and_the_tick_stays_bounded(gw):  # noqa: F811
+    import threading
+    g, keys = gw
+    pairs = [socket.socketpair() for _ in range(4)]
+    conns = [AgentConn(index=i, agent_id=a, conn_id=f"c-{i + 1}", gw=pairs[2 * i][0], signer=pairs[2 * i + 1][0],
+                       proc=None, uid=None) for i, a in enumerate(AGENTS)]
+    signer = SignerService({a: keys.private(a) for a in AGENTS}, {a: 0 for a in AGENTS}.get)
+    b = TickBarrier(conns, g, signer, _NoWitness(), deadline_s=1.0)
+    drip = pairs[1][1]
+    stop = threading.Event()
+
+    def dripper():  # one byte per ms, never a newline
+        try:
+            while not stop.is_set():
+                drip.send(b"x")
+                time.sleep(0.001)
+        except OSError:
+            pass
+
+    th = threading.Thread(target=dripper, daemon=True)
+    th.start()
+    pairs[2][1].sendall(_frame(keys, agent="agent_01", tick=0, action="ok", nonce="1" * 32))
+    t0 = time.monotonic()
+    o = b.run_tick(0)
+    stop.set()
+    th.join(2)
+    assert time.monotonic() - t0 < 0.9, "a drip must not hold the tick to its deadline"
+    assert not conns[0].alive and conns[1].alive
+    assert signer.flooded["agent_00"] >= 1 and o.records == 1
+
+
+def test_envelope_on_a_connection_with_no_bound_agent_is_denied(gw):  # noqa: F811
+    g, keys = gw
+    g.open(1, ["agent_00"])
+    line = _frame(keys, agent="agent_00", tick=1, action="u1")
+    adm = g.admit("c-9", line)                                   # c-9 was never bound by the barrier
+    assert (adm.reply.decision, adm.reply.reason) == (Decision.DENY, Reason.BAD_SIG)
+    assert adm.record.sig_ok is False

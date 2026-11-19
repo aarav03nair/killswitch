@@ -276,7 +276,7 @@ VERIFY_REASONS: dict[str, Exit] = {
     "parse_error": Exit.TAMPER, "hash_mismatch": Exit.TAMPER, "seq_gap": Exit.TAMPER,
     "gw_sig_invalid": Exit.TAMPER, "agent_sig_mismatch": Exit.TAMPER, "side_entry_mismatch": Exit.TAMPER,
     "alert_mismatch": Exit.TAMPER, "epoch_regression": Exit.TAMPER, "expired_admitted": Exit.TAMPER,
-    "window_violation": Exit.TAMPER, "reexec_invalid": Exit.TAMPER,
+    "window_violation": Exit.TAMPER, "reexec_invalid": Exit.TAMPER, "seed_invalid": Exit.TAMPER,
     "witness_missing": Exit.WITNESS, "witness_sig_invalid": Exit.WITNESS, "witness_mismatch": Exit.WITNESS,
     "count_mismatch": Exit.WITNESS, "truncated": Exit.WITNESS, "head_mismatch": Exit.WITNESS,
     "keyring_mismatch": Exit.WITNESS, "config_mismatch": Exit.WITNESS,
@@ -287,6 +287,8 @@ VERIFY_REASONS: dict[str, Exit] = {
 Truncation (F4): ``truncated`` with ``first_bad = n + 1``; an anchor that disagrees: ``head_mismatch``,
 ``keyring_mismatch`` (RT8(h)) or ``config_mismatch``. v1.2 (F9): ``reexec_invalid`` -> TAMPER, a record with
 ``reexec_of`` that is not a valid unhold re-execution (no matching hold, released twice, or not released).
+v1.3 (D-15): ``seed_invalid`` -> TAMPER, an admitted ``ks.seed`` record off seq 1/tick 0/ks.gateway/c-0, or whose
+write_set differs from the scenario's ``seed_state``.
 Adding a reason is a minor version bump."""
 
 

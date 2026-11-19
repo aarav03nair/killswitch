@@ -25,6 +25,7 @@ def gw(tmp_path):
     g = Gateway(cfg, ring, Recorder(RunDir.create(tmp_path / "run", cfg, ring), keys.signer("ks.gateway")),
                 {a: 0 for a in AGENTS}.get, dispatcher=SkeletonDispatcher())
     g.begin_tick(1)
+    g.bind("c-1", "agent_00")  # B3-42: unbound connections are denied
     return g, keys
 
 

@@ -1,0 +1,51 @@
+{
+  "id": "B3-43",
+  "title": "Contracts 1.3: ks.seed system tool (D-15) + deny reason for a dispatcher that raises",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "maya",
+  "reviewer": "kabir",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "done",
+  "outcome": "Seed record has its own system tool (Aarav's D-15, amends CALL-02 G1); every envelope is recorded even when a tool raises (rule 11)",
+  "acceptance": [
+    "ks.seed in SYSTEM_TOOLS; schema regenerated; contracts README + version 1.3.0; canonical/roundtrip tests green",
+    "verify rule: ks.seed valid only at seq 1, tick 0, author ks.gateway, write_set == seed_state; any other ks.seed record is a verify failure (tests)",
+    "Deny reason for a dispatcher that raises (kabir's B3-11 finding 3), or a written decision for Aarav if it conflicts with the freeze",
+    "CALL-02 amendment note citing D-15"
+  ],
+  "depends": [
+    "B3-11"
+  ],
+  "deliverable": "src/ks/contracts/",
+  "summary": "Contracts 1.3.0 (additive). (1) ks.seed: SEED_TOOL in SYSTEM_TOOLS, signer ks.gateway only. (2) Record.seed_problems(): an admitted ks.seed must be exec at seq 1, tick 0, a verified ks.gateway envelope on c-0, with empty read_set/outbox and no reexec_of. ks verify also checks write_set == seed_state at seq 1 on an empty store (ks.verify.core.expected_seed_writes). Any failure is the new verify reason seed_invalid (TAMPER). A denied ks.seed, e.g. from an agent, is an ordinary denial, so an agent cannot use it to break verify. (3) Kabir's B3-11 finding 3: the CALL-02 freeze does not close the Reason enum, and adding a reason is a minor bump (1.2 precedent), so I added the deny reason tool_error. The envelope was admitted (sig_ok true) and the tool raised; the txn is rolled back and the record carries no read/write set, outbox ids or result. No D-16 needed. (4) Schemas regenerated; README table + changelog; doc:run_config golden re-pinned; tests in tests/contracts/test_contracts_13.py, which cover the seed roundtrip/schema, the structural rule, tool_error validators and 5 verify cases. (5) CALL-02 resolutions get amendment G1-a citing D-15. ARCHITECTURE D-SEQ1 updated; the interim ks.dispatch skip rule is marked for deletion once nisha switches stub.py. Native 577 passed / 8 skipped; container 585 passed.",
+  "review": "[kabir · done] Attacked: agent/ks.monitor exec ks.seed, ks.gateway on c-3, seq 2, tick 1, second seed, hold, read_set: all rejected by Record validators or seed_invalid (TAMPER). write_set is checked against seed_state rebuilt from scenario code on an empty store, not against the record, so no tautology. tool_error: validators forbid read/write set, outbox and result_hash; a write committed behind it fails the reconcile pass. Additive: record/envelope goldens unchanged, only run_config re-pinned; a HEAD (1.2) run dir verifies OK under 1.3. G1-a cites D-15 and stays within it. Native 606 passed, container 634 passed. Non-blocking follow-ups: (1) verify does not require seq 1 to be ks.seed. Once B3-11 switches, a 1.3 run with state writes should fail if its seed is ks.dispatch or missing. (2) expected_seed_writes ignores config.scenario and the seed args; key it on the scenario once a second one exists.",
+  "log": [
+    {
+      "t": "19 Nov 17:41",
+      "who": "pmo",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 17:46",
+      "who": "maya",
+      "msg": "→ in_progress: contracts 1.3.0 in progress"
+    },
+    {
+      "t": "19 Nov 17:46",
+      "who": "maya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 17:46",
+      "who": "maya",
+      "msg": "→ in_review: contracts 1.3.0 landed; nisha to switch seed tool + tool_error in stub.py"
+    },
+    {
+      "t": "19 Nov 17:50",
+      "who": "kabir",
+      "msg": "review: done"
+    }
+  ]
+}

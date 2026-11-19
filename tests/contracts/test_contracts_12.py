@@ -29,8 +29,8 @@ WITNESS_FRAMES = [
 ]
 
 
-def test_version_is_1_2_0():
-    assert C.CONTRACTS_VERSION == "1.2.0"
+def test_version_is_1_2_0_or_later():
+    assert tuple(map(int, C.CONTRACTS_VERSION.split("."))) >= (1, 2, 0)
     assert "### 1.2.0" in (SRC / "contracts" / "README.md").read_text(encoding="utf-8")
 
 
@@ -233,7 +233,7 @@ def test_additive_only():
            "window_violation", "witness_missing", "witness_sig_invalid", "witness_mismatch", "count_mismatch",
            "truncated", "head_mismatch", "keyring_mismatch", "config_mismatch", "reconcile_mismatch", "no_state",
            "frozen", "diverged", "usage"}
-    assert v11 <= set(VERIFY_REASONS) and set(VERIFY_REASONS) - v11 == {"reexec_invalid"}
+    assert v11 <= set(VERIFY_REASONS) and set(VERIFY_REASONS) - v11 <= {"reexec_invalid", "seed_invalid"}  # 1.2 + 1.3
     for name in ("TickFrame", "SubmitFrame", "NoopFrame", "ReplyFrame", "SignRequest", "SignReply", "signer_refusal",
                  "RunConfig", "VerifyReport", "decode_frame", "encode_frame"):
         assert name in C.__all__

@@ -44,6 +44,7 @@ class AgentConn:
     _in: bytearray = field(default_factory=bytearray)
     _out: bytearray = field(default_factory=bytearray)
     _sig_in: bytearray = field(default_factory=bytearray)
+    sig_partial: bool = False
 
     def __post_init__(self) -> None:
         self.gw.setblocking(False)
@@ -114,6 +115,7 @@ class AgentConn:
             del self._sig_in[:i + 1]
         if len(self._sig_in) > MAX_FRAME_BYTES:
             self._sig_in.clear()
+        self.sig_partial = bool(self._sig_in)  # an unterminated tail counts against the budget (B3-42 drip)
         return lines
 
     def reply_signer(self, data: bytes) -> None:
@@ -219,7 +221,8 @@ class TickBarrier:
                         if lines is None:
                             sel.unregister(c.signer)
                             continue
-                        for line in lines:
+                        over = c.sig_partial and not self.signer.charge(c.agent_id)
+                        for line in ([] if over else lines):
                             reply = self.signer.handle(c.agent_id, line)  # SignReply | SignRefusal | None
                             if reply is None:  # over its per-tick line budget: counted, connection closed (M2)
                                 waiting.discard(c)
@@ -229,6 +232,12 @@ class TickBarrier:
                                 c.close()
                                 break
                             c.reply_signer(reply)
+                        if over:  # drip: too many reads with no complete line this tick
+                            waiting.discard(c)
+                            for s in (c.gw, c.signer):
+                                if s.fileno() >= 0 and s in sel.get_map():
+                                    sel.unregister(s)
+                            c.close()
                         continue
                     if c not in waiting:
                         continue

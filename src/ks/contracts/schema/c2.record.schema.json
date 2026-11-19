@@ -326,6 +326,7 @@
         "out_of_scope",
         "over_quota",
         "recovery_frozen",
+        "tool_error",
         "lineage_hold",
         "sensitive_field",
         "needs_approval",
@@ -394,7 +395,7 @@
       "type": "object"
     }
   },
-  "$id": "https://killswitch.local/schema/1.2.0/c2.record.schema.json",
+  "$id": "https://killswitch.local/schema/1.3.0/c2.record.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "C2 Record. Field docs give the OTel mapping (span name ``execute_tool {tool}``).",

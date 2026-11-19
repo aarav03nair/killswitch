@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "maya",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "C5 RecoveryPlan from the taint set, per-object restore with expect, plan file and dry-run diff",
   "acceptance": [
     "Hero plan restores S-17.iban and S-22 to their pre-culprit versions with expect = crm's after-version, cancels held payment/email",
@@ -18,7 +18,7 @@
     "B3-18"
   ],
   "deliverable": "src/ks/recovery/planner.py",
-  "summary": "",
+  "summary": "src/ks/recovery (planner.py, dryrun.py), tests/recovery 18 tests. API for B3-24: plan_recovery(records, taint, alert_id=, state=store, llm_agents=(), compensators=None, rerun_effects=True) -> Planned(plan, kept, independent, riders, rerun_records{seq: Record}, t0_seq_est, t0_seq_est_literal, t0_delta, notes); dry_run(store, planned, rerunner=None) -> DryRun(plan with diff, digests, rerun_writes); Rerunner = (store, RerunStep, Record, seq) -> writes, called in seq order inside store.simulate() after restores; render(dry); write_plan(plan, dir, refuse_under=run_dir); apply_restore(store, step, seq, action_id) for B3-30. Hero: restores S-17.iban/S-22 (expect crm v2, to v1), re-runs billing x3, comms, payments, reporter, triage kept, independent docs+inventory, 0 flags; dry-run digest unchanged; t0_delta reported (render + Planned, not in C5). Decisions raised: (1) B3-21/B3-24/B3-27 wording 'cancel payment/email' contradicts CALL-02 B2/M14 (re-run payments+comms, same outbox id v+1); default follows B2, rerun_effects=False gives the issue wording (tested). (2) CR to maya: RestoreStep.to optional for culprit-created objects; interim encoding to=VersionRef(ver=expect.ver, hash=TOMBSTONE_HASH), reason tainted_create, restores_to_absent(). (3) CR: RecoveryPlan field for t0_seq_est_literal. Assumptions: outbox status from store outbox:<id> OutboxItem, else assumed held (B3-23 not built); dispatched item of a re-run action flagged conservatively until B3-24 compares payloads; released items are cancelled; redacted rerun args check left to B3-24. 'Plan file outside the run dir' read as: write_plan takes an explicit dir and refuses one under the run dir. Suite 734 passed/8 skipped; container 742 passed.",
   "review": "",
   "log": [
     {
@@ -30,6 +30,21 @@
       "t": "19 Nov 16:03",
       "who": "maya",
       "msg": "From B3-03 review: restore cannot delete an object the culprit created — planner must emit put(None)/tombstone for culprit-created objects; also note get() raises RedactedValue on redacted head"
+    },
+    {
+      "t": "19 Nov 21:05",
+      "who": "vikram",
+      "msg": "→ in_progress: starting planner + dry-run diff"
+    },
+    {
+      "t": "19 Nov 21:11",
+      "who": "vikram",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 21:11",
+      "who": "vikram",
+      "msg": "→ in_review: planner + dry-run ready for maya; 3 decisions/CRs in summary"
     }
   ]
 }

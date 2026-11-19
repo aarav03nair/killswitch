@@ -31,7 +31,7 @@ SCOPES: dict[str, tuple[tuple[str, bool, int], ...]] = {
     "inventory": (("stock", False, 8),),
     "payments": (("invoices", False, 4), ("suppliers", True, 8)),
     "reporter": (("invoices", False, 6),),
-    "triage": (("tickets", False, 8), ("suppliers", False, 8)),
+    "triage": (("tickets", False, 8),),  # edits the supplier named by the scenario; sees no supplier rows (B2)
 }
 assert tuple(sorted(SCOPES)) == AGENT_IDS
 

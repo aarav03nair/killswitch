@@ -28,7 +28,8 @@ Every `ks.state` version carries the record `seq` that wrote it, and every seq m
 - **Agent action seqs start at 2.** The tick-1 view uses `visible_to = 2`, so the seed is visible and nothing written in tick 1 is (M2).
 - Rejected: seeding at seq 0 (would need a schema change to `CHECK (seq >= 1)` and leaves seed versions with no record to verify against) and a reserved seq with no record (same gap).
 - Recovery: the backward walk stops at seed versions (author `ks.gateway`, seq 1; ADR-05 §5). The planner never restores or re-runs seq 1.
-- Until B3-11 lands, harnesses (`tests/world/harness.py`, the runtime) seed at seq 1 and start actions at seq 2. That is the same numbering, so nothing changes when the gateway takes over.
+- B3-41: `ks.runtime.run` wires it for the `world` scenario: store at `workspace/state.db`, `seed_state` as the gateway's seed function, `WorldPolicy`. The 1-tick world cap is gone. The gateway, not the tool, owns the record's sets: `write_set` is `writes_at(store, seq)` and a disagreeing `Execution` is a recorded `tool_error` deny; the agent's delivered view joins the read set (`Gateway.view_reads`, tool reads in `Gateway.tool_reads`); a dispatcher that COMMITs, or asks for an outbox before B3-23, is a recorded deny. A db lock while seeding releases seq 1.
+- **Seed tool: `ks.seed` (D-15, decided by Aarav on 19 Nov; contracts 1.3.0, CALL-02 amendment G1-a).** The seed record is `tool="ks.seed"`, `SYSTEM_TOOLS["ks.seed"] = {ks.gateway}`, at seq 1, tick 0, on `c-0`, with an empty read_set and `write_set == seed_state`. `Record.seed_problems()` checks the structure, and `ks verify` adds the write_set check (`seed_invalid`, TAMPER). It is never a dispatch, so dispatch consumers need no special case.
 
 ## Views (M2)
 `ViewProvider.view(agent, tick, state)` gets a snapshot carrying `visible_to` = the first seq of the tick (the seq the tick's first action would take). A view must never default to "all heads".

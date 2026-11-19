@@ -27,13 +27,26 @@ CHILD = textwrap.dedent("""
     import samples as S
     from ks.contracts import *
     from ks.recorder import Recorder
-    from ks.state import open_store
+    from ks.world.scenario import open_world_store, seed_state
+    from ks.verify.core import expected_seed_writes
+    from test_contracts_13 import _env
     from pathlib import Path
 
     run, crash = Path(sys.argv[2]), sys.argv[3] == "crash"
     rd = RunDir(run)
     rec = Recorder(rd, lambda b: S.sign("ks.gateway", b))
-    store = open_store(run / "workspace" / "state.db")
+    store = open_world_store(run / "workspace" / "state.db")
+
+    def seed():                                             # seq 1 of every world run is the admitted ks.seed
+        txn = rec.begin()
+        with store.txn():
+            seed_state(store, seq=txn.seq)
+        env = _env()
+        r = txn.append(tick=0, ts_us=1_000_000_000, conn_id=SYSTEM_CONN, envelope=env.header(), envelope_hash=env.content_hash(),
+                   sig_ok=True, decision=Decision.EXEC, reason=Reason.OK, policy_rule="gateway.seed",
+                   action_class=ActionClass.R, read_set=(), write_set=expected_seed_writes(), outbox_ids=(),
+                   result_hash=result_hash({"seeded": 22}), control=None, reexec_of=None)
+        rd.append(S.witness(r, count=1))
 
     def step(n, crash_before_append):
         txn = rec.begin()                                   # seq taken at txn start
@@ -46,7 +59,8 @@ CHILD = textwrap.dedent("""
                        envelope_hash=env.content_hash(), sig_ok=True, decision=Decision.EXEC, reason=Reason.OK,
                        policy_rule=None, action_class=ActionClass.R, read_set=(), write_set=(w,), outbox_ids=(),
                        result_hash=result_hash({"ok": True}), control=None, reexec_of=None)
-        rd.append(S.witness(r, count=n))                    # a checkpoint after each record
+        rd.append(S.witness(r, count=n + 1))                # a checkpoint after each record (seed was 1)
+    seed()
     step(1, False)
     step(2, crash)
 """)
@@ -75,7 +89,7 @@ def test_crash_commit_append_is_reconcile_never_silent(tmp_path):
     rep = verify(crashed)
     assert (rep.ok, rep.exit, rep.reason) == (False, Exit.RECONCILE, "reconcile_mismatch")
     # the record itself is intact and witnessed: only the state is ahead of it
-    assert len((crashed / "record.jsonl").read_bytes().splitlines()) == 1
+    assert len((crashed / "record.jsonl").read_bytes().splitlines()) == 2  # seed + step 1
 
 
 def test_missing_state_with_writes_is_no_state_and_without_writes_is_ok(tmp_path):
@@ -95,8 +109,9 @@ def test_failed_append_aborts_the_recorder(tmp_path):
         rec.begin()                                  # one open txn at a time
     boom = OSError("disk full")
     rd.append = lambda doc: (_ for _ in ()).throw(boom)   # the append fails after the (notional) commit
-    with pytest.raises(OSError):
+    with pytest.raises(RecorderAborted) as ei:
         txn.append(**_denial())
+    assert ei.value.__cause__ is boom
     assert rec.aborted and rec.seq == 0
     with pytest.raises(RecorderAborted):
         rec.begin()                                  # the run is over: never silent, never reuse seq 1

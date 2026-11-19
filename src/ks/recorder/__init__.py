@@ -81,10 +81,12 @@ class Recorder:
             rec = Record.seal(prev_hash=self.head, seq=seq, record_id=record_id_for(seq), **fields)
             rec = rec.with_gw_sig(self._sign(rec.signing_bytes()))
             self.rundir.append(rec)
-        except BaseException:
+        except BaseException as e:
             # state may already be committed under `seq`: never retry, never reuse the seq. The run stops here.
             self.aborted = True
             self._reserved = None
+            if isinstance(e, Exception) and not isinstance(e, RecorderAborted):
+                raise RecorderAborted(f"append of seq {seq} failed ({type(e).__name__}: {e}); recorder aborted") from e
             raise
         self.seq, self.head, self._reserved = seq, rec.hash, None
         return rec

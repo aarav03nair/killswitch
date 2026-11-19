@@ -162,3 +162,9 @@
 | Per-conn flood budget (F8b) | One frame per tick already bounds records |
 | LLM agent (D9) | Stretch goal, only if green by 30 Nov |
 | Field objects for non-sensitive fields | F2+x deliberately keeps an honest row conflict |
+
+## Amendments
+
+| id | Amends | Change | Source | Test |
+|---|---|---|---|---|
+| G1-a | G1 | System tools gain `ks.seed` (signer `ks.gateway`). It is valid only as record seq 1, tick 0, on `c-0`, with an empty read_set, and its write_set must equal `seed_state`. Any other admitted `ks.seed` fails verify as `seed_invalid` (TAMPER). The seed record stops using `ks.dispatch`, so G4 stays pure. Contracts 1.3.0, additive. G1 is otherwise unchanged | ⚑ D-15, decided by Aarav on 19 Nov (B3-43, maya) | `tests/contracts/test_contracts_13.py` |

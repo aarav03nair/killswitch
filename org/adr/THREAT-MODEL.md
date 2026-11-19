@@ -84,3 +84,4 @@ RT7 boundary: marking a side-store entry `redacted` passes `verify` by design. R
 ## Errata (Call #3, 19 Nov 2026)
 - Errata (SKEL-01) finding 1: dumpable flag set after exec (Live setup).
 - Errata (SKEL-01) finding 6: repro = gateway holds the witness key, never anchored (Live setup, RT13 row). No claim changes.
+- Known limit (B3-16, interface rule 7 "coarse reads"): aggregate and scan reads list only rows live at scan time. A scan that finds nothing records no read (absence reads deferred to 2.0), and `Store.read_table` skips deleted rows, so a row deleted before a scan goes unrecorded and its output is never repaired. A point read of a deleted row does record it. No v1 adapter calls `read_table`, so no F-scenario hits this. No claim changes.

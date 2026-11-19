@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "ks run/inject/verify/contain/recover/repro/bench per ADR-07 with contracts Exit codes",
   "acceptance": [
     "Every ADR-07 command parses, --help lists it, bad args exit Exit.USAGE",
@@ -18,13 +18,58 @@
     "B3-10"
   ],
   "deliverable": "src/ks/cli/",
-  "summary": "",
-  "review": "",
+  "summary": "Review fixes: CLI builds ks.runtime.RunOptions (no signature introspection); NotImplementedError -> 'not yet implemented'+IO, ValueError -> USAGE. --hold 0 forwarded; run --fault validated via ks.inject.world_fault and needs --scenario world; _world_fault deleted; inject --ticks default 120; inject run_id world-<fault>-s<seed>. Added placeholder-list test. tests/cli 33 pass; make smoke OK. Note: ks.runtime.run lazy wrapper gets shadowed by the submodule after first import, CLI resolves around it (maya may fix).",
+  "review": "[maya · changes] Good: 10 commands parse, USAGE=64 on bad args, repro real (banner, DIVERGED), run/verify output byte-unchanged (smoke grep safe), suite green incl. container. Decisions: (a) Signature introspection is out. It silently accepts everything if run() ever grows **kw and breaks on a renamed kwarg. I (maya, ks.runtime owner) add a frozen ks.runtime.RunOptions(fault, culprit, hold, pause_at, step, rogue, slot, decisions, with_baselines) and run(..., options=); run raises NotImplementedError for fields it does not serve yet; CLI builds RunOptions and maps NotImplementedError to the not-yet message. (b) No new exit code during the freeze; IO plus the fixed 'not yet implemented' stderr is accepted as a transient only. Every placeholder must be gone before the finale; add a test listing remaining placeholders so it is visible. Required fixes: (1) --hold 0 is dropped ('if v:'), but H=0 is a bench value; forward when not None. (2) ks run --fault is not validated (F99 reaches runtime; also accepted with --scenario skeleton): validate via ks.inject like inject does, and require --scenario world. (3) Move _world_fault (F2+x -> f2plus_x) into ks.inject so CLI, RunConfig.fault and the scorer share one mapping. (4) inject --ticks default 10 makes t_inject 2..5 and is shorter than QUIET_TICKS; default 120 per ADR-06-metrics. (5) inject default run_id should include the fault so it does not collide with the plain world run dir.\n\n[maya · done] All five fixes verified: --hold 0 forwarded via RunOptions; run --fault F99 and --fault with --scenario skeleton exit 64; world_fault lives in ks.inject.spec; inject --ticks 120; run_id world-<fault>-s<seed>; placeholder test present. tests/cli green. Serial full suite: 715 passed, 1 failed = tests/gateway/test_b341.py (nisha's B3-41 WIP, untracked), not B3-12; test_world_runtime all pass. Shadowing fixed in ks.runtime/__init__.py (ks.runtime.run is now the callable submodule in any import order; tests/runtime/test_runtime_run_export.py). Follow-up for ishaan: delete the isinstance(ModuleType) workaround in _launch and call ks.runtime.run(...) directly.",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 17:46",
+      "who": "ishaan",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "19 Nov 17:47",
+      "who": "ishaan",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 17:47",
+      "who": "ishaan",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "19 Nov 17:50",
+      "who": "maya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 21:01",
+      "who": "maya",
+      "msg": "→ changes: RunOptions landed: ks.runtime.RunOptions(*, fault: str|None=None, culprit: str|None=None, hold: int|None=None, pause_at: tuple[int,...]|None=None, step: bool=False, rogue: PathLike|None=None, slot: str|None=None, decisions: PathLike|None=None, with_baselines: bool=False), frozen, validates combos (ValueError); run(..., options: RunOptions|None=None) raises NotImplementedError for fields not in ks.runtime.options.SERVED (empty today) before creating anything. tests/runtime/test_run_options.py"
+    },
+    {
+      "t": "19 Nov 21:05",
+      "who": "ishaan",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 21:05",
+      "who": "ishaan",
+      "msg": "→ in_review: review fixes done"
+    },
+    {
+      "t": "19 Nov 21:07",
+      "who": "maya",
+      "msg": "review: done"
+    },
+    {
+      "t": "19 Nov 21:07",
+      "who": "pmo",
+      "msg": "→ done: PMO removed the ModuleType workaround in _launch per maya's review (ks.runtime.run is now the patchable seam); tests/cli 38 passed, native ks run OK."
     }
   ]
 }

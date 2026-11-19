@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "Kabir F7: coarse reads must list every row and field object read",
   "acceptance": [
     "Every aggregate/scan adapter is enumerated by the test; each records every row read plus its field objects",
@@ -17,13 +17,48 @@
     "B3-06"
   ],
   "deliverable": "tests/world/test_aggregate_reads.py",
-  "summary": "",
-  "review": "",
+  "summary": "Review fixes: ADR-05 line now states read_table skips tombstones (deleted-before-scan rows unrecorded, never repaired; point read records them; no v1 adapter calls read_table). Test asserts NO_READ disjoint from AGGREGATE and JOIN.",
+  "review": "[kabir · changes] Consistent with CALL-02 'enumerated rows suffice'; 20/20 tests/world pass. Sets-union equality catches an unclassified new adapter; read_table suppliers asserts exact rows+iban; docs.write asserts exact rows+ver/hash. Changes: (1) ADR-05 line understates the limit: read_table skips tombstoned rows, so a row deleted before a scan (e.g. bad crm.delete_customer) is unlisted and the scan's output is not repaired after restore. State it: 'rows absent at scan time, never created or deleted, are not listed; point reads of a deleted row do record its tombstone; no v1 adapter calls read_table, so no F-scenario hits this'. Rows created after a scan are correctly not taint-relevant. (2) Assert NO_READ disjoint from AGGREGATE and JOIN. I will add the matching known-limit line to THREAT-MODEL (claim 7 says 'coarse reads').\n\n[kabir · done] Both changes verified: ADR-05 bullet states tombstone limit accurately (deleted-before-scan unrecorded, never repaired; point read records it; no v1 adapter calls read_table); NO_READ disjointness asserted (line 23). Matching known-limit line added to THREAT-MODEL Errata, wording agrees. tests/world 20 passed.",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 17:45",
+      "who": "tara",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "19 Nov 17:45",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 17:45",
+      "who": "tara",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "19 Nov 17:46",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 17:46",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 17:46",
+      "who": "tara",
+      "msg": "→ in_review: Kabir's two changes applied; tests/world green"
+    },
+    {
+      "t": "19 Nov 17:47",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

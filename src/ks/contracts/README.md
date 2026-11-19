@@ -1,4 +1,4 @@
-# ks.contracts: C1–C6 reference (CON-01 → CON-02 → B3-01, contracts **1.2.0**, frozen 22 Nov)
+# ks.contracts: C1–C6 reference (CON-01 → CON-02 → B3-01 → B3-43, contracts **1.3.0**, frozen 22 Nov)
 
 Import from `ks.contracts`, never from submodules. Every type is a frozen pydantic model that rejects unknown
 fields. Each one has `to_canonical()` / `from_canonical()` (strict: the bytes must already be canonical) and
@@ -57,6 +57,7 @@ rec = rec.with_gw_sig(gw_key.sign(rec.signing_bytes()))
 ## Rules the types enforce (kabir §4; the rest live in the gateway)
 - **Unknown action class is rejected.** `class U` ⇒ `deny` (rule 6).
 - **Every decision has a reason code.** `reason` must fit the `decision` (`REASONS_FOR`), and `exec` ⇒ `ok`.
+- **A tool that raises is still recorded (rule 11, v1.3).** Admitted envelope, tool/dispatcher exception: roll back the state txn, record `deny/tool_error` with `sig_ok=true`, no read/write set, no outbox ids, no `result_hash`. The exception text is not recorded.
 - **Denials have no effects.** `deny` carries no read set, write set, outbox items or result. `hold` carries no writes or result (rule 11: denials are still recorded).
 - **Attribution (Q9).** The record embeds the claimed `agent_id` and `act_chain` plus `sig_ok`. Read attribution **only** through `rec.attributed_agent`, which is `None` for `bad_sig`/`schema`. A forged envelope is never counted against the agent it claims to be.
 - **Anti-framing (D7).**
@@ -89,6 +90,7 @@ Each is a recorded envelope on `c-0`. Every outbox status change carries a `writ
 | `ks.dispatch` | `ks.gateway` | dispatch | read_set = lineage ∪ `outbox:<id>@ver`; write_set = status change (G4, F4) |
 | `ks.alert` | `ks.monitor` | `Alert.to_obj()` | binds every alert into the chain; FROZEN and TTI come from these (F6) |
 | `ks.approve` | `ks.operator` | `Approval` | binds a plan by hash and step list (G6, F5) |
+| `ks.seed` | `ks.gateway` | `{"seed": <scenario>}` | v1.3, D-15 (amends G1). Record seq 1 only: tick 0, `c-0`, read_set and outbox empty, write_set == `seed_state` at seq 1 (`Record.seed_problems()`; verify → `seed_invalid`). A denied `ks.seed` (agent) is an ordinary denial |
 | `ks.recover.<op>` | `ks.recovery` | `RecoverArgs` | `<op>` ∈ `StepOp`; `hold/stale_plan` if `expect` moved; `deny/recovery_frozen` while frozen |
 
 ## Run dir, determinism and verify (C6)
@@ -117,6 +119,20 @@ Each is a recorded envelope on `c-0`. Every outbox status change carries a `writ
 Metric and score keys and the `effects.jsonl` schema (tara, ADR-06); policy rule ids (nisha, ADR-03); the store implementation (vikram, ADR-05); side-store and verify internals (arjun, ADR-02).
 
 ## Changelog
+
+### 1.3.0 (B3-43, 19 Nov; D-15) — additive only
+Nothing renamed or removed. Tests: `tests/contracts/test_contracts_13.py`.
+
+- **ids:** `SEED_TOOL = "ks.seed"` in `SYSTEM_TOOLS`, executed by `ks.gateway` only. Aarav's D-15 (19 Nov) amends
+  CALL-02 G1; the seed record (D-SEQ1) stops borrowing `ks.dispatch`, which G4 reserves for outbox dispatch.
+- **C2:** `Record.seed_problems()`: an admitted `ks.seed` must be exec at seq 1, tick 0, verified `ks.gateway` on
+  `c-0`, empty read_set and outbox, no `reexec_of`. Deny reason `tool_error` (B3-11 finding 3): an admitted
+  envelope whose tool raised, recorded with no effects (rule 11).
+- **C6:** verify reason `seed_invalid` → TAMPER: `seed_problems()` non-empty, or write_set differs from
+  `ks.world.scenario.seed_state` on an empty store at seq 1 (`ks.verify.core.expected_seed_writes`).
+- **Schemas:** regenerated (version string; `c2.record` reason enum gains `tool_error`).
+
+**Golden hashes.** Only `doc:run_config` re-pinned (`contracts_version` = 1.3.0 in the sample).
 
 ### 1.2.0 (B3-01, 19 Nov; CALL-03/maya-plan §2) — additive only
 Closes SKEL-01 findings 2–4 and the contract parts of R3 and F9. Nothing renamed or removed: every 1.1 type,

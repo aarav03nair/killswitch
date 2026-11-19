@@ -11,13 +11,14 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ks.contracts import (CONTRACTS_VERSION, SYSTEM_PRINCIPALS, RunAnchor, RunConfig, RunDir, canonical)
-from ks.contracts.rundir import TIMING, WITNESS, WITNESS_HEADS_DIR
+from ks.contracts.rundir import STATE_DB, TIMING, WITNESS, WITNESS_HEADS_DIR
 from ks.gateway import Gateway
 from ks.identity import KeyStore, SignerService, derive_key_bytes, load_repro_secret
 from ks.recorder import Recorder
 from ks.witness import WitnessLink, open_witness_fds
 
 from .barrier import AgentConn, TickBarrier
+from .options import RunOptions
 from .spawn import (WITNESS_UID, agent_uid, kill_uids, pids_with_uids, plan_agent_uids, proc_uid, set_nondumpable,
                     set_oom_score_adj, spawn_child)
 from .setup import IsolationError, default_run_id, isolation_problems, refuse_existing, scenario as _scenario
@@ -82,12 +83,17 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
         repro_secret: str | os.PathLike[str] | None = None, tick_deadline_ms: int = 2000,
         separate_uids: bool | None = None, run_id: str | None = None, scenario: str = "skeleton",
         say: Callable[[str], None] = lambda s: print(s, flush=True),
-        _force_agent_uids: list[int] | None = None) -> RunResult:
+        options: RunOptions | None = None, _force_agent_uids: list[int] | None = None) -> RunResult:
     """Run ``scenario`` (``skeleton`` or the 10-agent ``world``, B3-10). ``separate_uids=None`` means "if root".
     Raises ValueError on bad arguments, FileExistsError if ``out`` exists, RuntimeError if the environment refuses
     (stray processes under our uids) and IsolationError if the /proc readback contradicts RunConfig.isolation
     (before tick 0). ``_force_agent_uids`` is a test hook that spawns agents under other uids than planned, to
-    prove the readback abort; it is not reachable from the CLI."""
+    prove the readback abort; it is not reachable from the CLI. ``options`` carries the scenario knobs (B3-12);
+    any field not yet served raises NotImplementedError before anything is created or spawned."""
+    if options is not None and not isinstance(options, RunOptions):
+        raise TypeError("options must be a ks.runtime.RunOptions")
+    if options is not None and (todo := options.unserved()):
+        raise NotImplementedError(f"runtime does not serve {', '.join(todo)} yet")
     if (agents is not None and agents < 1) or ticks < 1:
         raise ValueError("need at least one agent and one tick")
     sc = _scenario(scenario, agents=agents, seed=seed, ticks=ticks)
@@ -129,6 +135,7 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
                            secret=secret)
     epochs: dict[str, int | None] = {a: 0 for a in ids}
     conns: list[AgentConn] = []
+    store = None
     witness: WitnessLink | None = None
     iso = Isolation(separate_uids=separate)
     try:
@@ -174,7 +181,14 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
                                  f"{config.isolation}, aborting before tick 0: " + "; ".join(problems))
 
         recorder = Recorder(rd, keys.signer("ks.gateway"))
-        gateway = Gateway(config, keyring, recorder, epochs.get, dispatcher=sc.dispatcher())
+        gkw: dict = {}
+        if sc.name == "world":  # B3-41: the world runs over ks.state, with the seed record (D-SEQ1) and WorldPolicy
+            from ks.policy import WorldPolicy
+            from ks.world.scenario import open_world_store, seed_state
+            store = open_world_store(rd.path / STATE_DB)
+            gkw = dict(store=store, seed=lambda s, q: seed_state(s, seq=q), sign=keys.signer("ks.gateway"),
+                       policy=WorldPolicy())
+        gateway = Gateway(config, keyring, recorder, epochs.get, dispatcher=sc.dispatcher(), **gkw)
         signer = SignerService({a: keys.private(a) for a in ids}, epochs.get)
         barrier = TickBarrier(conns, gateway, signer, witness, tick_deadline_ms / 1000)
         timing, stalls, misses = [], 0, 0
@@ -187,6 +201,8 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
         rd.write(TIMING, b"".join(timing))
     finally:
         _teardown(conns, witness, our_uids)
+        if store is not None:
+            store.close()
 
     last = witness.newest if witness is not None else None  # newest verified ack, late ones drained at close (M1)
     anchor = RunAnchor.of(last, keyring, config) if last is not None else None

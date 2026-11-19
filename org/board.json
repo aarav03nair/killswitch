@@ -370,6 +370,12 @@
       "title": "ADR word cap waived after the freeze (≤1,500 words)",
       "status": "accepted",
       "summary": "Post-freeze ADRs carry their amendments in place. Length alone is not a defect; reviewers judge correctness. ADR-06-metrics.md is an intentional companion file."
+    },
+    {
+      "id": "D-15",
+      "title": "Seed record (seq 1) gets its own system tool ks.seed",
+      "status": "decided",
+      "summary": "The frozen system-tool list (CALL-02 G1) has no seed tool, so B3-11 records the seed as ks.dispatch, which G4 reserves for outbox dispatch. Maya recommends adding ks.seed (contracts 1.3, additive, signed by ks.gateway only, valid only at seq 1, tick 0). Until then the seed stays ks.dispatch with policy_rule gateway.seed. DECIDED by Aarav 19 Nov: add ks.seed (contracts 1.3, additive; amends CALL-02 G1). Owner maya (B3-43), then nisha switches the seed write."
     }
   ],
   "risks": [
@@ -403,301 +409,6 @@
     }
   ],
   "activity": [
-    {
-      "t": "19 Nov 01:05",
-      "who": "anaya",
-      "msg": "moved ABS-05 to in_review"
-    },
-    {
-      "t": "19 Nov 05:57",
-      "who": "anaya",
-      "msg": "moved ABS-01 to in_review"
-    },
-    {
-      "t": "19 Nov 05:58",
-      "who": "kabir",
-      "msg": "reviewed ABS-05: done"
-    },
-    {
-      "t": "19 Nov 05:59",
-      "who": "pmo",
-      "msg": "reviewed ABS-01: done"
-    },
-    {
-      "t": "19 Nov 05:59",
-      "who": "panel",
-      "msg": "reviewed ABS-02: done"
-    },
-    {
-      "t": "19 Nov 05:59",
-      "who": "panel",
-      "msg": "reviewed SEC-01: changes"
-    },
-    {
-      "t": "19 Nov 06:00",
-      "who": "panel",
-      "msg": "reviewed ABS-06: changes"
-    },
-    {
-      "t": "19 Nov 06:01",
-      "who": "maya",
-      "msg": "moved CON-01 to in_review"
-    },
-    {
-      "t": "19 Nov 06:02",
-      "who": "kabir",
-      "msg": "moved SEC-01 to in_review"
-    },
-    {
-      "t": "19 Nov 06:04",
-      "who": "zoya",
-      "msg": "moved ABS-06 to in_review"
-    },
-    {
-      "t": "19 Nov 06:04",
-      "who": "ishaan",
-      "msg": "moved ADR-07 to in_progress"
-    },
-    {
-      "t": "19 Nov 06:04",
-      "who": "kabir",
-      "msg": "moved SEC-03 to in_progress"
-    },
-    {
-      "t": "19 Nov 06:04",
-      "who": "nisha",
-      "msg": "moved ADR-04 to in_progress"
-    },
-    {
-      "t": "19 Nov 06:04",
-      "who": "nisha",
-      "msg": "moved ADR-03 to in_progress"
-    },
-    {
-      "t": "19 Nov 06:04",
-      "who": "arjun",
-      "msg": "moved ADR-01 to in_progress"
-    },
-    {
-      "t": "19 Nov 06:04",
-      "who": "arjun",
-      "msg": "moved ADR-02 to in_progress"
-    },
-    {
-      "t": "19 Nov 06:04",
-      "who": "nisha",
-      "msg": "moved ADR-03 to in_review"
-    },
-    {
-      "t": "19 Nov 06:04",
-      "who": "nisha",
-      "msg": "moved ADR-04 to in_review"
-    },
-    {
-      "t": "19 Nov 06:04",
-      "who": "arjun",
-      "msg": "moved ADR-01 to in_review"
-    },
-    {
-      "t": "19 Nov 06:04",
-      "who": "arjun",
-      "msg": "moved ADR-02 to in_review"
-    },
-    {
-      "t": "19 Nov 06:04",
-      "who": "tara",
-      "msg": "moved ADR-06 to in_progress"
-    },
-    {
-      "t": "19 Nov 06:04",
-      "who": "tara",
-      "msg": "moved ADR-06 to in_review"
-    },
-    {
-      "t": "19 Nov 06:05",
-      "who": "ishaan",
-      "msg": "moved ADR-07 to in_review"
-    },
-    {
-      "t": "19 Nov 06:06",
-      "who": "vikram",
-      "msg": "moved ADR-05 to in_progress"
-    },
-    {
-      "t": "19 Nov 06:06",
-      "who": "maya",
-      "msg": "moved ADR-00 to in_progress"
-    },
-    {
-      "t": "19 Nov 06:07",
-      "who": "vikram",
-      "msg": "moved ADR-05 to in_review"
-    },
-    {
-      "t": "19 Nov 06:07",
-      "who": "panel",
-      "msg": "reviewed ABS-06: done"
-    },
-    {
-      "t": "19 Nov 06:07",
-      "who": "panel",
-      "msg": "reviewed SEC-01: done"
-    },
-    {
-      "t": "19 Nov 06:07",
-      "who": "maya",
-      "msg": "moved ADR-00 to in_review"
-    },
-    {
-      "t": "19 Nov 06:10",
-      "who": "zoya",
-      "msg": "reviewed ADR-07: changes"
-    },
-    {
-      "t": "19 Nov 06:12",
-      "who": "kabir",
-      "msg": "reviewed CON-01: changes"
-    },
-    {
-      "t": "19 Nov 06:12",
-      "who": "kabir",
-      "msg": "moved SEC-03 to in_review"
-    },
-    {
-      "t": "19 Nov 06:15",
-      "who": "panel",
-      "msg": "reviewed ADR-00: changes"
-    },
-    {
-      "t": "19 Nov 06:16",
-      "who": "anaya",
-      "msg": "reviewed ADR-06: changes"
-    },
-    {
-      "t": "19 Nov 06:18",
-      "who": "maya",
-      "msg": "reviewed ADR-04: changes"
-    },
-    {
-      "t": "19 Nov 06:18",
-      "who": "maya",
-      "msg": "reviewed ADR-05: changes"
-    },
-    {
-      "t": "19 Nov 06:18",
-      "who": "maya",
-      "msg": "reviewed ABS-04: changes"
-    },
-    {
-      "t": "19 Nov 06:19",
-      "who": "maya",
-      "msg": "reviewed SEC-02: changes"
-    },
-    {
-      "t": "19 Nov 06:19",
-      "who": "kabir",
-      "msg": "reviewed ADR-01: changes"
-    },
-    {
-      "t": "19 Nov 06:19",
-      "who": "kabir",
-      "msg": "reviewed ADR-02: changes"
-    },
-    {
-      "t": "19 Nov 06:19",
-      "who": "kabir",
-      "msg": "reviewed ADR-03: changes"
-    },
-    {
-      "t": "19 Nov 06:20",
-      "who": "pmo",
-      "msg": "opened ORG-04 — Call #2: design freeze — resolve all cross-ADR issues"
-    },
-    {
-      "t": "19 Nov 06:20",
-      "who": "pmo",
-      "msg": "moved ORG-04 to in_progress"
-    },
-    {
-      "t": "19 Nov 06:33",
-      "who": "pmo",
-      "msg": "moved ORG-04 to done"
-    },
-    {
-      "t": "19 Nov 06:33",
-      "who": "maya",
-      "msg": "opened CON-02 — Contracts v1.1.0 per design freeze"
-    },
-    {
-      "t": "19 Nov 06:33",
-      "who": "zoya",
-      "msg": "opened ABS-08 — Update abstract kit for the design freeze (D13, hero, S*)"
-    },
-    {
-      "t": "19 Nov 06:34",
-      "who": "maya",
-      "msg": "moved CON-02 to in_progress"
-    },
-    {
-      "t": "19 Nov 06:35",
-      "who": "arjun",
-      "msg": "moved ADR-01 to in_review"
-    },
-    {
-      "t": "19 Nov 06:35",
-      "who": "arjun",
-      "msg": "moved ADR-02 to in_review"
-    },
-    {
-      "t": "19 Nov 06:35",
-      "who": "ishaan",
-      "msg": "moved ADR-07 to in_review"
-    },
-    {
-      "t": "19 Nov 06:36",
-      "who": "tara",
-      "msg": "moved ADR-06 to in_review"
-    },
-    {
-      "t": "19 Nov 06:36",
-      "who": "nisha",
-      "msg": "moved ADR-03 to in_review"
-    },
-    {
-      "t": "19 Nov 06:36",
-      "who": "nisha",
-      "msg": "moved ADR-04 to in_review"
-    },
-    {
-      "t": "19 Nov 10:52",
-      "who": "pmo",
-      "msg": "reviewed ENG-00: done"
-    },
-    {
-      "t": "19 Nov 10:55",
-      "who": "vikram",
-      "msg": "moved ADR-05 to in_review"
-    },
-    {
-      "t": "19 Nov 10:56",
-      "who": "maya",
-      "msg": "moved ADR-00 to in_review"
-    },
-    {
-      "t": "19 Nov 10:58",
-      "who": "anaya",
-      "msg": "reviewed ADR-06: done"
-    },
-    {
-      "t": "19 Nov 10:58",
-      "who": "maya",
-      "msg": "reviewed ADR-04: changes"
-    },
-    {
-      "t": "19 Nov 10:58",
-      "who": "maya",
-      "msg": "reviewed ADR-05: changes"
-    },
     {
       "t": "19 Nov 10:58",
       "who": "kabir",
@@ -1402,6 +1113,301 @@
       "t": "19 Nov 17:29",
       "who": "nisha",
       "msg": "moved B3-11 to in_review"
+    },
+    {
+      "t": "19 Nov 17:33",
+      "who": "kabir",
+      "msg": "reviewed B3-11: changes"
+    },
+    {
+      "t": "19 Nov 17:41",
+      "who": "pmo",
+      "msg": "opened B3-43 — Contracts 1.3: ks.seed system tool (D-15) + deny reason for a dispatcher that raises"
+    },
+    {
+      "t": "19 Nov 17:42",
+      "who": "vikram",
+      "msg": "moved B3-18 to in_progress"
+    },
+    {
+      "t": "19 Nov 17:43",
+      "who": "nisha",
+      "msg": "moved B3-11 to in_review"
+    },
+    {
+      "t": "19 Nov 17:45",
+      "who": "tara",
+      "msg": "moved B3-17 to in_progress"
+    },
+    {
+      "t": "19 Nov 17:45",
+      "who": "tara",
+      "msg": "moved B3-16 to in_progress"
+    },
+    {
+      "t": "19 Nov 17:45",
+      "who": "tara",
+      "msg": "moved B3-17 to in_review"
+    },
+    {
+      "t": "19 Nov 17:45",
+      "who": "tara",
+      "msg": "moved B3-16 to in_review"
+    },
+    {
+      "t": "19 Nov 17:46",
+      "who": "kabir",
+      "msg": "reviewed B3-16: changes"
+    },
+    {
+      "t": "19 Nov 17:46",
+      "who": "ishaan",
+      "msg": "moved B3-12 to in_progress"
+    },
+    {
+      "t": "19 Nov 17:46",
+      "who": "tara",
+      "msg": "moved B3-16 to in_review"
+    },
+    {
+      "t": "19 Nov 17:46",
+      "who": "maya",
+      "msg": "moved B3-43 to in_progress"
+    },
+    {
+      "t": "19 Nov 17:46",
+      "who": "maya",
+      "msg": "moved B3-43 to in_review"
+    },
+    {
+      "t": "19 Nov 17:47",
+      "who": "ishaan",
+      "msg": "moved B3-12 to in_review"
+    },
+    {
+      "t": "19 Nov 17:47",
+      "who": "kabir",
+      "msg": "reviewed B3-16: done"
+    },
+    {
+      "t": "19 Nov 17:48",
+      "who": "nisha",
+      "msg": "moved B3-11 to in_review"
+    },
+    {
+      "t": "19 Nov 17:50",
+      "who": "vikram",
+      "msg": "moved B3-18 to in_review"
+    },
+    {
+      "t": "19 Nov 17:50",
+      "who": "pmo",
+      "msg": "opened B3-44 — World conforms to CALL-02 B2/B3 on a real F2+ run: triage kept, docs independent"
+    },
+    {
+      "t": "19 Nov 17:50",
+      "who": "kabir",
+      "msg": "reviewed B3-43: done"
+    },
+    {
+      "t": "19 Nov 17:50",
+      "who": "maya",
+      "msg": "reviewed B3-17: changes"
+    },
+    {
+      "t": "19 Nov 17:50",
+      "who": "maya",
+      "msg": "reviewed B3-12: changes"
+    },
+    {
+      "t": "19 Nov 17:50",
+      "who": "tara",
+      "msg": "moved B3-44 to in_progress"
+    },
+    {
+      "t": "19 Nov 17:50",
+      "who": "pmo",
+      "msg": "moved B3-15 to todo"
+    },
+    {
+      "t": "19 Nov 17:51",
+      "who": "kabir",
+      "msg": "reviewed B3-11: done"
+    },
+    {
+      "t": "19 Nov 17:51",
+      "who": "kabir",
+      "msg": "moved B3-11 to done"
+    },
+    {
+      "t": "19 Nov 17:51",
+      "who": "pmo",
+      "msg": "moved B3-41 to todo"
+    },
+    {
+      "t": "19 Nov 17:52",
+      "who": "tara",
+      "msg": "moved B3-44 to in_review"
+    },
+    {
+      "t": "19 Nov 17:52",
+      "who": "maya",
+      "msg": "opened B3-45 — Decision: t0_seq_est walk and the suspect's self-reads (A8 conservative vs B2 hero C=0)"
+    },
+    {
+      "t": "19 Nov 17:52",
+      "who": "maya",
+      "msg": "reviewed B3-18: changes"
+    },
+    {
+      "t": "19 Nov 17:52",
+      "who": "nisha",
+      "msg": "moved B3-14 to in_progress"
+    },
+    {
+      "t": "19 Nov 17:53",
+      "who": "maya",
+      "msg": "reviewed B3-44: changes"
+    },
+    {
+      "t": "19 Nov 17:56",
+      "who": "nisha",
+      "msg": "moved B3-14 to in_review"
+    },
+    {
+      "t": "19 Nov 17:59",
+      "who": "arjun",
+      "msg": "moved B3-15 to in_review"
+    },
+    {
+      "t": "19 Nov 17:59",
+      "who": "arjun",
+      "msg": "moved B3-42 to in_review"
+    },
+    {
+      "t": "19 Nov 18:45",
+      "who": "pmo",
+      "msg": "moved B3-45 to done"
+    },
+    {
+      "t": "19 Nov 18:45",
+      "who": "pmo",
+      "msg": "opened B3-46 — B3-45 option C: read entries tagged view|tool; t0 follows suspect self-reads through tool reads only"
+    },
+    {
+      "t": "19 Nov 18:47",
+      "who": "vikram",
+      "msg": "moved B3-18 to in_review"
+    },
+    {
+      "t": "19 Nov 18:48",
+      "who": "tara",
+      "msg": "moved B3-17 to in_review"
+    },
+    {
+      "t": "19 Nov 18:48",
+      "who": "tara",
+      "msg": "moved B3-44 to in_review"
+    },
+    {
+      "t": "19 Nov 21:01",
+      "who": "maya",
+      "msg": "moved B3-12 to changes"
+    },
+    {
+      "t": "19 Nov 21:01",
+      "who": "kabir",
+      "msg": "reviewed B3-14: done"
+    },
+    {
+      "t": "19 Nov 21:01",
+      "who": "kabir",
+      "msg": "reviewed B3-15: changes"
+    },
+    {
+      "t": "19 Nov 21:01",
+      "who": "kabir",
+      "msg": "reviewed B3-42: done"
+    },
+    {
+      "t": "19 Nov 21:01",
+      "who": "maya",
+      "msg": "reviewed B3-17: done"
+    },
+    {
+      "t": "19 Nov 21:01",
+      "who": "maya",
+      "msg": "reviewed B3-18: done"
+    },
+    {
+      "t": "19 Nov 21:01",
+      "who": "tara",
+      "msg": "moved B3-44 to in_review"
+    },
+    {
+      "t": "19 Nov 21:01",
+      "who": "pmo",
+      "msg": "moved B3-41 to todo"
+    },
+    {
+      "t": "19 Nov 21:02",
+      "who": "maya",
+      "msg": "reviewed B3-17: done"
+    },
+    {
+      "t": "19 Nov 21:02",
+      "who": "maya",
+      "msg": "reviewed B3-44: done"
+    },
+    {
+      "t": "19 Nov 21:03",
+      "who": "nisha",
+      "msg": "moved B3-41 to in_progress"
+    },
+    {
+      "t": "19 Nov 21:05",
+      "who": "ishaan",
+      "msg": "moved B3-12 to in_review"
+    },
+    {
+      "t": "19 Nov 21:05",
+      "who": "arjun",
+      "msg": "moved B3-15 to in_review"
+    },
+    {
+      "t": "19 Nov 21:05",
+      "who": "vikram",
+      "msg": "moved B3-21 to in_progress"
+    },
+    {
+      "t": "19 Nov 21:07",
+      "who": "maya",
+      "msg": "reviewed B3-12: done"
+    },
+    {
+      "t": "19 Nov 21:07",
+      "who": "kabir",
+      "msg": "reviewed B3-15: done"
+    },
+    {
+      "t": "19 Nov 21:07",
+      "who": "pmo",
+      "msg": "moved B3-31 to todo"
+    },
+    {
+      "t": "19 Nov 21:07",
+      "who": "pmo",
+      "msg": "moved B3-12 to done"
+    },
+    {
+      "t": "19 Nov 21:10",
+      "who": "nisha",
+      "msg": "moved B3-41 to in_review"
+    },
+    {
+      "t": "19 Nov 21:11",
+      "who": "vikram",
+      "msg": "moved B3-21 to in_review"
     }
   ]
 }

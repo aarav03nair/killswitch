@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "Fault injection per ADR-06 with t_inject seeded in [T/4, T/2], scorer-only fields",
   "acceptance": [
     "F2+ writes S-17.iban v2 at t_inject and S-22 price x10 at t_inject+1; billing/payments/comms/reporter consume; inventory/docs untouched (test)",
@@ -19,13 +19,53 @@
     "B3-06"
   ],
   "deliverable": "src/ks/inject/",
-  "summary": "",
-  "review": "",
+  "summary": "Review fixes: one t_inject draw (ks.inject.t_inject_for uses world/hero_tick; runtime.setup.hero_tick now calls it, import of draw_int removed, only edit in ks.runtime); check_hero_guard(spec, ticks, suspend_tick) raises if suspend > t_inject+QUIET for F2+/F2+x; make_spec rejects t_inject outside [T/4,T/2]; ks.inject.world_fault(name) shared mapping. Tests added.",
+  "review": "[maya · changes] Good: t_inject_for is uniform on [T/4,T/2] inclusive (draw_int % (hi-lo+1)); InjectSpec reaches no gateway/record code; no ks.runtime import; T2 is a real two-run comparison (faulty vs S* schedules), 50 tests green, container 634 passed. Required: (1) Two sources of truth for t_inject: ks.runtime.setup.hero_tick draws 'world/hero_tick' while t_inject_for draws 'inject/t_inject'; they differ (seed 3: 44 vs 48). Since the world fires F2+ at hero_tick, RunConfig.fault_tick would be wrong once wired. Make setup.hero_tick call ks.inject.t_inject_for (one draw) and add a test asserting equality. (2) check_hero_guard must take suspend_tick and check (t_inject+1, suspend] per ADR-06 B2; if suspend > t_inject+QUIET_TICKS it must raise for F2+/F2+x, not pass silently (C=0 would be faked). (3) make_spec(t_inject=...) must reject values outside [T/4,T/2]. Note (not blocking): T2 compares world logs via repr, not record bytes; the record-level T2 belongs to runtime wiring (B3-10 follow-up). When wired, only the culprit process may receive the fault id; honest agents get hero_tick+variant only.\n\n[maya · done] All three fixes verified on disk. (1) One t_inject draw: t_inject_for draws 'world/hero_tick'; runtime.setup.hero_tick delegates to it; test_one_source_of_truth_for_t_inject checks hero_tick == t_inject_for == make_spec for T in {40,120}, seeds 1..39. (2) check_hero_guard(spec, ticks, suspend_tick) checks (t_inject+1, suspend] and raises past t_inject+QUIET for F2+/F2+x (tested at +QUIET+1). (3) make_spec rejects t_inject outside [T/4,T/2] (both edges tested). world_fault is the shared mapping (CLI B3-12 should switch to it). tests/inject+taint 53 passed; full suite 698 passed. Record-level T2 stays a runtime-wiring follow-up.\n\n[maya · done] All three fixes verified on disk. (1) One t_inject draw: t_inject_for draws 'world/hero_tick'; runtime.setup.hero_tick delegates to it; test_one_source_of_truth_for_t_inject checks hero_tick == t_inject_for == make_spec for T in {40,120}, seeds 1..39. (2) check_hero_guard(spec, ticks, suspend_tick) checks (t_inject+1, suspend] and raises past t_inject+QUIET for F2+/F2+x (tested at +QUIET+1). (3) make_spec rejects t_inject outside [T/4,T/2] (both edges tested). world_fault is the shared mapping (CLI B3-12 should switch to it). tests/inject+taint 53 passed; full suite 692 passed, 8 skipped. Record-level T2 stays a runtime-wiring follow-up.",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 17:45",
+      "who": "tara",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "19 Nov 17:45",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 17:45",
+      "who": "tara",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "19 Nov 17:50",
+      "who": "maya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 18:48",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 18:48",
+      "who": "tara",
+      "msg": "→ in_review: review fixes"
+    },
+    {
+      "t": "19 Nov 21:01",
+      "who": "maya",
+      "msg": "review: done"
+    },
+    {
+      "t": "19 Nov 21:02",
+      "who": "maya",
+      "msg": "review: done"
     }
   ]
 }

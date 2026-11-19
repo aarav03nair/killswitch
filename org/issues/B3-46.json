@@ -1,0 +1,31 @@
+{
+  "id": "B3-46",
+  "title": "B3-45 option C: read entries tagged view|tool; t0 follows suspect self-reads through tool reads only",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "maya",
+  "reviewer": "kabir",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "Closes the self-chained-write under-taint gap while keeping the B2 hero result (Aarav's B3-45 decision C)",
+  "acceptance": [
+    "Contract: each read-set entry carries source view|tool (additive, contracts 1.4); gateway tags view deliveries vs adapter reads (with B3-41)",
+    "ks.taint t0 walk follows the suspect's self-reads through tool reads only; B3-18 self-chain fixture (bad W1, crm tool-reads W1, writes W2, alert on W2) seeds W1; F2+ hero seed unchanged {S-17.iban v2, S-22 v2}",
+    "ADR-05 section 4 amended citing B3-45; CALL-02 amendment note for A8/B2"
+  ],
+  "depends": [
+    "B3-18",
+    "B3-41"
+  ],
+  "deliverable": "src/ks/contracts/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 18:45",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

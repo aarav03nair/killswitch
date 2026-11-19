@@ -10,6 +10,7 @@ from .canonical import MAX_SAFE_INT
 
 __all__ = [
     "AGENT_ID_RE", "PRINCIPAL_RE", "SYSTEM_PRINCIPALS", "SYSTEM_CONN", "SYSTEM_TOOLS", "RECOVER_TOOL_PREFIX",
+    "SEED_TOOL",
     "Hash", "Sig", "Nonce", "AgentId", "PrincipalId", "ActionId", "ConnId", "RecordId", "ToolName", "Token", "Seq",
     "Tick", "NonNeg", "Epoch", "LogicalUs", "PubKey", "record_id_for", "is_system_principal", "is_system_tool",
     "system_tool_signers",
@@ -30,6 +31,11 @@ SYSTEM_CONN = "c-0"
 Every envelope recorded on ``c-0`` claims a system principal. Both directions are Record validators.
 c-0 envelopes are still signature-verified; operator frames reach c-0 only via the peercred socket (J1)."""
 
+SEED_TOOL = "ks.seed"
+"""v1.3 (D-15, amends CALL-02 G1): the seed record. Executed only as record seq 1, tick 0, by ``ks.gateway`` on
+``c-0``, read_set and outbox empty, write_set == the scenario's ``seed_state`` (``Record.seed_problems`` +
+``ks verify`` -> ``seed_invalid``). A denied ``ks.seed`` envelope (e.g. an agent's) is an ordinary denial."""
+
 RECOVER_TOOL_PREFIX = "ks.recover."
 """``ks.recover.<op>``, ``<op>`` a C5 ``StepOp``; signed by ``ks.recovery`` only."""
 
@@ -38,6 +44,7 @@ SYSTEM_TOOLS: dict[str, frozenset[str]] = {
     "ks.dispatch": frozenset({"ks.gateway"}),
     "ks.alert": frozenset({"ks.monitor"}),
     "ks.approve": frozenset({"ks.operator"}),
+    SEED_TOOL: frozenset({"ks.gateway"}),
 }
 """Reserved ``ks.*`` tools -> principals that may execute them (K13), plus ``ks.recover.<op>`` (recovery).
 Each is a recorded envelope on ``c-0``. An agent principal submitting any ``ks.*`` tool is denied

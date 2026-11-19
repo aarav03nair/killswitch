@@ -48,6 +48,15 @@ class SignerService:
         self.refusals[(principal, why)] += 1
         return encode_frame(SignRefusal(reason=why))
 
+    def charge(self, principal: str) -> bool:
+        """Count one signer-socket read that left an unterminated line (a drip) against the per-tick budget.
+        ``False`` once over it: the caller closes the connection (B3-42)."""
+        self._lines[principal] += 1
+        if self._lines[principal] > MAX_SIGNER_LINES_PER_TICK:
+            self.flooded[principal] += 1
+            return False
+        return True
+
     def handle(self, principal: str, line: bytes) -> bytes | None:
         """One request line from ``principal``'s handle -> one reply line: ``SignReply`` or ``SignRefusal``;
         ``None`` once the handle is over its per-tick line budget (no reply, caller closes the connection)."""

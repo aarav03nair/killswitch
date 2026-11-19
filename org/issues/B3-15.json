@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "Complete ADR-02 section 6 record pass and reconcile with findings 4 and 9",
   "acceptance": [
     "Per-record rules: exec ks.control/ks.recover.* only by system principal on c-0 with issued_by == agent_id; epochs fold monotonically; expiry_tick >= tick on exec/hold; ts_us formula. One tamper probe each -> TAMPER first_bad",
@@ -20,8 +20,8 @@
     "B3-09"
   ],
   "deliverable": "src/ks/verify/",
-  "summary": "",
-  "review": "",
+  "summary": "Blocker fixed. Verify no longer trusts the skeleton label: in a skeleton run any record with a non-empty write_set is seed_invalid (exit TAMPER), and an existing state.db is no_state. Kabir's dodge probe is now a regression test in tests/verify/test_record_rules.py, plus a state.db-without-writes test. tests/recorder/test_recorder.py now uses the acme world scenario with a real ks.seed at seq 1. Local run: 694 passed. make smoke passes. Container run: 7 failures in tests/cli and tests/runtime, which Maya is editing (RunOptions); none are in verify or recorder.",
+  "review": "[kabir · changes] Good: ts_us formula, epoch fold, system-tool rule on c-0, seed args from RunConfig, value-vs-hash on head and side (my probe: editing versions.author/seq -> reconcile_mismatch too). Recorder RecorderAborted fix is correct; test_contracts_13 ts edits follow the formula, not weakened. BLOCKER: the skeleton exemption is keyed on the label config.scenario. Probe: scenario='skeleton', seq 1 = gateway ks.dispatch whose write_set is the full world seed (IBANs incl.), matching state.db -> verify exit 0 ok. So a run that writes state dodges the D-15 seed rule by naming itself skeleton (config.json is only bound when --head is given). Fix: key the exemption on the stateless property: if scenario == skeleton, any non-empty write_set or an existing state.db is seed_invalid/no_state. Add that probe as a test. tests/recorder/_fresh_run uses skeleton with state writes and relies on this dodge; move it to a seeded run or a pre-1.3 contracts_version.\n\n[kabir · done] Blocker closed. Re-ran probes: skeleton dodge -> TAMPER seed_invalid first_bad 1; versions.author/seq edit -> reconcile_mismatch. New dodges: world run relabelled skeleton -> seed_invalid at 1 (with or without state.db); with --head -> config_mismatch. Skeleton plus a state.db (where side values live) -> no_state. Recorder rework keeps its meaning: the clean child verifies OK, the crash child is killed between commit and append -> RECONCILE reconcile_mismatch, record = seed + step 1. 400 passed. Non-blocking follow-ups, which are general gaps and not label exemptions: (1) a skeleton record with read_set or outbox_ids still verifies ok. Extend the stateless rule to read_set/outbox_ids, and in world runs check read_set versions against the fold. (2) sidestore/ is not checked by verify for any run.",
   "log": [
     {
       "t": "19 Nov 11:34",
@@ -37,6 +37,41 @@
       "t": "19 Nov 16:30",
       "who": "pmo",
       "msg": "→ todo: Scope note from kabir's B3-09 review: no_state/mismatch reconcile already landed in B3-09. Narrow reconcile to value-vs-hash: an edited value in state.db currently verifies OK (hole). Add edited-state.db tests. Also fix: first append failure raises OSError, not RecorderAborted."
+    },
+    {
+      "t": "19 Nov 17:50",
+      "who": "pmo",
+      "msg": "→ todo: From kabir's B3-43 review (non-blocking): (1) verify must require record seq 1 to be ks.seed for a 1.3 run; a missing seed or a ks.dispatch seed fails. (2) seed check must rebuild seed_state from the run's own scenario and seed args (RunConfig), not defaults."
+    },
+    {
+      "t": "19 Nov 17:59",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 17:59",
+      "who": "arjun",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "19 Nov 21:01",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 21:05",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 21:05",
+      "who": "arjun",
+      "msg": "→ in_review: skeleton dodge closed"
+    },
+    {
+      "t": "19 Nov 21:07",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

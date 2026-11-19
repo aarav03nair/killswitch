@@ -127,3 +127,14 @@ def test_witness_file_owned_by_witness_uid_mode_0600_and_gateway_holds_no_fd(tmp
     lk.close(timeout_s=10)
     assert [WitnessCheckpoint.from_canonical(x) for x in rd.path.joinpath("witness.jsonl").read_bytes().splitlines()] == [cp]
     assert stat.S_IMODE(os.stat(rd.path / "witness.jsonl").st_mode) == 0o600
+
+
+def test_second_head_for_an_already_signed_seq_is_refused(link, tmp_path):
+    """B3-42: equivocation. The witness signed (seq 2, H2); a later, higher-tick push of (seq 2, H3) gets no ack and no line."""
+    link.push(1, H1, 3, timeout_s=10)
+    b = link.push(2, H2, 4, timeout_s=10)
+    assert link.push(2, H3, 5, timeout_s=0.3) is None
+    assert _lines(tmp_path)[-1] == b and len(_lines(tmp_path)) == 2
+    assert len((tmp_path / "heads" / "heads.jsonl").read_bytes().splitlines()) == 2
+    c = link.push(2, H2, 6, timeout_s=10)                 # the same head at a later tick is still fine
+    assert c is not None and c.count == 3

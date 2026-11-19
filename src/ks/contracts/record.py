@@ -30,7 +30,7 @@ from .control import CONTROL_TOOL, Control
 from .envelope import MAX_EXPIRY_TICKS, EnvelopeHeader
 from .hashing import Domain, GENESIS_HASH, args_hash
 from .ids import (RECOVER_TOOL_PREFIX, SYSTEM_CONN, SYSTEM_PRINCIPALS, ConnId, Hash, LogicalUs, PrincipalId,
-                  RecordId, Seq, Sig, Tick, Token, record_id_for, system_tool_signers)
+                  RecordId, SEED_TOOL, Seq, Sig, Tick, Token, record_id_for, system_tool_signers)
 from .state import ReadEntry, WriteEntry, _sorted_unique
 
 __all__ = ["Decision", "ActionClass", "Reason", "REASONS_FOR", "Record", "WitnessCheckpoint", "GENESIS_HASH",
@@ -71,6 +71,10 @@ class Reason(StrEnum):
     OUT_OF_SCOPE = "out_of_scope"
     OVER_QUOTA = "over_quota"            # per-connection budget exceeded (SEC-03 F8); never ``expired``
     RECOVERY_FROZEN = "recovery_frozen"  # recovery action while frozen (verify != OK or tamper/stall alert, M12)
+    TOOL_ERROR = "tool_error"
+    """v1.3 (B3-11 finding 3, rule 11): the envelope was admitted but its tool/dispatcher raised. The state txn is
+    rolled back, so the record has no read/write set, outbox ids or result; ``sig_ok`` is true (admitted).
+    The exception text is not recorded (records hold hashes only)."""
     # hold
     LINEAGE_HOLD = "lineage_hold"
     SENSITIVE_FIELD = "sensitive_field"
@@ -83,7 +87,7 @@ REASONS_FOR = {
     Decision.DENY: frozenset({Reason.BAD_SIG, Reason.SCHEMA, Reason.NONCE_REUSED, Reason.EXPIRED,
                               Reason.LATE_FRAME, Reason.STALE_EPOCH, Reason.SUSPENDED, Reason.REVOKED,
                               Reason.REVOKED_ANCESTOR, Reason.CLASS_U, Reason.OUT_OF_SCOPE, Reason.OVER_QUOTA,
-                              Reason.RECOVERY_FROZEN}),
+                              Reason.RECOVERY_FROZEN, Reason.TOOL_ERROR}),
     Decision.HOLD: frozenset({Reason.LINEAGE_HOLD, Reason.SENSITIVE_FIELD, Reason.NEEDS_APPROVAL,
                               Reason.STALE_PLAN}),
 }
@@ -223,6 +227,28 @@ class Record(Document):
         if self.reason == Reason.STALE_PLAN and not env.tool.startswith(RECOVER_TOOL_PREFIX):
             raise ValueError("stale_plan is only for ks.recover.* steps")
         return self
+
+    def seed_problems(self) -> list[str]:
+        """D-15 structural rule for an admitted ``ks.seed`` record (empty list = fine, also for non-seed records
+        and for denied ``ks.seed`` envelopes). ``ks verify`` adds ``write_set == seed_state`` and reports any
+        problem as ``seed_invalid``."""
+        env = self.envelope
+        if env is None or env.tool != SEED_TOOL or self.decision == Decision.DENY:
+            return []
+        p: list[str] = []
+        if self.decision != Decision.EXEC:
+            p.append("ks.seed is exec or deny, never hold")
+        if self.seq != 1:
+            p.append(f"ks.seed at seq {self.seq}, not 1")
+        if self.tick != 0:
+            p.append(f"ks.seed at tick {self.tick}, not 0")
+        if env.agent_id != "ks.gateway" or not self.sig_ok or self.conn_id != SYSTEM_CONN:
+            p.append("ks.seed must be a verified ks.gateway envelope on c-0")
+        if self.read_set or self.outbox_ids:
+            p.append("ks.seed has no read set and no outbox items")
+        if self.reexec_of is not None:
+            p.append("ks.seed is never a re-execution")
+        return p
 
     # --- construction / integrity -------------------------------------------------------------
     @classmethod

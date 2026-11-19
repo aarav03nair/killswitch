@@ -34,12 +34,12 @@ def test_same_seed_identical_and_seed_matters(tmp_path):
     assert a == b and a != c
 
 
-def test_triage_view_excludes_iban(tmp_path):
+def test_triage_view_has_no_suppliers(tmp_path):
     store = open_world_store(tmp_path / "s.db")
     with store.txn():
         seed_state(store)
     objs = [e.obj for e in build_view(store, "triage")]
-    assert "suppliers:S-17" in objs and "suppliers:S-17.iban" not in objs
+    assert not [o for o in objs if o.startswith("suppliers:")]  # B2: triage sees no supplier rows (its edit reads only S-17 via the adapter)
     assert "suppliers:S-17.iban" in [e.obj for e in build_view(store, "billing")]
     for a in AGENT_IDS:
         v = build_view(store, a)
@@ -94,11 +94,11 @@ class _Spy:
     def __init__(self, store):
         self._s, self.seen = store, {}
 
-    BLOCKED = ("get", "heads", "history", "value_at", "read_table")
+    ALLOWED = ("read", "write_row", "put")  # B3-41: an allowlist; anything else (conn, state_digest, get...) raises
 
     def __getattr__(self, n):
-        if n in self.BLOCKED:
-            raise AssertionError(f"adapter used store.{n}; only _Ctx.read may read state")
+        if n not in self.ALLOWED:
+            raise AssertionError(f"adapter used store.{n}; only _Ctx.read and the two writers may touch state")
         return getattr(self._s, n)
 
     def read(self, obj, **kw):
@@ -257,3 +257,26 @@ def test_dispatcher_view_same_tick_write_invisible_and_strict(tmp_path):
     with pytest.raises(TypeError):
         d.view("crm", 1, store)
     assert d.view("crm", 1, None) == ()
+
+
+def test_world_adapters_touch_state_only_through_ctx():
+    """B3-41 AST check over src/ks/world: no raw SQL or digest reads, and ``.store`` is reached only inside
+    ``_Ctx`` (reads/writes) and ``WorldDispatcher.view`` (the M2 snapshot); adapters hold no module-level Store."""
+    import ast
+    import pathlib
+    import ks.world
+    banned_names = {"sqlite3", "open_store", "open_world_store", "Store"}
+    for p in pathlib.Path(ks.world.__file__).parent.glob("*.py"):
+        tree = ast.parse(p.read_text())
+        def visit(node, scope):
+            if isinstance(node, (ast.ClassDef, ast.FunctionDef)):
+                scope = scope + (node.name,)
+            if isinstance(node, ast.Attribute):
+                assert node.attr not in ("conn", "state_digest", "execute", "executescript"), (p.name, node.lineno)
+                if node.attr == "store" and p.name == "tools.py":
+                    assert "_Ctx" in scope or scope[-2:] == ("WorldDispatcher", "view"), (p.name, node.lineno, scope)
+            if p.name == "tools.py" and isinstance(node, ast.Name):
+                assert node.id not in banned_names, (p.name, node.lineno)
+            for ch in ast.iter_child_nodes(node):
+                visit(ch, scope)
+        visit(tree, ())

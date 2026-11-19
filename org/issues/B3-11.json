@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "Replace the stub with ADR-03 section 1 steps 1-9 in the single canonical order (finding 7), state txn and re-check",
   "acceptance": [
     "Table test: one frame per failing step yields exactly the reason of the first failing step in the canonical order (decode..txn)",
@@ -19,8 +19,8 @@
     "B3-09"
   ],
   "deliverable": "src/ks/gateway/",
-  "summary": "",
-  "review": "",
+  "summary": "B3-43 done: seed record tool=ks.seed (no policy_rule marker); dispatcher raise -> rollback + recorded DENY/TOOL_ERROR (seq consumed, no gap, next admit ok); tests: seed verifies, wrong seed write_set -> seed_invalid, tool-error deny; D-SEQ1 interim skip rule deleted from ARCHITECTURE.md. Suite 606 passed (host).",
+  "review": "[kabir · changes] Order, pruning (nonce from t kept through t+8, freed t+9; exact replay is expired and action_id-blocked: no off-by-one), RT5 re-read (conn/agent/epoch/ancestors after BEGIN IMMEDIATE, deny recorded under the txn seq, 0 writes), visible_to (computed once per open, same int for every agent) all hold. Native 526/8 skipped, Docker 534. Blocking, both reproduced: (1) result_hash(ex.result) runs after COMMIT: a tool returning a float raises CanonicalError with the write committed at seq 2, no record, seq left reserved, every later admit raises RecorderAborted. Hash and put_side before COMMIT. (2) BEGIN IMMEDIATE and GatewayTxn sit outside the try: database locked leaves seq reserved, gateway wedged. Move into the try. (3) Rule 11: a dispatcher exception rolls back and re-raises, so the envelope is never recorded (not in B3-41 scope). No deny reason fits: ask maya for a contract decision, mark TODO. Non-blocking table gaps: conn (7) and agent status (8) both give SUSPENDED, so set conn to REVOKED; add chain to the step-3 frame; put the action_id branch of step 6 in the table. Seed as ks.dispatch: current verify has no dispatch pass so it passes. A future G4 dispatch-window pass would misread it (no outbox read, world write_set, class R).\n\n[kabir · done] Round 2: blockers fixed, reproduced against my probes. (1) Float result: CanonicalError before COMMIT, no state change, seq released, next admit is seq 2. (2) Locked BEGIN IMMEDIATE: seq released, gateway not wedged. (3) Dispatcher raises after writing to the txn: the seq-2 version is gone before the deny is appended. DENY/TOOL_ERROR has sig_ok, no result_hash/read_set/write_set, consumes seq 2, next admit seq 3. Table gaps closed. Host 626 passed/8 skipped; Docker 637 passed, 2 xfailed (taint, vikram WIP). Non-blocking for B3-41: (a) _seed_record still runs BEGIN IMMEDIATE outside the try and sets _seeded before trying, so a locked db at seed leaves seq 1 reserved and the next admit raises RecorderAborted. Fail-closed (open raises, no records), but use the _execute pattern. (b) A dispatcher that COMMITs itself and then raises leaves a seq-2 write under a TOOL_ERROR deny with an empty write_set. On the deny path, assert writes_at(store, seq) == () or abort.",
   "log": [
     {
       "t": "19 Nov 11:34",
@@ -31,6 +31,56 @@
       "t": "19 Nov 16:33",
       "who": "pmo",
       "msg": "→ todo: From maya's B3-06 review: pass views a snapshot with visible_to = first seq of the tick as an int (tick 1 -> 2 per D-SEQ1), then make WorldDispatcher.view reject visible_to=None (M2). Also add the seq-1 seed record (D-SEQ1)."
+    },
+    {
+      "t": "19 Nov 17:24",
+      "who": "nisha",
+      "msg": "→ in_progress: starting"
+    },
+    {
+      "t": "19 Nov 17:29",
+      "who": "nisha",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 17:29",
+      "who": "nisha",
+      "msg": "→ in_review: ready for kabir"
+    },
+    {
+      "t": "19 Nov 17:33",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 17:43",
+      "who": "nisha",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 17:43",
+      "who": "nisha",
+      "msg": "→ in_review: round 2: blockers 1,2 and table gaps fixed; item 3 pending B3-43"
+    },
+    {
+      "t": "19 Nov 17:48",
+      "who": "nisha",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 17:48",
+      "who": "nisha",
+      "msg": "→ in_review: B3-43 follow-ups landed"
+    },
+    {
+      "t": "19 Nov 17:51",
+      "who": "kabir",
+      "msg": "review: done"
+    },
+    {
+      "t": "19 Nov 17:51",
+      "who": "kabir",
+      "msg": "→ done: re-review passed"
     }
   ]
 }

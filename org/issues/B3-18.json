@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "Taint from recorded read sets with the A8 seed rule (t0_seq_est, root_candidates), never reading RunConfig",
   "acceptance": [
     "Seed = every write by root_candidates[0] with t0_seq_est <= seq <= suspend_seq; hero seed = {S-17.iban v2, S-22 v2} on the F2+ fixture",
@@ -18,13 +18,48 @@
     "B3-04"
   ],
   "deliverable": "src/ks/taint/",
-  "summary": "",
-  "review": "",
+  "summary": "src/ks/taint (closure.py): RecordIndex, root_candidates (H1, MAX_HOPS=3), t0_seq_est, suspend_seq_of, seed_versions (A8), closure, taint_from_alerts -> Taint (.seed .versions .actions .via .outbox_ids .taint_set()). Changes for maya: (1) test_self_chain_gap_pinned: bad W1, crm reads W1, writes W2, alert on W2 only -> default seeds W2 only (W1 untainted), literal walk seeds W1+W2. (2) Taint.t0_seq_est_literal (always computed) + Taint.t0_delta for the dry-run; test_taint_carries_literal_t0_for_dry_run_delta. t0 default = skip self-reads (B3-45 option B interim; option C built as B3-46). World tests agree with tara's B3-44 (triage kept, docs independent, no xfails). tests/taint 27 passed; full suite 692 passed, 8 skipped.",
+  "review": "[maya · changes] Logic is sound and meets acceptance on the fixture: hero seed {S-17.iban v2, S-22 v2}, row-only triage clean, root_candidates [crm, intake] with hop bound, seed window inclusive, recovery/seed/denied records never propagate, AST guard (no RunConfig/fault/culprit/fault_tick). t0 decision: the literal walk is unusable under I1 (seeds crm from tick 3, breaks B2 hero C=0); your skip-self-reads default is the right interim, but it under-taints a self-chain (verified: bad W1, crm reads it, writes W2, alert on W2 only -> t0=W2, W1 never seeded). That trades A8 conservatism against B2, both binding, so it goes to Aarav as B3-45 (recommend: tag reads view|tool, follow self-reads through tool reads only). Required now: (1) add a test pinning that gap (W1 not seeded under default, seeded under literal) so it is visible, not silent; (2) Taint carries t0_seq_est_literal beside t0_seq_est so the dry-run can report the delta, as your docstring promises. Tree note: test_world_triage_cause_is_s22_only now fails (KeyError) because tara's in-flight B3-44 edit to src/ks/world/scenario.py un-taints triage; B3-44 must update that test and the strict xfails.\n\n[maya · done] Both required changes verified. (1) test_self_chain_gap_pinned: default seeds W2 only (IBAN v2 not tainted), literal walk seeds W1+W2; gap is visible, closed by B3-46 (Aarav's option C on B3-45). (2) Taint.t0_seq_est_literal always computed, t0_delta property; test_taint_carries_literal_t0_for_dry_run_delta checks delta > 0 on F2+ and 0 under follow_self_reads. World tests agree with B3-44 (triage clean, no xfails). tests/taint green; full suite green.",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 17:42",
+      "who": "vikram",
+      "msg": "→ in_progress: starting ks.taint"
+    },
+    {
+      "t": "19 Nov 17:50",
+      "who": "vikram",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 17:50",
+      "who": "vikram",
+      "msg": "→ in_review: ready for maya; 3 decisions raised in summary"
+    },
+    {
+      "t": "19 Nov 17:52",
+      "who": "maya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 18:47",
+      "who": "vikram",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 18:47",
+      "who": "vikram",
+      "msg": "→ in_review: Gap test pinned; Taint carries t0_seq_est_literal + t0_delta; suite green"
+    },
+    {
+      "t": "19 Nov 21:01",
+      "who": "maya",
+      "msg": "review: done"
     }
   ]
 }

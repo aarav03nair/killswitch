@@ -1,0 +1,36 @@
+{
+  "id": "B3-45",
+  "title": "Decision: t0_seq_est walk and the suspect's self-reads (A8 conservative vs B2 hero C=0)",
+  "sprint": 3,
+  "track": "decision",
+  "owner": "aarav",
+  "reviewer": "maya",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "done",
+  "outcome": "Aarav picks the t0 rule. Facts: under I1 every view row is a read, so the literal ADR-05 walk follows crm's reads of its own earlier writes and puts t0 at crm's honest tick-3 S-31 edit; seed then covers all crm work from tick 3 and the B2 hero golden (R=0, C=0) cannot hold. B3-18's default skips suspect self-reads: hero holds, but if a culprit chains its own writes (bad W1, reads it, writes W2) and only W2 is alerted, W1 is not seeded and stays (checked on the B3-18 fixture: t0 default=W2, literal=W1). Options: A literal walk (safe, breaks B2); B skip self-reads (B2 holds, under-taint gap, a jury-pickable attack); C tag each read entry as view or tool (additive contract, with B3-41) and follow self-reads only through tool reads (keeps both). maya recommends C, with B as interim default and the gap reported in dry-run.",
+  "acceptance": [
+    "Aarav records A, B or C in the issue; ADR-05 section 4 amended to match; B3-18 default and tests follow"
+  ],
+  "depends": [],
+  "deliverable": "org/adr/ADR-05-state-taint-recovery.md",
+  "summary": "DECIDED by Aarav 19 Nov: option C. Each read entry is tagged view|tool (additive contract, built with B3-41); the t0 walk follows the suspect's self-reads only through tool reads. Interim default stays B (skip self-reads) with the gap reported in the dry-run (t0_seq_est_literal beside t0_seq_est). ADR-05 section 4 to be amended to match (B3-46).",
+  "review": "",
+  "log": [
+    {
+      "t": "19 Nov 17:52",
+      "who": "maya",
+      "msg": "opened"
+    },
+    {
+      "t": "19 Nov 18:45",
+      "who": "pmo",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 18:45",
+      "who": "pmo",
+      "msg": "→ done: Aarav chose C"
+    }
+  ]
+}

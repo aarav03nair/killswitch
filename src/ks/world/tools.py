@@ -7,11 +7,10 @@ Gateway-side only: agent processes import ``ks.world.skeleton``, never this. ks.
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass
 from typing import Any
 
 from ks.contracts import ActionClass, Envelope, ReadEntry, ViewEntry, WriteEntry
-from ks.gateway.dispatch import Execution, OutboxRequest, StateSnapshot, StateTxn
+from ks.gateway.dispatch import Execution, GatewayTxn, OutboxRequest, StateSnapshot, StateTxn
 
 from .scenario import build_view
 
@@ -46,13 +45,8 @@ _PLAIN = ("name", "price", "terms", "risk_note")
 _SET_KEYS = {"iban", "price", "name", "terms"}
 
 
-@dataclass(frozen=True)
-class WorldTxn:
-    """The state transaction an adapter runs in: the store (inside the gateway's ``BEGIN IMMEDIATE``) and the
-    record ``seq`` this action's writes carry (assigned by the gateway at BEGIN IMMEDIATE, G5)."""
-
-    store: Store
-    seq: int
+WorldTxn = GatewayTxn
+"""The txn an adapter runs in: ``.store`` (inside the gateway's ``BEGIN IMMEDIATE``) and ``.seq`` (G5)."""
 
 
 class _Ctx:
@@ -221,7 +215,8 @@ def _docs_write(c: _Ctx) -> Execution:
     for i in invs:
         row = c.read(f"invoices:{i}")
         total += 0 if row is None else row["amount"]
-    c.put_row(f"docs:{c.args['id']}", {"title": c.args["title"], "n_invoices": len(invs), "total": total})
+    table = "reports" if c.args["id"].startswith("RPT-") else "docs"  # reporter's lane is not docs' (CALL-02 B3)
+    c.put_row(f"{table}:{c.args['id']}", {"title": c.args["title"], "n_invoices": len(invs), "total": total})
     return c.done({"ok": True})
 
 
@@ -313,4 +308,6 @@ class WorldDispatcher:
             return ()
         if not (hasattr(state, "store") and hasattr(state, "visible_to")):
             raise TypeError("view needs a snapshot with .store and .visible_to (M2)")
+        if type(state.visible_to) is not int:  # M2: never default to "all heads"
+            raise TypeError("view needs visible_to = the tick's first seq as an int (M2)")
         return build_view(state.store, agent_id, visible_to=state.visible_to)

@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "done",
   "outcome": "Witness refuses to sign a second head for a seq it already signed; signer drip and unbound connections can't evade M2/S3",
   "acceptance": [
     "push(2,H2,4) then push(2,H3,5): witness refuses the second, no ack, no line (test)",
@@ -19,13 +19,28 @@
     "B3-36"
   ],
   "deliverable": "src/ks/witness/",
-  "summary": "",
-  "review": "",
+  "summary": "Witness refuses a second head for an already-signed seq; signer drip (unterminated reads) charges the per-tick budget via SignerService.charge and closes at cap, tick bounded; Gateway.bind added, unbound non-c-0 connection is bad_sig (stub.py: _sig_ok + bind only; nisha's tests bind c-1 in fixtures). Tests in tests/witness and tests/panel.",
+  "review": "[kabir · done] Re-ran my probes. Witness: push(2,H2,4) then push(2,H3,5) -> None, no line; and after seq 3, push(2,H4,7) -> None; 2 lines total. Unbound c-1 -> sig_ok False deny bad_sig; bound to billing with a crm-signed frame -> bad_sig. Binding comes from the barrier's own conn table (c.agent_id), not frame contents. Drip: charge() runs on every read that leaves a partial line and closes at MAX_SIGNER_LINES_PER_TICK; panel test bounds the tick under 0.9 s. Native 692, container 700 green.",
   "log": [
     {
       "t": "19 Nov 16:30",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 17:59",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 17:59",
+      "who": "arjun",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "19 Nov 21:01",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

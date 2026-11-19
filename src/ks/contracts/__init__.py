@@ -1,4 +1,4 @@
-"""ks.contracts: frozen contracts C1-C6 (CON-01, v1.1 CON-02, v1.2 B3-01). Import from here, not from submodules.
+"""ks.contracts: frozen contracts C1-C6 (CON-01, v1.1 CON-02, v1.2 B3-01, v1.3 B3-43). Import from here, not from submodules.
 
 C1 Envelope · C2 Record + WitnessCheckpoint · C3 State API + values + side store ·
 C4 Alert + Control · C5 RecoveryPlan · C6 RunConfig + Keyring + RunDir + verify Exit · transport frames.
@@ -12,7 +12,7 @@ from .control import (CONTROL_TOOL, DETECTOR_KIND, HARD_ALLOWED, HARD_DETECTORS,
 from .envelope import MAX_ACT_DEPTH, MAX_EXPIRY_TICKS, ActLink, Envelope, EnvelopeHeader, expiry_ok
 from .hashing import (GENESIS_HASH, TOMBSTONE_HASH, Domain, args_hash, raw_hash, result_hash, sha256_hex,
                       tagged_hash, value_hash)
-from .ids import (RECOVER_TOOL_PREFIX, SYSTEM_CONN, SYSTEM_PRINCIPALS, SYSTEM_TOOLS, record_id_for,
+from .ids import (RECOVER_TOOL_PREFIX, SEED_TOOL, SYSTEM_CONN, SYSTEM_PRINCIPALS, SYSTEM_TOOLS, record_id_for,
                   system_tool_signers)
 from .record import (REASONS_FOR, ActionClass, Decision, Reason, Record, WitnessCheckpoint, determinism_view,
                      witness_chain_problems)
@@ -29,9 +29,10 @@ from .transport import (MAX_FRAME_BYTES, MAX_SIGN_PER_TICK, MAX_VIEW_ENTRIES, SI
                         TickFrame, WitnessClose, WitnessFiles, WitnessHead, WitnessInit, WitnessPub, WitnessReady,
                         decode_frame, decode_witness_frame, encode_frame, signer_refusal)
 
-CONTRACTS_VERSION = "1.2.0"
+CONTRACTS_VERSION = "1.3.0"
 """Contract version. 1.1.0 = CON-02 design freeze (CALL-02); 1.2.0 = B3-01, additive (witness link frames,
-SignRefusal, RunConfig.isolation/decisions_from, VerifyReport.isolation, reexec_invalid); see README changelog. Any change to fields,
+SignRefusal, RunConfig.isolation/decisions_from, VerifyReport.isolation, reexec_invalid); 1.3.0 = B3-43, additive
+(``ks.seed`` system tool per D-15, deny reason ``tool_error``, verify reason ``seed_invalid``); see README changelog. Any change to fields,
 patterns, canonical rules or domain tags bumps it, regenerates ``schema/`` and re-pins golden hashes."""
 
 DOCUMENTS = {
@@ -51,7 +52,7 @@ __all__ = [
     "MAX_DEPTH",
     # hashing / ids
     "Domain", "GENESIS_HASH", "TOMBSTONE_HASH", "sha256_hex", "tagged_hash", "value_hash", "args_hash",
-    "result_hash", "raw_hash", "record_id_for", "SYSTEM_PRINCIPALS", "SYSTEM_CONN", "SYSTEM_TOOLS",
+    "result_hash", "raw_hash", "record_id_for", "SYSTEM_PRINCIPALS", "SYSTEM_CONN", "SYSTEM_TOOLS", "SEED_TOOL",
     "RECOVER_TOOL_PREFIX", "system_tool_signers",
     # C1
     "Envelope", "EnvelopeHeader", "ActLink", "MAX_ACT_DEPTH", "MAX_EXPIRY_TICKS", "expiry_ok",

@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "ADR-03 policy, class per action instance, write scopes and read scope = I1 view scope",
   "acceptance": [
     "test_scope_table: each role's write scope enforced, out-of-scope -> deny/out_of_scope",
@@ -19,13 +19,33 @@
     "B3-04"
   ],
   "deliverable": "src/ks/policy/",
-  "summary": "",
-  "review": "",
+  "summary": "src/ks/policy/__init__.py WorldPolicy: TOOL_ROLES + WRITE_SCOPE (write scope), table-level read scope R2 from SCOPES (modify-target row covered by write scope, so triage risk_note works), p.scope deny/out_of_scope, I2 hold/needs_approval (p.i2_approval), class U denied (p.class_u), I1 admitted. Tests tests/policy (20). lineage/sensitive holds out of scope. No stub.py or scenario.py edits.",
+  "review": "[kabir · done] Acceptance met through the real gateway: write scope + table-level R2, out_of_scope is a recorded sig_ok deny with no effects and no raw args, I2 -> hold/needs_approval, U -> class_u. Probed the triage set_risk_note exception: supplier='S-17.iban' (field object) -> deny/tool_error, empty read/write set, no value returned; 'S-17:x', '../x' same. The adapter projects plain keys only, so the iban is never read. Deferring lineage/sensitive holds to B3-23 is inside scope. Follow-ups (non-blocking): (1) WorldPolicy is not wired into runtime/run.py (Gateway defaults to AllowAll) and no issue tracks it; open one, since RT scope probes mean nothing until it is wired. (2) Defence in depth: policy should deny a dotted or ':'-bearing id arg as p.scope rather than rely on a tool_error. Native 692, container 700 green.",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 17:52",
+      "who": "nisha",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "19 Nov 17:56",
+      "who": "nisha",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "19 Nov 17:56",
+      "who": "nisha",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "19 Nov 21:01",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }
