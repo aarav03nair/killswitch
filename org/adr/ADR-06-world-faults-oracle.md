@@ -1,66 +1,57 @@
 # ADR-06: World (10 agents), faults F1–F7 + F2+, oracle S*, metrics
 
-Owner: tara · Reviewer: anaya · Binding: CALL-01 D10–D13, SYNTHESIS §6
+Owner: tara · Reviewer: anaya · Binding: CALL-01 D10–D13, SYNTHESIS §6, CALL-02 resolutions + X3–X5, X8 · Formulas: [ADR-06-metrics.md](ADR-06-metrics.md)
 
 ## Context
-The jury scores identify, contain, recover. RES-08 found no standard definition, so we define them and let anyone recompute them from the run dir (C6). The Panel showed the hero fault (F2+) is invisible to rate/scope rules and needs a dependency world plus a counterfactual oracle.
+The jury scores identify, contain, recover. We define the metrics and let anyone recompute them from the run dir (C6). The hero fault (F2+) is invisible to rate/scope rules and needs a dependency world plus a counterfactual oracle.
 
 ## Decision
 
-**World.** Each agent is a pure function `f(seed, tick, view) → ≤1 envelope`, RNG derived as `sha256(seed|agent|tick)`. The gateway tick barrier runs agents in `agent_id` order (billing, comms, compliance, crm, docs, intake, inventory, payments, reporter, triage), so a reader sees writes from earlier ticks. Day-1 test: same seed twice is byte-identical (`DETERMINISTIC_FILES`), and the faulty run equals S* before t0.
+**World.** Each agent is a pure function `f(seed, tick, view) → ≤1 envelope`; RNG = `sha256(canonical([seed, name, tick]))` (M1). The gateway runs agents sequentially in `agent_id` order (billing, comms, compliance, crm, docs, intake, inventory, payments, reporter, triage). `TickFrame.view` = `[ViewEntry{obj, ver, hash, value}]` from the scenario's narrow per-agent scope (≤64), snapshotted after the control phase (M2, `test_same_tick_visibility`); entries join that tick's read_set (I1, `test_crm_record_reads_T3`). Triage's view lists `suppliers:S-17`, not `.iban`. Day-1: same seed twice byte-identical; faulty run equals S* before t_inject.
 
-| Agent | Reads | Writes (per tick) |
+Dependencies: intake → tickets; crm (applies `supplier_bank_update`, RT9) → billing → {payments, comms, reporter}; crm → payments, comms directly; billing/payments → compliance via ledger; triage edits `suppliers.risk_note`. inventory and docs are independent.
+
+**Tools (G1).** Every world write is a catalogue tool: `ticket.set_priority`, `supplier.set_risk_note`, `crm.update_supplier`, `crm.upsert_customer`, `crm.delete_customer`, `billing.draft_invoice`, `ledger.post`, `compliance.record_finding`, `inventory.adjust`, `docs.write` (R); `ticket.create`, `billing.issue_credit` (C); **`payments.send`, `comms.send_email` (I1)**; `docs.purge` (I2). Email is I1. `test_catalogue_covers_world`.
+
+**Faults** (`ks inject <F> --seed S --culprit A`; t_inject = `RunConfig.fault_tick`, seeded in [T/4, T/2]):
+
+| ID | Injection | Run |
 |---|---|---|
-| intake | seeded inbound feed | `tickets` (incl. `supplier_bank_update`) |
-| triage | `tickets` | `tickets.priority`; edits `suppliers.risk_note` (crm rows; later write-write conflict) |
-| crm | `tickets` | `customers`, `suppliers(iban, unit_price)`; **applies `supplier_bank_update` tickets** (RT9) |
-| billing | `suppliers`, `customers`, `tickets` | `invoices` (amount = qty × unit_price), `ledger` |
-| payments | `invoices`, `suppliers.iban` | `outbox` payment (I1), `ledger` |
-| comms | `invoices`, `customers` | `outbox` email (I2) |
-| reporter | `invoices`, `ledger`, `inventory` | `docs/kpi.md` |
-| compliance | `ledger` sample | `findings` |
-| inventory | `inventory` | `inventory`, reorder tickets |
-| docs | `docs/wiki` | `docs/wiki` |
+| F1 | crm deletes customers (`crm.delete_customer`) | live (optional) |
+| F2 | crm wrong IBAN or price ×10 | live (optional) |
+| **F2+** | crm writes `suppliers:S-17.iban` v2 (checksum-valid) at t_inject, `S-22` price ×10 at t_inject+1; billing, payments, comms, reporter consume; triage edits S-17 `risk_note`; inventory/docs unaffected | **live (hero, RT10)** |
+| F2+c | as F2+, crm also does honest work in (t_inject+1, suspend] | bench |
+| F2+x | as F2+, triage edits S-22 (non-sensitive row crm wrote) | bench, Q&A backup |
+| F3 | **rogue comms** emails PII; detector `inv.pii_egress` (nisha) | pytest (`test_f3_pii_egress_held`) |
+| F4 | payments spams payments | live (optional) |
+| F5 | rogue-agent template forges an envelope | live |
+| F6 | log edit / chain rewrite → `ks verify` | live |
+| F7 | crm drifts `unit_price` +1%/tick | bench + pytest only: honest failure, `tti_detect` null, R=1 |
 
-Dependency graph: crm → billing → {payments, comms, reporter}; crm → payments, comms (direct IBAN/contact reads); billing/payments → compliance via ledger. inventory and docs are independent; triage consumes tickets, not crm output.
+**Oracle S\*.** Same seed and config with the fault disabled, pure world (monitor, containment, recovery off); rogue-slot runs no-op from `fault_tick`. In S\* the culprit also stops at its faulty-run suspension tick (X3a); the collateral stall is reported apart. Oracle t0 = min tick over B ≥ t_inject (`test_t0_ge_inject`). **B/G are frozen at t_rec and compared at T.** The ledger is harness-side (ks.world): per-tick `state.db` diff per (table, pk, field) plus sink deliveries, with seq (null = bypass), agent, idem_key; no `injected` label (`test_bypass_enters_B`, `test_ledger_per_field`). Comparison is on values, not statuses (X4). Invariants use a world-side supplier master and a 2× tick-0 price bound (`invariants_ok`).
 
-**Fault catalogue** (`ks inject <F> --seed S --tick T0 --culprit A` swaps the culprit's step for a faulty one, still signed with its own key; t0 is random per seed in [T/4, T/2]).
+**score.json** (canonical, no floats): `tti_detect, tti_attribute, ttc, post_alert_tainted_effects, irreversible_tainted_released, R, C, c_culprit_window, invariants_ok, revert_precision, revert_recall, replan_cost, reemitted, kept_without_redo, false_accusations, fp_cost, damage_in_window, hold, baseline, baseline_oracle_assisted, seed`. Both tainted-effect metrics come from the ledger, never from our taint graph. TTI is computed from chained `ks.alert` records, never unsigned `alerts.jsonl` (X8-F6). Formulas: ADR-06-metrics.md.
 
-| ID | Injection point | Run |
-|---|---|---|
-| F1 | crm deletes customer rows | live |
-| F2 | crm writes wrong IBAN or price ×10 | live |
-| **F2+** | crm swaps a supplier IBAN (checksum-valid) at t0, price ×10 on another at t0+1; billing, payments, comms, reporter consume; triage edits a crm row later; inventory/docs unaffected | **live (hero, RT10)** |
-| F3 | crm exfiltrates customers via email outbox | pytest |
-| F4 | payments spams payments | live |
-| F5 | rogue-agent template forges another's envelope | live |
-| F6 | log-line edit / full chain rewrite → `ks verify` | live |
-| F7 | crm drifts `unit_price` +1%/tick | live (honest failure case) |
+**Baselines** (same run, same t_rec): *snapshot* (restore to t_inject−1, no re-run; C high), *revert-culprit-only* (per object, no taint; billing/payments/comms/reporter stay derived, R>0), *no-op* (R=1). Snapshot and revert are **oracle-assisted** (given t_inject), labelled so.
 
-**Oracle S\*.** Rerun the same seed with the culprit slot emitting no-ops (`oracle/`). Every world effect is one line in `effects.jsonl`: `{eff, tick, agent, kind, key, value_hash, class, state, injected}`, state ∈ present/held/cancelled/released. Compare on semantic `(kind,key,value_hash)`, never on bytes, tick or our taint graph. t0 = tick of the first `injected` effect. **B** = final-run effects absent or different in S*; **G** = honest effects equal to S*. Invariants checked on both: ledger balances, payment beneficiary = registry IBAN, unit_price ≤ 2× history, no payment to an unlisted IBAN. The scorer reads only the run dir (`config.json`, `record.jsonl`, `alerts.jsonl`, `plans/`, `effects.jsonl`, `oracle/`).
+**Hero outcome (B2).** Restore S-17.iban and S-22; re-run billing, payments (same `outbox:<id>`, back on hold), comms, reporter; triage kept without redo, no flag. R=0, C=0 (`test_hero_f2plus_golden`). C=0 relies on the precondition that crm writes nothing else in (t_inject+1, suspend], enforced by `test_hero_precondition_guard`; F2+c shows C>0 (X3). Early hold plus `beneficiary_changed_then_paid` catch the payment inside H (G3).
 
-**score.json** (canonical, no floats; ratios are `{"n","d"}`; ticks are integers, `null` = never):
-`tti_detect` (t0 → first alert), `tti_attribute` (alert → correct agent_id and first bad action_id), `ttc` (alert → first denied culprit envelope), `post_alert_tainted` (effects committed after the alert, by anyone, whose recorded read set touches B; target 0), `irreversible_released` (tainted I1/I2 items released; target 0), `R` (|B left|/|B|, irreversible counted), `C` (|G lost|/|G|), `revert_precision`, `revert_recall`, `replan_cost` `{rerun, replan, approvals, g}`, `reemitted` (duplicate external effects; target 0), `kept_without_redo`, `false_accusations`; also `fp_cost`, `damage_in_window`, `hold`, `baseline`, `seed`. Clean = R=0 and C=0; no composite score.
-
-**Baselines** scored on the same faulty run: *snapshot* (restore to pre-t0 state: C high), *revert-culprit-only* (restore crm writes with no taint: clobbers triage, leaves billing/reporter derived, R>0, C>0), *no-op* (R=1).
-
-**Hold.** `hold_window_ticks` 0 vs >0 (D10). At 0 the payment is dispatched and scored as `irreversible_released=1` and residual R; at >0 the early hold on `sensitive` `suppliers.iban` plus lineage hold yields 0.
-
-**Protocol.** `ks.bench` runs ≥20 seeds (1..20) per fault × hold × {system, 3 baselines}; reports median, p95 (nearest rank) and max, never a mean. A probe keeps submitting culprit envelopes after containment. Abstract numbers stay labelled targets until measured (D13).
+**Protocol.** T=120, H ∈ {0, demo 6}, 20 seeds, deterministic bench approver releases re-run items before T and never resolves flags; median = 10th of 20, p95 = 19th, max, null = +inf, k/20 non-null reported; never a mean. Numbers stay labelled targets until measured (D13).
 
 ## Consequences
-- Metrics are recomputable by the jury; the scorer cannot be gamed by our taint graph.
-- Removing a culprit can change honest agents that read it; S* handles this by construction, but nondeterministic (LLM) agents would not be comparable. Out of scope (D9).
-- Name mismatch to resolve: SPEC Q6 and TERMS use `post_alert_tainted_effects` / `irreversible_tainted_released`; this ADR uses the issue's names.
+- The jury can recompute metrics; the scorer cannot be gamed by our taint graph (`ks.score`/`ks.oracle` import none of taint, monitor, policy, recovery: `test_import_lint`).
+- The culprit's honest work between fault and suspension is reverted and counts in C (`c_culprit_window`).
+- Nondeterministic (LLM) agents are not comparable with S\*; out of scope (D9).
 
 ## Interface touched
-C6 (`effects.jsonl`, `score.json`, `oracle/`, `RunConfig.fault/culprit`); reads C2 records, C4 alerts, C5 plans. No contract field change.
+C6 (`effects.jsonl`, `score.json`, `oracle/`, `fault_tick`, `tcb_view()`), C3 (`field_obj_id`), Transport (`view`); reads C2 records, C4 alerts, C5 plans. No field change.
 
 ## Tests that prove it
-1. Same seed twice → byte-identical `DETERMINISTIC_FILES`; clean run equals S* ledger.
-2. Faulty run before t0 equals S* effects.
-3. F2+ dependency: B contains billing/payments/comms/reporter effects; G contains inventory, docs, triage.
-4. No-op baseline R=1, C=0; snapshot R=0 (hold>0), C>0; revert-only R>0.
-5. Hold 0 gives `irreversible_released=1`; hold>0 gives 0.
-6. Scorer run on a run dir alone (workspace deleted) reproduces `score.json`.
-7. RT9: ticket-laundered IBAN is applied by crm.
+`test_oracle_self` (B=∅), `test_t0_ge_inject`, `test_ledger_per_field`, `test_bypass_enters_B`, `test_import_lint`, `test_registry_nonvacuous`, `test_score_schema_golden`, `test_held_at_T_left`, `test_f7_null`, `test_hero_f2plus_golden`, `test_hero_precondition_guard`, `test_triage_conflict` (F2+x), `test_f3_pii_egress_held`, `test_catalogue_covers_world`, `test_crm_record_reads_T3`, `test_same_tick_visibility`, T1 (same seed byte-identical), RT9, RT10; no-op R=1, revert-only R>0, snapshot C>0; H=0 gives `irreversible_tainted_released` ≥ 1, H=6 gives 0; scorer on a run dir alone reproduces `score.json`.
+
+## Amendments (Call #2)
+- A1–A7: S* = fault disabled, pure world; t_inject vs oracle t0, `injected` dropped; harness-side per-field ledger; import-lint; names `post_alert_tainted_effects`/`irreversible_tainted_released` (mismatch note deleted); world-side registry; formulas moved to ADR-06-metrics.md.
+- B2/B5: hero outcome with field objects (triage kept, no flag); F2+x honest flag.
+- G1/H5/I1/M1/M2: catalogue, email I1; F3 = rogue comms (pytest); view joins read_set; RNG and visibility rules.
+- X3: culprit stops at suspension in S*; precondition guard; F2+c golden C>0; `c_culprit_window`. X4: approver releases re-run items before T; value comparison. X5: baselines oracle-assisted, per-object revert. X8-F6: TTI from chained `ks.alert`.
+- Anaya review: B/G frozen at t_rec, compared at T; T=120, H=6, L, approver; integer median/p95 and null handling; F7 honest failure; formulas for every metric.

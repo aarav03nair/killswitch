@@ -1129,6 +1129,46 @@
       "t": "19 Nov 06:33",
       "who": "zoya",
       "msg": "opened ABS-08 — Update abstract kit for the design freeze (D13, hero, S*)"
+    },
+    {
+      "t": "19 Nov 06:34",
+      "who": "maya",
+      "msg": "moved CON-02 to in_progress"
+    },
+    {
+      "t": "19 Nov 06:35",
+      "who": "arjun",
+      "msg": "moved ADR-01 to in_review"
+    },
+    {
+      "t": "19 Nov 06:35",
+      "who": "arjun",
+      "msg": "moved ADR-02 to in_review"
+    },
+    {
+      "t": "19 Nov 06:35",
+      "who": "ishaan",
+      "msg": "moved ADR-07 to in_review"
+    },
+    {
+      "t": "19 Nov 06:36",
+      "who": "tara",
+      "msg": "moved ADR-06 to in_review"
+    },
+    {
+      "t": "19 Nov 06:36",
+      "who": "nisha",
+      "msg": "moved ADR-03 to in_review"
+    },
+    {
+      "t": "19 Nov 06:36",
+      "who": "nisha",
+      "msg": "moved ADR-04 to in_review"
+    },
+    {
+      "t": "19 Nov 10:52",
+      "who": "pmo",
+      "msg": "reviewed ENG-00: done"
     }
   ]
 }

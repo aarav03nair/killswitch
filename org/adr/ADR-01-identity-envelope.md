@@ -1,47 +1,55 @@
 # ADR-01: Identity and envelope signing
 
-Owner: arjun · Reviewer: kabir · Binding: CALL-01 (D6, D7), THREAT-MODEL v3, contracts 1.0.0
+Owner: arjun · Reviewer: kabir · Binding: CALL-01 (D6, D7), CALL-02 resolutions, THREAT-MODEL v3, contracts v1.1.0
 
 ## Context
-A rogue agent runs arbitrary Python (D11). If it holds a signing key, theft lets it forge indefinitely (RT2). If the gateway trusts an unsigned `agent_id`, one agent can frame another (RT3). RES-03: workload identity (SPIFFE) says which process connected, not which agent performed an action, so each action needs its own signature plus a delegation chain. Replay (RT4) and agent-supplied time (RT6) must not change outcomes.
+A rogue agent runs arbitrary Python (D11). If it holds a signing key, theft lets it forge indefinitely (RT2). If the gateway trusts an unsigned `agent_id`, one agent can frame another (RT3). Workload identity (SPIFFE) says which process connected, not which agent performed an action, so each action needs its own signature (RES-03). Replay (RT4) and agent-supplied time (RT6) must not change outcomes.
 
 ## Decision
-1. **Keys.** One Ed25519 key per agent, plus gateway, witness and recovery keys. Agent keys are generated **in memory** by the gateway-side signer and never touch disk or an agent process. `keys.json` holds public keys only. Gateway, witness and signer set `PR_SET_DUMPABLE=0`.
-2. **Signer handle.** Each agent runs under its own numeric uid (60001 + index), non-dumpable, with a scrubbed env, `close_fds`, and path-less `socketpair`s to the gateway and signer. It sends `SignRequest{header}` and gets `SignReply{sig}`. The signer signs only `EnvelopeHeader.signing_bytes()` (tag `ks/envelope/v1`), for the principal bound to that socket, never the one named in the header. No export, no raw-bytes signing, no other domain.
-3. **Commit-then-sign.** The agent derives the header (`args` → `args_hash`), has it signed, and submits the envelope. The gateway recomputes `args_hash` from the raw args and verifies against the header, using the same `ks.contracts.canonical` serializer the agent side used. The record embeds the header, `envelope_hash` and `sig_ok`, then carries the gateway's own `gw_sig`. Redacting args never breaks verification.
-4. **Replay.** `nonce` is unique per `agent_id` (anti-replay only; dedupe uses the gateway-derived idempotency key). `expiry_tick` is the last valid tick. `epoch` must be the agent's current one. All are integer ticks; no wall clock in records.
-5. **Delegation.** `act_chain` is root-first, `parent_action_id == act_chain[-1].action_id`, depth ≤ `MAX_ACT_DEPTH` (16), no self-reference. It is agent-declared and used **only** to deny when an ancestor is revoked or suspended. Taint uses recorded read sets, never the chain.
-6. **Verification order (per frame, fail closed):**
-   1. Size, canonical form, known type, no unknown keys, else `deny/schema`.
-   2. Known `agent_id` and valid signature over the header, else `deny/bad_sig`.
-   3. `expiry_tick ≥ now`, else `deny/expired`.
-   4. Nonce unseen for this agent, else `deny/nonce_reused`. It is consumed only after steps 1-3 pass, so a forger cannot burn a victim's nonces.
-   5. Current `epoch`; agent not suspended or revoked, else `stale_epoch`/`suspended`/`revoked`.
+1. **Keys.** `keys.json` holds public keys only: exactly one key each for `ks.gateway`, `ks.witness`, `ks.monitor`, `ks.operator`, `ks.recovery` and every agent. `verify` fails closed if any is missing (E3). Private keys are never a function of the seed alone. They derive per ADR-00 (HKDF over `key_secret` and the seed) and live in memory only. Gateway, witness and signer set `PR_SET_DUMPABLE=0`.
+2. **Key modes (C3, E4).** `key_mode = fresh | repro`. In **fresh** mode `key_secret` is random per run, the witness generates its own key and sends only the public key, and the gateway never holds it. In **repro** mode the secret is a file, 0600 uid 0, outside the run dir, and the run is labelled "not a security run". Repro is banned for D11, RT2 and RT8, forces `anchored=false`, and is refused together with `--rogue` (X7). RT2 runs fresh and also scans for `key_secret`.
+3. **Signer handle.** Each agent runs under its own uid (60001 + index), non-dumpable, with a scrubbed env, `close_fds` and path-less `socketpair`s to the gateway and signer. It sends `SignRequest{header}` and gets `SignReply{sig}`. The signer signs only `EnvelopeHeader.signing_bytes()` (tag `ks/envelope/v1`), for the principal bound to the socket. It **refuses** (E5): a header whose `agent_id` is not the bound principal, a `ks.*` tool, a non-null `sig`, a stale epoch, a suspended principal, and any request past `MAX_SIGN_PER_TICK = 2` per principal per tick.
+4. **Commit-then-sign.** The agent derives the header (`args` to `args_hash`), has it signed and submits the envelope. The gateway recomputes `args_hash` from the raw args with the shared `ks.contracts.canonical` serializer. The record embeds header, `envelope_hash` and `sig_ok`, then `gw_sig`. Redaction never breaks verification.
+5. **Epochs (D1).** Per principal, epochs start at 0 and are **strictly monotonic**: suspend, revoke and release each set a value above every earlier one, and an epoch is never reused. Release means "active again at a fresh epoch", not "restore the old epoch", so envelopes presigned before it are dead. `verify` folds epochs and checks monotonicity. An honest agent learns its epoch from `TickFrame.epoch` (None while suspended or revoked).
+6. **Expiry and nonces (D2).** `expiry_tick` is the last valid tick; `expiry_tick > tick + MAX_EXPIRY_TICKS` (8) is `deny/expired`. The nonce store keeps exactly that window, so pruning is safe. A reused `(agent_id, action_id)` is `deny/nonce_reused`, checked with the nonce. A `SubmitFrame` for the wrong tick is `deny/late_frame`, never `expired`.
+7. **Delegation.** `act_chain` is root-first, `parent_action_id == act_chain[-1].action_id`, depth <= `MAX_ACT_DEPTH` (16), no self-reference. It is agent-declared and used only to deny when an ancestor is revoked or suspended. Taint uses recorded read sets.
+8. **Verification order (per frame, fail closed):**
+   1. Size and depth, canonical form, known type, no unknown keys, else `deny/schema` (oversize closes the connection).
+   2. Known `agent_id` and valid signature, else `deny/bad_sig` (also for spliced args, and for a system `agent_id` on `c-1..`, which is never verified).
+   3. `expiry_tick >= now` and within the cap, else `deny/expired`.
+   4. Nonce and `(agent_id, action_id)` unseen, else `deny/nonce_reused`. Consumed only after steps 1-3, so a forger cannot burn a victim's nonces. Order: sig, expiry, nonce.
+   5. **Connection deny-list first** (conn suspended or revoked: `deny/suspended`, `deny/revoked`), then the agent's epoch and status (`stale_epoch`, `suspended`, `revoked`). An agent-signed `ks.*` tool is `deny/out_of_scope` here.
    6. Every `act_chain` principal active, else `revoked_ancestor`.
-   7. Then policy, scope and class checks (ADR-03); class U is denied.
+   7. Policy, scope and class checks (ADR-03); class U is denied.
 
-   Epoch and deny-list are re-checked inside the write transaction (rule 5). Every denial is recorded (rule 11).
-7. **Bad signature (D7).** The record names the claimed id as data only; `attributed_agent` is `None`. The alert names only `conn_id`, and the gateway signs `Control{suspend, target="conn:<id>"}`. The claimed agent is never suspended or alerted. A valid signature proves which key signed through which handle, not intent.
-8. **Time and order.** The gateway assigns `seq`, `ts_us`, `record_id`. `claimed_ts_us`/`claimed_seq` are evidence only; other extra keys are `schema` denials.
-9. **Production mapping.** Agent ids take SPIFFE form, `spiffe://<trust-domain>/agent/<name>`. In production, a SPIRE SVID authenticates the connection (replacing uid and socketpair) and an HSM holds keys. The per-action signature and act chain stay, because SVIDs are workload-level and SPIRE documents no revocation. Here ids are short names; the mapping is documented, not implemented.
+   Epoch and both deny-lists (conn and agent) are re-checked inside the step-8 write transaction (D5). Every denial is recorded.
+9. **System principals (E1).** `c-0` carries in-gateway system envelopes only (`ks.control`, `ks.dispatch`, `ks.alert`, `ks.approve`, `ks.recover.<op>`). The signer `ks.console` is renamed **`ks.operator`** (E2); the "incident console" is the read-only page. `ks.console` is removed from ids with no alias, and system `agent_id` iff `c-0` is checked both ways (X7). Controls are signed by `issued_by`.
+10. **Bad signature (D7).** The record names the claimed id as data only; `attributed_agent` is `None`. The alert names only `conn_id`, and the gateway signs `Control{suspend, target="conn:<id>"}`. Conns are 1:1 with agent processes, with no reconnect. Conn release is an operator Control. The claimed agent is never suspended.
+11. **Time and order.** The gateway assigns `seq`, `ts_us`, `record_id`; `claimed_*` live only inside the signed envelope as evidence.
+12. **Replayed decisions (X6).** `ks run --decisions RUN` requires `verify --head` OK on the source run, approvals that match `plan_hash`, and no `--rogue`.
+13. **Production.** Ids become `spiffe://<trust-domain>/agent/<name>`; a SPIRE SVID replaces uid and socketpair, an HSM holds keys. SPIFFE relies on short-lived SVIDs rather than revocation (RES-03), so the per-action signature stays. Documented, not implemented.
 
 ## Consequences
-- A rogue can obtain signatures only for its own principal and only over headers. It can act as itself within scope; policy and invariants catch the rest.
-- The signer is a signing oracle for its own principal. Expiry, epoch and rate limits bound that.
-- Isolation depends on per-agent uids. Without them, C1/C4 degrade (key read) or attribution is void (RT3b). The harness reports `NOT_ENFORCEABLE`. We claim "enforced in production (uid/container), detected here by reconciliation", nothing stronger.
+- A rogue obtains signatures only for its own principal, only over headers, at most 2 per tick. It can act as itself within scope; policy and invariants catch the rest.
+- Isolation depends on per-agent uids; otherwise C1/C4 degrade (RT3b). The harness reports `NOT_ENFORCEABLE`. Claim: "enforced in production, detected here by reconciliation".
 - A bad signature costs the sender its connection, so a faulty honest connection is suspended too (one-click release). A rogue cannot frame a victim.
-- The nonce store is pruned by the `expiry_tick` window.
+- Ancestor denial binds honest descendants only; a rogue child can omit `act_chain` and is contained by its own suspension. RT12 keeps the retry probe plus a synthetic revoked-ancestor chain (no delegation in the world).
+- Repro mode trades security for byte-reproducibility and is never a security run.
 
 ## Interface touched
-**C1** (nonce, expiry_tick, epoch, act_chain, sig, `MAX_ACT_DEPTH`, args_hash). **C2** (`sig_ok`, `attributed_agent`, deny reasons). **C4** (`signature` alert, `Control` on `conn:`). **C6** (`Keyring`, public keys only). Transport `SignRequest`/`SignReply`. C3, C5 untouched.
+**C1** (nonce, `expiry_tick`, epoch, `act_chain`, `MAX_EXPIRY_TICKS`, `MAX_DEPTH`, `MAX_ACT_DEPTH`). **C2** (`sig_ok`, `attributed_agent`, `late_frame`, `nonce_reused`, system-conn validators). **C4** (`signature` alert, `Control` on `conn:`). **C6** (`Keyring`, `key_mode`, `ks.operator`, `SYSTEM_CONN`). Transport (`SignRequest`/`SignReply`, `TickFrame.epoch`, `MAX_SIGN_PER_TICK`). C3, C5 untouched.
 
 ## Tests that prove it
 | RT | Test | Passes when |
 |---|---|---|
-| RT2 key theft | rogue scans env, fds, files, `/proc` of every process; probes signer for export | 0 private-key bytes in the dump; signer offers only sign(header) |
-| RT3 forgery | claims `billing` via own handle; garbage sig; spliced args | 0 executed; `deny/bad_sig` on `conn_R`; `conn:` suspended; `billing` active, no `agent:billing` control |
-| RT3b sibling hijack | `ptrace`, `pidfd_getfd`, `process_vm_readv` on `crm` | all EPERM; 0 actions attributed to `crm` beyond its own |
-| RT4 replay | exact replay; expired; pre-suspend epoch; same nonce on an I-class tool | `nonce_reused`, `expired`, `stale_epoch`; 0 duplicate effects |
-| RT6 clock games | `ts`/`seq`/`tick`/`record_id` claims in envelope and args | records equal the claim-free run; `seq` = 1..n |
+| RT2 key theft (fresh) | rogue scans env, fds, files, `/proc`, incl. `key_secret`; probes signer | 0 key bytes; signer offers only sign(header) |
+| RT3 forgery | claims `billing`; garbage sig; spliced args | 0 executed; `deny/bad_sig`; `conn:c-R` suspended; 0 exec with `conn_id == c-R` and seq > suspend seq; `billing` untouched |
+| RT3b sibling hijack | `ptrace`, `pidfd_getfd`, `process_vm_readv` on `crm` | all EPERM |
+| **RT3c** forged Control | `ks.control` as `ks.operator` (bad_sig) and under own id (out_of_scope) | 0 Controls applied |
+| RT4 replay | presigned unsent old-epoch envelope; exact replay; expired; far expiry; same `action_id` | `stale_epoch`, `nonce_reused`, `expired`; 0 duplicate effects |
+| RT6 clock games | `ts`/`seq`/`tick` claims | records follow the T5 formulas; honest records identical in the determinism projection; claims only inside `envelope` |
 
-Unit tests: a forged envelope never consumes a nonce; depth 17 is rejected; a revoked ancestor denies.
+Unit tests: `test_epoch_monotonic`, `test_action_id_reuse`, `test_keyring_complete`, `test_signer_refusals`, `test_fresh_keys_differ`, `test_witness_key_not_in_gateway`, forged envelope never consumes a nonce, depth 17 rejected, revoked ancestor denies.
+
+## Amendments (Call #2)
+Applied: **C3, D1, D2, D5, E1, E2, E3, E4, E5** (resolutions); **X6, X7** (CALL-02); Kabir M1-M6 and nits (epochs and expiry, conn deny-list, system principals and `ks.operator`, key modes, RT4/RT6/RT3/RT3c rewrites, `action_id` uniqueness, `late_frame`, SPIFFE wording, trimmed section 13). Contracts v1.1.0 names used throughout.

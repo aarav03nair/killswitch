@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "maya",
-  "status": "todo",
+  "status": "in_progress",
   "outcome": "Contracts implement the CON-02 checklist + X1, X7, X8(F1) with tests; Kabir can sign",
   "acceptance": [
     "every checklist item in CALL-02/resolutions.md implemented with a test",
@@ -23,6 +23,11 @@
       "t": "19 Nov 06:33",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "19 Nov 06:34",
+      "who": "maya",
+      "msg": "→ in_progress: started contracts v1.1.0"
     }
   ]
 }

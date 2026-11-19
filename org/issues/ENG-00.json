@@ -7,7 +7,7 @@
   "reviewer": "panel",
   "model": "opus",
   "created_by": "maya",
-  "status": "changes",
+  "status": "done",
   "outcome": "A 1-page strawman of components + data flow + the 3 riskiest assumptions, to be confirmed or broken by Sprint 1 findings",
   "acceptance": [
     "component diagram (text/mermaid) covering identity, recorder, monitor, containment, recovery, eval harness",
@@ -17,7 +17,7 @@
   "depends": [],
   "deliverable": "org/adr/STRAWMAN.md",
   "summary": "Strawman at org/adr/STRAWMAN.md (~1,200 words incl. diagram/tables).\nCore: every agent call is an Ed25519-signed envelope through one Action Gateway; gateway adapters (not agents) record read/write sets with before/after values into a hash-chained JSONL recorder.\nMonitor (rules + per-agent baselines) alerts with culprit-signed evidence; containment = revoke credential, quarantine at gateway, cancel in-flight, hold undispatched outbox; others keep running.\nRecovery = taint graph (networkx) from recording: revert culprit writes, re-run tainted honest actions, compensate external effects, report irreversible ones.\nDemo: 'Acme Mini-Co', 10 deterministic agents with deliberate crm->billing->reporter/comms dependencies; fault catalogue F1-F7; TTI/TTC/precision/recall/collateral/residual vs. a no-fault ground-truth run and two baselines.\n5 riskiest assumptions mapped to RES-01..08; enterprise mapping to OTel spans, OPA/Cedar, SPIFFE/token exchange, WORM audit; 7 open questions for Call #1.",
-  "review": "[panel · changes] Full review: org/reports/PANEL-ENG-00.md. Verdict: changes.\n1. TTI is weakest on hero F2: a wrong IBAN is an in-scope, normal-rate write, so rule/rate monitors miss it. Add data-invariant detectors; report detect vs attribute separately.\n2. TTC is mis-defined (it ends when the culprit stops). Redefine as alert -> first denied envelope + post-alert tainted effects + irreversible tainted releases (target 0).\n3. Recovery holes: a write-write conflict clobbers honest later edits (restore only if current == culprit's after-version); re-runs can re-fire email/payments (dedupe through outbox idempotency keys).\n4. Jury breaks: gateway bypass/key theft in single process (fix: subprocess per agent + state=fold(log) reconciliation); tail truncation (witness checkpoints); honest consumer pays bad IBAN (lineage hold, RES-02 s5); false positive has no undo (suspend before revoke, release path); TOCTOU (epoch fencing, gateway-assigned seq).\n5. Cut LLM mode, Dolt, Merkle, SPIFFE from the finale. Hero = F2+ (IBAN + price x10, with a conflict case), also run with hold=0 to show honest residual damage.\n6. Framing: provenance-first. Identify, contain, recover = three queries on one graph; selective undo is the payoff shown in the demo, not the sole headline (RES-05 crowding, RES-07 single-agent incidents).",
+  "review": "[panel · changes] Full review: org/reports/PANEL-ENG-00.md. Verdict: changes.\n1. TTI is weakest on hero F2: a wrong IBAN is an in-scope, normal-rate write, so rule/rate monitors miss it. Add data-invariant detectors; report detect vs attribute separately.\n2. TTC is mis-defined (it ends when the culprit stops). Redefine as alert -> first denied envelope + post-alert tainted effects + irreversible tainted releases (target 0).\n3. Recovery holes: a write-write conflict clobbers honest later edits (restore only if current == culprit's after-version); re-runs can re-fire email/payments (dedupe through outbox idempotency keys).\n4. Jury breaks: gateway bypass/key theft in single process (fix: subprocess per agent + state=fold(log) reconciliation); tail truncation (witness checkpoints); honest consumer pays bad IBAN (lineage hold, RES-02 s5); false positive has no undo (suspend before revoke, release path); TOCTOU (epoch fencing, gateway-assigned seq).\n5. Cut LLM mode, Dolt, Merkle, SPIFFE from the finale. Hero = F2+ (IBAN + price x10, with a conflict case), also run with hold=0 to show honest residual damage.\n6. Framing: provenance-first. Identify, contain, recover = three queries on one graph; selective undo is the payoff shown in the demo, not the sole headline (RES-05 crowding, RES-07 single-agent incidents).\n\n[pmo · done] Superseded by ADR-00..07 and the Call #2 freeze; Panel must-fixes carried into ADRs.",
   "log": [
     {
       "t": "19 Nov 00:34",
@@ -43,6 +43,11 @@
       "t": "19 Nov 00:39",
       "who": "panel",
       "msg": "review: changes"
+    },
+    {
+      "t": "19 Nov 10:52",
+      "who": "pmo",
+      "msg": "review: done"
     }
   ]
 }

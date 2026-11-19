@@ -90,7 +90,7 @@ footer{color:var(--mut);font-size:13px;margin-top:20px}
 <text class="sub" x="53" y="492" text-anchor="middle">reconciliation</text>
 <line class="edge" x1="98" y1="400" x2="110" y2="400" marker-end="url(#ah1)"/>
 </svg><p class="key"><span><b>Solid box:</b> component</span><span><b>Dashed amber:</b> held in outbox</span><span><b>Dashed violet:</b> separate process</span></p></section>
-<section><h2><span class="num">2</span>Provenance graph, hero scenario (F2+)</h2><p class="cap">Every change has an author; every read has a source. Not drawn: intake, reporter, compliance.</p><svg class="g" viewBox="0 0 320 400" role="img" aria-label="Provenance graph of the hero scenario F2+, base view">
+<section><h2><span class="num">2</span>Provenance graph, hero scenario (F2+)</h2><p class="cap">Every change has an author; every read has a source. Not drawn: intake, reporter, compliance, the &#215;10 price change.</p><svg class="g" viewBox="0 0 320 400" role="img" aria-label="Provenance graph of the hero scenario F2+, base view">
 <defs><marker id="ah2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" class="arrowhead"/></marker></defs>
 <rect class="box taint" x="20" y="8" width="140" height="50" rx="6"/>
 <text class="nm" x="90.0" y="24" text-anchor="middle">crm</text>
@@ -98,14 +98,13 @@ footer{color:var(--mut);font-size:13px;margin-top:20px}
 <text class="tag" x="90.0" y="54" text-anchor="middle">tainted source</text>
 <line class="edge" x1="90" y1="58" x2="90" y2="76" marker-end="url(#ah2)"/>
 <rect class="box taint" x="20" y="78" width="140" height="50" rx="6"/>
-<text class="nm" x="90.0" y="94" text-anchor="middle">supplier row</text>
-<text class="sub" x="90.0" y="109" text-anchor="middle">IBAN v2</text>
+<text class="nm" x="90.0" y="94" text-anchor="middle">supplier IBAN</text>
+<text class="sub" x="90.0" y="109" text-anchor="middle">own field, v2</text>
 <text class="tag" x="90.0" y="124" text-anchor="middle">tainted</text>
 <rect class="box" x="196" y="78" width="116" height="50" rx="6"/>
 <text class="nm" x="254.0" y="94" text-anchor="middle">triage</text>
-<text class="sub" x="254.0" y="109" text-anchor="middle">later edits row</text>
-<line class="edge dash" x1="196" y1="103" x2="162" y2="103" marker-end="url(#ah2)"/>
-<text class="sub" x="254" y="141" text-anchor="middle">write-write conflict</text>
+<text class="sub" x="254.0" y="109" text-anchor="middle">edits risk_note</text>
+<text class="sub" x="254" y="141" text-anchor="middle">different field, no clash</text>
 <rect class="box" x="8" y="164" width="96" height="50" rx="6"/>
 <text class="nm" x="56.0" y="180" text-anchor="middle">billing</text>
 <text class="sub" x="56.0" y="195" text-anchor="middle">reads row</text>
@@ -152,14 +151,13 @@ footer{color:var(--mut);font-size:13px;margin-top:20px}
 <text class="tg-id" x="90.0" y="54" text-anchor="middle">root candidate</text>
 <line class="edge" x1="90" y1="58" x2="90" y2="76" marker-end="url(#ah3)"/>
 <rect class="box taint" x="20" y="78" width="140" height="50" rx="6"/>
-<text class="nm" x="90.0" y="94" text-anchor="middle">supplier row</text>
-<text class="sub" x="90.0" y="109" text-anchor="middle">IBAN v2</text>
+<text class="nm" x="90.0" y="94" text-anchor="middle">supplier IBAN</text>
+<text class="sub" x="90.0" y="109" text-anchor="middle">own field, v2</text>
 <text class="tg-id" x="90.0" y="124" text-anchor="middle">alert raised</text>
 <rect class="box" x="196" y="78" width="116" height="50" rx="6"/>
 <text class="nm" x="254.0" y="94" text-anchor="middle">triage</text>
-<text class="sub" x="254.0" y="109" text-anchor="middle">later edits row</text>
-<line class="edge dash" x1="196" y1="103" x2="162" y2="103" marker-end="url(#ah3)"/>
-<text class="sub" x="254" y="141" text-anchor="middle">write-write conflict</text>
+<text class="sub" x="254.0" y="109" text-anchor="middle">edits risk_note</text>
+<text class="sub" x="254" y="141" text-anchor="middle">different field, no clash</text>
 <rect class="box" x="8" y="164" width="96" height="50" rx="6"/>
 <text class="nm" x="56.0" y="180" text-anchor="middle">billing</text>
 <text class="sub" x="56.0" y="195" text-anchor="middle">reads row</text>
@@ -205,14 +203,13 @@ footer{color:var(--mut);font-size:13px;margin-top:20px}
 <text class="tg-ct" x="90.0" y="54" text-anchor="middle">suspend</text>
 <line class="edge" x1="90" y1="58" x2="90" y2="76" marker-end="url(#ah4)"/>
 <rect class="box taint" x="20" y="78" width="140" height="50" rx="6"/>
-<text class="nm" x="90.0" y="94" text-anchor="middle">supplier row</text>
-<text class="sub" x="90.0" y="109" text-anchor="middle">IBAN v2</text>
+<text class="nm" x="90.0" y="94" text-anchor="middle">supplier IBAN</text>
+<text class="sub" x="90.0" y="109" text-anchor="middle">own field, v2</text>
 <text class="tag" x="90.0" y="124" text-anchor="middle">tainted</text>
 <rect class="box" x="196" y="78" width="116" height="50" rx="6"/>
 <text class="nm" x="254.0" y="94" text-anchor="middle">triage</text>
-<text class="sub" x="254.0" y="109" text-anchor="middle">later edits row</text>
-<line class="edge dash" x1="196" y1="103" x2="162" y2="103" marker-end="url(#ah4)"/>
-<text class="sub" x="254" y="141" text-anchor="middle">write-write conflict</text>
+<text class="sub" x="254.0" y="109" text-anchor="middle">edits risk_note</text>
+<text class="sub" x="254" y="141" text-anchor="middle">different field, no clash</text>
 <rect class="box" x="8" y="164" width="96" height="50" rx="6"/>
 <text class="nm" x="56.0" y="180" text-anchor="middle">billing</text>
 <text class="sub" x="56.0" y="195" text-anchor="middle">reads row</text>
@@ -258,18 +255,17 @@ footer{color:var(--mut);font-size:13px;margin-top:20px}
 <rect class="box taint" x="20" y="8" width="140" height="50" rx="6"/>
 <text class="nm" x="90.0" y="24" text-anchor="middle">crm</text>
 <text class="sub" x="90.0" y="39" text-anchor="middle">writes bad IBAN</text>
-<text class="tg-rc" x="90.0" y="54" text-anchor="middle">revert if unchanged</text>
+<text class="tg-rc" x="90.0" y="54" text-anchor="middle">restore IBAN, price</text>
 <line class="edge" x1="90" y1="58" x2="90" y2="76" marker-end="url(#ah5)"/>
 <rect class="box taint" x="20" y="78" width="140" height="50" rx="6"/>
-<text class="nm" x="90.0" y="94" text-anchor="middle">supplier row</text>
-<text class="sub" x="90.0" y="109" text-anchor="middle">IBAN v2</text>
-<text class="tg-rc" x="90.0" y="124" text-anchor="middle">flag, not restored</text>
+<text class="nm" x="90.0" y="94" text-anchor="middle">supplier IBAN</text>
+<text class="sub" x="90.0" y="109" text-anchor="middle">own field, v2</text>
+<text class="tg-rc" x="90.0" y="124" text-anchor="middle">restored</text>
 <rect class="box" x="196" y="78" width="116" height="50" rx="6"/>
 <text class="nm" x="254.0" y="94" text-anchor="middle">triage</text>
-<text class="sub" x="254.0" y="109" text-anchor="middle">later edits row</text>
-<text class="tg-ok" x="254.0" y="124" text-anchor="middle">edit kept</text>
-<line class="edge dash" x1="196" y1="103" x2="162" y2="103" marker-end="url(#ah5)"/>
-<text class="sub" x="254" y="141" text-anchor="middle">write-write conflict</text>
+<text class="sub" x="254.0" y="109" text-anchor="middle">edits risk_note</text>
+<text class="tg-ok" x="254.0" y="124" text-anchor="middle">edit kept, no redo</text>
+<text class="sub" x="254" y="141" text-anchor="middle">different field, no clash</text>
 <rect class="box" x="8" y="164" width="96" height="50" rx="6"/>
 <text class="nm" x="56.0" y="180" text-anchor="middle">billing</text>
 <text class="sub" x="56.0" y="195" text-anchor="middle">reads row</text>
@@ -312,7 +308,7 @@ footer{color:var(--mut);font-size:13px;margin-top:20px}
 <text class="sub" x="157.0" y="347" text-anchor="middle">no edge</text>
 <text class="tg-ok" x="157.0" y="362" text-anchor="middle">untouched</text>
 <text class="sub" x="107" y="388" text-anchor="middle">independent agents</text>
-</svg><ul class="steps"><li>Recovery plan shown as a dry-run diff, approved first.</li><li>Taint-scoped revert: restore a row only if it still holds crm&#8217;s version. Triage edited the supplier row, so it is flagged, not overwritten.</li><li>Re-run deterministic honest steps (billing, payments, comms) through the outbox with idempotency keys; nothing is sent twice.</li><li>Cancel (outbox item): a step of the approved plan. Compensate the class C invoice; report anything that already left.</li><li>No LLM agent at the finale. An LLM step would become a re-plan queued for approval.</li></ul></section>
+</svg><ul class="steps"><li>Recovery plan shown as a dry-run diff, approved first.</li><li>Taint-scoped revert: restore the supplier&#8217;s IBAN (its own field object) and the &#215;10 price, each only if it still holds crm&#8217;s version.</li><li>Triage edited the same supplier&#8217;s risk_note. We keep that edit and restore only the bank account. No flag.</li><li>Re-run deterministic honest steps (billing, payments, comms) through the outbox with idempotency keys; nothing is sent twice.</li><li>Cancel (outbox item): a step of the approved plan. Compensate the class C invoice; report anything that already left.</li><li>No LLM agent at the finale. An LLM step would become a re-plan queued for approval.</li></ul><p class="cap" style="margin:8px 0 0;font-size:13px">Footnote: if an honest agent changed the same data (bench case F2+x), it is flagged to a person.</p></section>
 <section><h2><span class="num">4</span>Audit</h2><p class="cap">Anyone can run verify. Tamper-evident up to the last witnessed head.</p><ul class="checks"><li>chain</li><li>signatures</li><li>witness heads</li><li>seq gaps</li><li>reconciliation</li></ul></section>
 <footer>Limits: irreversible effects are held, compensated or reported, never reversed. Tamper is detected, not prevented. Design plan; nothing here is measured yet.</footer>
 </main></body></html>
