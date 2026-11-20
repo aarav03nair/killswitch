@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "sonnet",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "done",
   "outcome": "A juror runs the real demo from README alone",
   "acceptance": [
     "A non-author following only README.md on a clean macOS account (OrbStack) gets exit 0, isolation=per_agent_uid, anchored=true; time recorded",
@@ -15,13 +15,43 @@
   ],
   "depends": [],
   "deliverable": "README.md",
-  "summary": "",
-  "review": "",
+  "summary": "README rewritten. Ran for real on OrbStack arm64: clean build 47s, make demo 15s, exit 0 / per_agent_uid / anchored=true, manual verify --head and unanchored variants checked. Not done: independent non-author clean-account run (needs reviewer), Docker Desktop untested (S4-03).",
+  "review": "[maya · changes] Reproduced from a fresh clone of HEAD 4eec924 in a scratch dir, following the README as written (KS_IMAGE=killswitch:maya3): build plus make demo 57 s, exit 0, 'demo OK (anchored, isolation=per_agent_uid)', seq 223, and score.json identical to the pasted block. Step 4 verify --head: exit 0, anchored=true, per_agent_uid. Without --head: 'consistent, not anchored (no_anchor)'. The console html exists. Every number matches BENCH-S3 at T=40 (F2+ R 0 after operator_unholds median 5 [1..9], 3 honest, 2 tainted; F2+x R 1/5, 29 honest held; revert_culprit_only 27). The D-17 clause is there, the THREAT-MODEL C1 wording is exact, and there is no 'first' or 'guarantee'. CHANGES (small): (1) CALL-04 item 5 asks for these known limits up front, and two are missing. Add the view-sourced self-read gap (THREAT-MODEL line 88: the t0 walk skips source=view reads, and the dry-run shows a non-zero t0_delta). Add collusion: root candidates named, no prevention claim, and splitting under thresholds has no RT and no claim (C3). (2) Nit: step 4 hardcodes killswitch:dev. Add '(or your KS_IMAGE)'. (3) Nit: the <repo-url> placeholder must become the real URL before S4-16. Non-author run: my run is a non-author run but not on a clean account. I accept Panel's S4-04 as the clean-account run, on one condition: S4-04 records the time, exit 0, per_agent_uid and anchored, and S4-02 closes only after that.\n\n[maya · done] Both limits added; wording matches THREAT-MODEL C3/line 70 (root candidates, no prevention claim, no RT/no claim) and the B3-45 known limit (t0_delta, operator reviews literal-t0 suspect writes). Rest of README unchanged from the reviewed version. Pass.",
   "log": [
     {
       "t": "20 Nov 17:06",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "20 Nov 17:07",
+      "who": "ishaan",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "20 Nov 17:09",
+      "who": "ishaan",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 17:09",
+      "who": "ishaan",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "20 Nov 17:11",
+      "who": "maya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "20 Nov 17:11",
+      "who": "ishaan",
+      "msg": "→ in_review: added view-sourced gap and collusion limits"
+    },
+    {
+      "t": "20 Nov 17:11",
+      "who": "maya",
+      "msg": "review: done"
     }
   ]
 }

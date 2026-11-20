@@ -7,7 +7,7 @@
   "reviewer": "zoya",
   "model": "sonnet",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "done",
   "outcome": "Every number on board/demo-sim.html traces to a measured source",
   "acceptance": [
     "D10 reads 'pause, no recovery: hold off releases median 12 tainted payments [6..18], 20/20 seeds; hold on 0 (T=40)'; old 'R 1/6, #77 dispatched' text gone",
@@ -15,13 +15,53 @@
   ],
   "depends": [],
   "deliverable": "board/demo-sim.html",
-  "summary": "",
-  "review": "",
+  "summary": "demo-sim.html rewritten to seed 2 (R 0/9, C 0/265, 9 released/7 honest) and BENCH-S3 T=40; D10 contrast 12 [6..18] 20/20 vs hold on 0; unhold step + D-17 line; no reporter re-run/cancel; CDN font removed; sources in HTML comments.",
+  "review": "[zoya · changes] Good: D10 12 [6..18] 20/20 + hold on 0, D-17 9/7, R 0/9, C 0/265, kept 263/265, tti 2/0, ttc 1, seq 223, plan lines all match; old R/cancel/reporter text and CDN gone; JS parses (node --check), beat logic walks OK; no first/guarantee. Fix vs record.jsonl of hero-s2-092934: (1) Break beat: S-22 write is tick 12 (seq 53), not 11; only S-17.iban at tick 11 (seq 45). (2) Contain beat: suspend was AUTO by ks.monitor at tick 13 (seq 66, hard_alert, epoch 1), not 'ks contain suspend' signed by ks.operator at 14; rewrite terminal + say. (3) Contain 'lineage hold: payment and email held' at tick 14: no hold control on ob-000011/12 before seq 73 (recovery re-hold); cite the source of that hold or drop the line. The 7 honest holds are ks.gateway sensitive_field (seq 47-58, ticks 11-13): could show them. (4) Graph node 'SKU-9 price' -> S-22. (5) Banner says 'seq numbers are omitted' but page shows seq 223: fix wording. (6) Contrast: 'same pause, hold ON' cites H=6; F2+ H=0 no_op is also 0 [0..0] 20/20, so cite that for a like-for-like line. Tamper <n>: keep as placeholder (juror picks the line live); label it 'seq of the edited line' and say so in the banner.\n\n[zoya · changes] Re-checked every tick/seq/actor vs runs/hero-s2-20261120-092934/record.jsonl + alerts.jsonl/log/dry/apply. Correct: S-17.iban t11 s45, S-22 t12 s53, INV-0012 t12 s52 reads iban v2, ob-000011 t13 s60, ob-000012 t13 s63, triage S-17 t13 s64, ks.monitor suspend t13 s66 epoch 1, crm deny t14 s78, 7 gateway sensitive_field holds s47,48-51,57,58 (t11-13), plan p-000066 6 steps s68-75, re-holds s73/75, 9 unholds (7 honest incl. ob-000010 which read iban v1), seq 223, D10 12 [6..18] / H=0 0 [0..0]. Fix: (1) Identify beat 'hard alert (t_alert = 13, seq 66)': seq 66 is the suspend; the ks.alert record is seq 65 (alerts.jsonl evidence_seqs 45,63). Use seq 65 or drop the seq. (2) Unhold beat labelled 'tick 14-15': operator unholds run ticks 15-28, seq 81-161 (ob-000011 t15 s81, ob-000012 t17 s91, last ob-000010 t28 s161). Relabel, e.g. 'ticks 15-28'. (3) '$ ks resume' is not a ks subcommand (CLI: run/inject/verify/blame/contain/recover/score/repro/bench/console); log shows 'resumed at tick 14' via Enter. Replace with a real line (e.g. 'Enter: resumed at tick 14', from the .log) or drop it. (4) Minor: plan re-runs billing twice (seq 52 INV-0012; seq 59 repaired ledger:L-0013 at apply s71); 're-run billing (INV-0012)' could add L-0013. Rest passes.\n\n[zoya · done] Re-checked vs runs/hero-s2-20261120-092934/record.jsonl + .log. (1) Identify: ks.alert a-000001 is seq 65 t13; suspend ks.monitor seq 66 t13 epoch 1: correct. (2) Unhold beat 'tick 15-28', seq 81 (ob-000011 t15), 91 (ob-000012 t17), 102..161 (last ob-000010 t28): correct. (3) '$ ks resume' gone; 'run resumed at tick 15' matches .log line 8 (resume was Enter at the pause prompt; 'operator resume request' is acceptable, 'Enter at pause prompt' would be more exact). Diff vs HEAD shows no other changes beyond the previously reviewed content. Optional minor (L-0013 second billing re-run) not taken; not blocking. Done.",
   "log": [
     {
       "t": "20 Nov 17:06",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "20 Nov 17:07",
+      "who": "ishaan",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "20 Nov 17:08",
+      "who": "ishaan",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 17:08",
+      "who": "ishaan",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "20 Nov 17:10",
+      "who": "zoya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "20 Nov 17:10",
+      "who": "ishaan",
+      "msg": "→ in_review: fixes per zoya review"
+    },
+    {
+      "t": "20 Nov 17:12",
+      "who": "zoya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "20 Nov 17:13",
+      "who": "ishaan",
+      "msg": "→ in_review: seq/tick/command fixes checked against record.jsonl"
+    },
+    {
+      "t": "20 Nov 17:14",
+      "who": "zoya",
+      "msg": "review: done"
     }
   ]
 }

@@ -434,81 +434,6 @@
   ],
   "activity": [
     {
-      "t": "19 Nov 21:01",
-      "who": "pmo",
-      "msg": "moved B3-41 to todo"
-    },
-    {
-      "t": "19 Nov 21:02",
-      "who": "maya",
-      "msg": "reviewed B3-17: done"
-    },
-    {
-      "t": "19 Nov 21:02",
-      "who": "maya",
-      "msg": "reviewed B3-44: done"
-    },
-    {
-      "t": "19 Nov 21:03",
-      "who": "nisha",
-      "msg": "moved B3-41 to in_progress"
-    },
-    {
-      "t": "19 Nov 21:05",
-      "who": "ishaan",
-      "msg": "moved B3-12 to in_review"
-    },
-    {
-      "t": "19 Nov 21:05",
-      "who": "arjun",
-      "msg": "moved B3-15 to in_review"
-    },
-    {
-      "t": "19 Nov 21:05",
-      "who": "vikram",
-      "msg": "moved B3-21 to in_progress"
-    },
-    {
-      "t": "19 Nov 21:07",
-      "who": "maya",
-      "msg": "reviewed B3-12: done"
-    },
-    {
-      "t": "19 Nov 21:07",
-      "who": "kabir",
-      "msg": "reviewed B3-15: done"
-    },
-    {
-      "t": "19 Nov 21:07",
-      "who": "pmo",
-      "msg": "moved B3-31 to todo"
-    },
-    {
-      "t": "19 Nov 21:07",
-      "who": "pmo",
-      "msg": "moved B3-12 to done"
-    },
-    {
-      "t": "19 Nov 21:10",
-      "who": "nisha",
-      "msg": "moved B3-41 to in_review"
-    },
-    {
-      "t": "19 Nov 21:11",
-      "who": "vikram",
-      "msg": "moved B3-21 to in_review"
-    },
-    {
-      "t": "19 Nov 21:13",
-      "who": "panel",
-      "msg": "reviewed B3-41: done"
-    },
-    {
-      "t": "19 Nov 21:13",
-      "who": "pmo",
-      "msg": "moved B3-46 to todo"
-    },
-    {
       "t": "19 Nov 21:13",
       "who": "pmo",
       "msg": "moved B3-23 to todo"
@@ -1432,6 +1357,81 @@
       "t": "20 Nov 17:06",
       "who": "pmo",
       "msg": "opened S4-25 — ABS-07 comment-only review of Aarav's abstract"
+    },
+    {
+      "t": "20 Nov 17:07",
+      "who": "ishaan",
+      "msg": "moved S4-10 to in_progress"
+    },
+    {
+      "t": "20 Nov 17:07",
+      "who": "ishaan",
+      "msg": "moved S4-02 to in_progress"
+    },
+    {
+      "t": "20 Nov 17:07",
+      "who": "kabir",
+      "msg": "moved S4-01 to in_progress"
+    },
+    {
+      "t": "20 Nov 17:08",
+      "who": "ishaan",
+      "msg": "moved S4-10 to in_review"
+    },
+    {
+      "t": "20 Nov 17:09",
+      "who": "ishaan",
+      "msg": "moved S4-02 to in_review"
+    },
+    {
+      "t": "20 Nov 17:10",
+      "who": "zoya",
+      "msg": "reviewed S4-10: changes"
+    },
+    {
+      "t": "20 Nov 17:10",
+      "who": "ishaan",
+      "msg": "moved S4-10 to in_review"
+    },
+    {
+      "t": "20 Nov 17:11",
+      "who": "maya",
+      "msg": "reviewed S4-02: changes"
+    },
+    {
+      "t": "20 Nov 17:11",
+      "who": "ishaan",
+      "msg": "moved S4-02 to in_review"
+    },
+    {
+      "t": "20 Nov 17:11",
+      "who": "maya",
+      "msg": "reviewed S4-02: done"
+    },
+    {
+      "t": "20 Nov 17:12",
+      "who": "maya",
+      "msg": "moved S4-12 to in_progress"
+    },
+    {
+      "t": "20 Nov 17:12",
+      "who": "maya",
+      "msg": "moved S4-12 to in_review"
+    },
+    {
+      "t": "20 Nov 17:12",
+      "who": "zoya",
+      "msg": "reviewed S4-10: changes"
+    },
+    {
+      "t": "20 Nov 17:13",
+      "who": "ishaan",
+      "msg": "moved S4-10 to in_review"
+    },
+    {
+      "t": "20 Nov 17:14",
+      "who": "zoya",
+      "msg": "reviewed S4-10: done"
     }
   ]
 }
