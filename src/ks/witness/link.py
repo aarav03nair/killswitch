@@ -27,8 +27,11 @@ class WitnessLink:
         self.pub: str | None = None
         self._buf = bytearray()
         self.newest: WitnessCheckpoint | None = None
-        """Newest checkpoint whose signature verified, from any ack, late ones included (SKEL-01 M1). The anchor
-        is taken from this after ``close``, so an honest run always verifies with ``--head``."""
+        """Newest checkpoint whose signature verified **and** whose ``(seq, head)`` is what this link pushed for
+        that tick, from any ack, late ones included (SKEL-01 M1). The anchor is taken from this after ``close``, so
+        an honest run always verifies with ``--head``; a forged or mismatched ack never moves it (S4-01)."""
+        self._pushed: dict[int, tuple[int, str]] = {}
+        """tick -> (seq, head) this link pushed: the only checkpoints ``_ingest`` accepts (S4-01)."""
 
     def _readline(self, timeout_s: float) -> bytes | None:
         """Next line, or ``None`` at the deadline. EOF raises WitnessError."""
@@ -81,6 +84,7 @@ class WitnessLink:
 
     def push(self, seq: int, head: str, tick: int, timeout_s: float) -> WitnessCheckpoint | None:
         """Push one head; the verified checkpoint, or ``None`` on stall (deadline, bad or regressing ack)."""
+        self._pushed.setdefault(tick, (seq, head))  # the witness never signs a 2nd head for a tick
         self.sock.sendall(encode_frame(WitnessHead(seq=seq, head=head, tick=tick)))
         end = time.monotonic() + timeout_s
         while True:
@@ -95,12 +99,15 @@ class WitnessLink:
             return cp if (cp.seq, cp.head, cp.tick) == (seq, head, tick) else None
 
     def _ingest(self, line: bytes) -> WitnessCheckpoint | None:
-        """Parse and verify one ack line; keep it as ``newest`` if it is newer. ``None`` if bad."""
+        """Parse and verify one ack line; keep it as ``newest`` if it is newer. ``None`` if bad: unparsable, bad or
+        missing signature, or not the ``(seq, head)`` this link pushed for its tick (S4-01)."""
         try:
             cp = WitnessCheckpoint.from_canonical(line[:-1])
         except CanonicalError:
             return None
         if cp.sig is None or not verify_hex(self.pub or "", cp.sig, cp.signing_bytes()):
+            return None
+        if self._pushed.get(cp.tick) != (cp.seq, cp.head):
             return None
         if self.newest is None or cp.count > self.newest.count:
             self.newest = cp

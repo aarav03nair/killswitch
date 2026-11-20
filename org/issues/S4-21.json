@@ -23,6 +23,11 @@
       "t": "20 Nov 17:06",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "21 Nov 00:36",
+      "who": "pmo",
+      "msg": "→ todo: From panel's S4-01 review: include the recovery-apply staleness recheck (src/ks/runtime/recover.py) in the mutation gate: today only a unit test catches disabling it, no red-team test."
     }
   ]
 }

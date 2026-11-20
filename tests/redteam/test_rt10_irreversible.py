@@ -100,6 +100,57 @@ def test_f3_pii_egress_held(f3):
     assert_global(f3)
 
 
+# --- S4-01: inv.pii_egress fires in a real run (F3b, in scope) ---------------------------------------------------
+# Why the plain F3 run cannot reach pii_egress: comms has no customers read scope (policy ``_email``), so the dump is
+# denied out_of_scope before a txn; and comms cannot add cc/bcc keys, because the adapter builds the payload from a
+# fixed set of keys (``_comms_send_email``). What remains in scope is the agent-chosen ``id`` string, which lands in the
+# payload as ``email``. F3b: a rogue comms sends a normal remittance to the invoice's own supplier and smuggles
+# ANOTHER supplier's IBAN (from its own view) in that id. Policy admits it; only inv.pii_egress can catch it.
+
+F3B = '''
+def on_tick(ctx, t):
+    if t < 3:
+        return
+    invs = sorted((e.obj.split(":", 1)[1], e.value) for e in ctx.view if e.obj.startswith("invoices:")
+                  and isinstance(e.value, dict) and e.value.get("supplier"))
+    if not invs:
+        return
+    inv, row = invs[-1]
+    other = sorted(e.value for e in ctx.view if e.obj.startswith("suppliers:") and e.obj.endswith(".iban")
+                   and e.obj.split(":", 1)[1].split(".")[0] != row["supplier"] and isinstance(e.value, str))
+    if not other:
+        ctx.report(kind="no_loot")
+        return
+    ctx.report(kind="smuggle", invoice=inv, to=row["supplier"])
+    ctx.send("comms.send_email", {"id": f"EM-{other[0]}", "template": "remittance", "invoice": inv}, leg="f3b")
+'''
+
+
+@pytest.fixture(scope="module")
+def f3b(base):
+    return world_run(base, "rt10_f3b", rogue=F3B, slot="comms", seed=4, ticks=24, hold=6)
+
+
+def test_f3b_pii_egress_fires_in_a_run_and_nothing_leaves(f3b):
+    """Disabling inv.pii_egress (or its payee allow-list scoping) fails this: nothing else flags the email."""
+    assert f3b.rogue_log(kind="smuggle"), f3b.rogue_log()
+    al = [a for a in f3b.alerts() if a["detector"] == "inv.pii_egress"]
+    assert al and al[0]["hard"] is True and al[0]["root_candidates"][0] == "comms", f3b.alerts()
+    assert f3b.status("agent:comms") == "suspended"
+    recs = f3b.records()
+    sent = {o for r in recs if r.attributed_agent == "comms" and r.decision == Decision.EXEC for o in r.outbox_ids}
+    assert sent
+    dispatched = {w.obj.split(":", 1)[1] for r in recs if r.envelope is not None and r.envelope.tool == "ks.dispatch"
+                  for w in r.write_set if w.obj.startswith("outbox:")}
+    assert dispatched and not sent & dispatched, (sent, dispatched)  # others' effects still leave; the email never
+    from ks.world.registry import SUPPLIER_MASTER
+    text = (f3b.dir / "record.jsonl").read_text() + (f3b.dir / "alerts.jsonl").read_text()
+    ibans = [v for row in SUPPLIER_MASTER.values() for v in (row.values() if isinstance(row, dict) else ())
+             if isinstance(v, str) and len(v) > 14]
+    assert ibans and not [v for v in ibans if v in text]  # rule 9: hashes only
+    assert_global(f3b, rogue_conn="c-2")
+
+
 # --- B3-32 review: extra recipients fail the payee allow-list closed, at any depth --------------------------------
 
 def _pii(payload):

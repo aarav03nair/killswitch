@@ -7,7 +7,7 @@
   "reviewer": "panel",
   "model": "opus",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "done",
   "outcome": "Every defence has an RT test that fails when the defence is disabled",
   "acceptance": [
     "Disabling the witness ack signature check (src/ks/witness/link.py) fails a new forged-ack RT test",
@@ -18,13 +18,38 @@
     "B3-35"
   ],
   "deliverable": "tests/redteam/",
-  "summary": "",
-  "review": "",
+  "summary": "New RT tests: test_rt08b_witness_ack.py covers forged, edited, unsigned and mismatched witness acks; push returns None and newest stays unchanged, including at the close drain. link.py now accepts an ack only for the (seq, head) it pushed for that tick. test_rt10b_outbox_provenance.py: an off-gateway outbox item planted in state.db is held as unrecorded_item and never dispatched. RT10 F3b: a rogue comms hides another supplier's IBAN in the email id field; inv.pii_egress fires in a real run, comms is suspended and the email never leaves. Plain F3 cannot reach pii_egress (no customers read scope, and the payload is built from fixed keys). score ttc is now {unavailable: no_alert|no_containment}, never null; test_score and the noop RT were updated (tara please note). SPEC rows added. Mutation check in the container, mounting the mutated src: sig check off fails 4 tests, pushed-head match off fails 2, Outbox._unrecorded off fails RT10b, pii_egress off fails F3b, ttc set back to null fails 4. Native suite: 1077 passed.",
+  "review": "[panel · done] Verified on a scratch copy of the current tree, in container killswitch:panel (--network none, scratch mounted, PYTHONPATH=/app/src). Baseline: 1092 passed, 1 skipped. Mutants run against tests/redteam: ack sig check off -> 4 RT8b fail; pushed-head match off -> 2 RT8b fail; Outbox._unrecorded off -> RT10b fails; pii_egress finding off -> F3b plus 6 extra-recipient RT10 tests fail; gateway stale-epoch check off -> RT4 x2, RT5 fail; verify epoch fence off -> 9 RT12 fail; stub dispatcher author re-check off -> RT5 x2, RT10 F3/F3b, RT12 x2 fail. All 5 named defences are killed by red-team tests. M1 still holds: the honest late ack is accepted (_pushed keeps every tick pushed; RT8b honest_late_ack is the control and fails if late acks are rejected); a bad ack fails closed as a stall. ttc is {unavailable} and agg treats it as +inf. Follow-ups, not blocking: (a) recovery apply recheck in runtime/recover.py (4 sites) off -> 0 RT fail, only tests/runtime/test_recover.py catches it; add an RT row (S4-13/vikram area). (b) The gateway 'epoch is None -> SUSPENDED' branch is an equivalent mutant (agent_denial fires first); harmless.",
   "log": [
     {
       "t": "20 Nov 15:11",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "20 Nov 17:07",
+      "who": "kabir",
+      "msg": "→ in_progress: started"
+    },
+    {
+      "t": "21 Nov 00:08",
+      "who": "kabir",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 00:11",
+      "who": "kabir",
+      "msg": "→ in_review: All 3 acceptance items met plus the CALL-04 add-on. All 5 mutants killed in the container. Container suite: 1089 passed, 1 skipped. Native suite: 1077 passed. Not committed."
+    },
+    {
+      "t": "21 Nov 00:36",
+      "who": "panel",
+      "msg": "review: done"
+    },
+    {
+      "t": "21 Nov 00:36",
+      "who": "panel",
+      "msg": "→ done: gate review passed: all 5 defences killed by RT tests in the container"
     }
   ]
 }

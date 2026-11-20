@@ -94,6 +94,17 @@ def test_tti_from_chained_alerts(spec, ledgers, tmp_path):
     assert isinstance(s["post_alert_tainted_effects"], int)
 
 
+def test_ttc_unavailable_not_null(spec, ledgers, tmp_path):
+    """S4-01 (kabir): an alert with no culprit containment, and no alert at all, both give {unavailable: reason}."""
+    led, star = ledgers
+    _, t0, first = _bseq(spec, led, star)
+    _write(tmp_path / "a", [_alert(tmp_path / "a", 900, t0 + 3, [first["seq"]], [spec.culprit])])
+    s = score_run(tmp_path / "a", spec, star, run_ledger=led)
+    assert s["t_alert"] == t0 + 3 and s["t_contain"] is None and s["ttc"] == {"unavailable": "no_containment"}
+    _write(tmp_path / "b", [])
+    assert score_run(tmp_path / "b", spec, star, run_ledger=led)["ttc"] == {"unavailable": "no_alert"}
+
+
 def test_alert_not_covering_B_is_not_detection(spec, ledgers, tmp_path):
     led, star = ledgers
     _, t0, first = _bseq(spec, led, star)
@@ -107,7 +118,8 @@ def test_f7_null(tmp_path):
     led, star = run_pure(sp, tmp_path / "f", faulted=True).effects, run_s_star(sp, tmp_path / "s").effects
     _write(tmp_path / "r", [])
     s = score_run(tmp_path / "r", sp, star, run_ledger=led)
-    assert s["tti_detect"] is None and s["ttc"] is None and s["tti_attribute"] is None
+    assert s["tti_detect"] is None and s["tti_attribute"] is None
+    assert s["ttc"] == {"unavailable": "no_alert"}  # S4-01: never null
 
 
 def _eff(tick, key, vh, state="present", kind="row", seq=5, agent="a", idem=None):

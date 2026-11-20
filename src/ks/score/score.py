@@ -14,7 +14,7 @@ from ks.contracts.rundir import SCORE, sidestore_relpath
 from ks.inject import InjectSpec, culprit_window
 from ks.oracle import b_set, equal, fold, g_set, outbox_key, real_ledger, t0_of
 
-__all__ = ["SCORE_KEYS", "CONTRAST_KEY", "item_tainted", "CONTAINMENT_REASONS", "score_run", "suspend_tick_of", "write_score"]
+__all__ = ["SCORE_KEYS", "CONTRAST_KEY", "RESOLVER_KEYS", "resolver_summary", "item_tainted", "CONTAINMENT_REASONS", "score_run", "suspend_tick_of", "write_score"]
 
 CONTAINMENT_REASONS = frozenset({"suspended", "revoked", "revoked_ancestor", "stale_epoch"})
 SCORE_KEYS = ("seed", "fault", "hold", "baseline", "baseline_oracle_assisted", "t_inject", "t_rec", "t0", "t_alert",
@@ -25,6 +25,74 @@ SCORE_KEYS = ("seed", "fault", "hold", "baseline", "baseline_oracle_assisted", "
 CONTRAST_KEY = "lineage_hold"
 """B3-53: present (``false``) only when ``RunConfig.lineage_hold`` is false (D10 contrast run); omitted at default so
 every existing score.json is byte-identical. Read from config.json, never inferred from the effects."""
+
+
+RESOLVER_KEYS = ("resolver", "resolver_label", "ww_flags_before", "ww_flags_after", "resolutions")
+"""S4-13 (D-18, ADR-05a §7): appended (in this order) only when ``RunConfig.resolver`` is not ``off``, so every
+resolver-off score.json (the F2+x before-row included) is byte-identical."""
+
+
+def _resolver(run: Path) -> str:
+    from ks.contracts import RunDir
+    try:
+        return RunDir(run).config().resolver
+    except FileNotFoundError:
+        return "off"
+
+
+def resolver_summary(run: str | Path, recs: list[Mapping[str, Any]] | None = None) -> dict[str, Any]:
+    """ADR-05a §7 score keys from the record and the plan files: every executed ``ks.recover.resolve`` (plan, step,
+    seq, rule, obj, rebased agent, unblocked items, the seq of the undo that reverted it or null), and write-write
+    flags before / after the resolver over the approved plans (after = flags left + resolutions undone)."""
+    from ks.contracts import RecoveryPlan
+    from ks.contracts.rundir import PLANS_DIR
+    run = Path(run)
+    recs = _records(run) if recs is None else recs
+    cfg = _resolver(run)
+
+    def args(r):
+        try:
+            return json.loads((run / sidestore_relpath(r["envelope"]["args_hash"])).read_text())["value"]
+        except Exception:  # noqa: BLE001 - unreadable args: the entry is listed without them
+            return None
+
+    undone: dict[int, int] = {}
+    for r in recs:
+        env = r.get("envelope")
+        if env and env["tool"] == "ks.recover.unresolve" and r["decision"] == "exec":
+            a = args(r)
+            if a:
+                undone[a["step"]["resolution"]["seq"]] = r["seq"]
+    res = []
+    for r in recs:
+        env = r.get("envelope")
+        if not env or env["tool"] != "ks.recover.resolve" or r["decision"] != "exec":
+            continue
+        a = args(r) or {}
+        st = a.get("step") or {}
+        res.append({"plan_id": a.get("plan_id"), "n": a.get("n"), "seq": r["seq"],
+                    "rule": f"{st.get('rule')}/{st.get('rule_version')}", "obj": st.get("obj"),
+                    "rebased_agent": (st.get("rebased") or {}).get("agent_id"),
+                    "unblocked": list(st.get("unblocked") or []), "undone_by_seq": undone.get(r["seq"])})
+    approved = []
+    for r in recs:
+        env = r.get("envelope")
+        if env and env["tool"] == "ks.approve" and r["decision"] == "exec":
+            a = args(r)
+            if a and a.get("plan_id") not in approved:
+                approved.append(a["plan_id"])
+    resolves = ww = 0
+    for pid in approved:
+        try:
+            plan = RecoveryPlan.from_canonical((run / PLANS_DIR / f"{pid}.json").read_bytes())
+        except Exception:  # noqa: BLE001
+            continue
+        resolves += sum(1 for s in plan.steps if s.op == "resolve")
+        ww += sum(1 for s in plan.steps if s.op == "flag" and s.reason == "write_write_conflict")
+    n_undone = sum(1 for x in res if x["undone_by_seq"] is not None)
+    from ks.contracts import resolver_label as label
+    return {"resolver": cfg, "resolver_label": label(cfg), "ww_flags_before": resolves + ww,
+            "ww_flags_after": ww + n_undone, "resolutions": res}
 
 
 def _lineage_hold(run: Path) -> bool:
@@ -216,7 +284,9 @@ def score_run(run_dir: str | Path, spec: InjectSpec, star: list[dict[str, Any]],
                and r["envelope"]["agent_id"] == culprit and r["reason"] in CONTAINMENT_REASONS
                and r["tick"] >= t_alert]
         t_contain = min(den) if den else None
-    ttc = None if t_contain is None else t_contain - t_alert
+    # S4-01: never null. {unavailable: reason} says why there is no time-to-contain (bench agg reads it as +inf)
+    ttc: Any = (_na("no_alert") if t_alert is None else _na("no_containment") if t_contain is None
+                else t_contain - t_alert)
 
     if t_alert is None:
         post = _na("no_alert") if b else 0
@@ -278,7 +348,8 @@ def score_run(run_dir: str | Path, spec: InjectSpec, star: list[dict[str, Any]],
                     and r["decision"] == "exec")
     # A3: held / released items from the chained hold and unhold Controls. Tainted = recovery had to act on the item
     # (restore / compensate / cancel / re-run output); every other held item is honest work that was stalled.
-    x_keys = _recovery_keys(run, recs, led, ("ks.recover.restore", "ks.recover.compensate", "ks.recover.cancel_outbox"))
+    x_keys = _recovery_keys(run, recs, led, ("ks.recover.restore", "ks.recover.compensate", "ks.recover.cancel_outbox",
+                                             "ks.recover.resolve"))
     redo = _recovery_keys(run, recs, led, ("ks.recover.rerun", "ks.recover.replan"))
     touched = x_keys | redo
     oev = _outbox_events(run, recs)
@@ -339,6 +410,8 @@ def score_run(run_dir: str | Path, spec: InjectSpec, star: list[dict[str, Any]],
         assert tuple(k for k in out if k != CONTRAST_KEY) == SCORE_KEYS
     else:
         assert tuple(out) == SCORE_KEYS
+    if _resolver(run) != "off":  # S4-13: additive keys, only for resolver-on runs (resolver-off bytes unchanged)
+        out.update(resolver_summary(run, recs))
     return out
 
 
