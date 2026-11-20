@@ -7,20 +7,40 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "done",
   "outcome": "The console tells the same story as score.json",
   "acceptance": [
     "Scorecard shows operator_unholds total/honest and held_honest_actions; H=0 note says 'no lineage hold' only when it was off; test added"
   ],
   "depends": [],
   "deliverable": "src/ks/console/",
-  "summary": "",
-  "review": "",
+  "summary": "Scorecard now shows operator_unholds total/honest/tainted and held_honest_actions (model/live/html); H=0 note says 'no lineage hold' only when config lineage_hold=false; 'first bad index' -> 'first bad seq'. Tests: unit + real hero and --hold 0 --no-lineage-hold contrast runs; tests/console 25 pass.",
+  "review": "[kabir · done] Rendered in container (killswitch:kabir3) on a real hero run and a real --hold 0 --no-lineage-hold contrast (tests.integration _drive, --pause-on-alert). Hero: 'operator released 9 held item(s): 7 honest, 2 tainted (recovery re-holds); honest actions held: 7', no H=0 note (hold 6). Contrast: 'operator released 2: 0 honest, 2 tainted; honest actions held: 0', note 'H=0 (no lineage hold): residual damage R = 0/3; irreversible tainted effects released = 0'. Both match score.json fp_cost exactly and appear in beat 3 and the HTML. Missing fp_cost says 'unavailable', never 0. 'first bad seq' wording in live/html/model. tests/console 25 passed. Flag for whoever owns D10 (not S4-19): under this driver the contrast run released 0 tainted irreversible effects, so it does not show the escape the --no-lineage-hold help text promises. Check the before-recovery contrast numbers before anyone quotes them.",
   "log": [
     {
       "t": "20 Nov 17:06",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "21 Nov 00:05",
+      "who": "ishaan",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "21 Nov 00:05",
+      "who": "ishaan",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 00:05",
+      "who": "ishaan",
+      "msg": "→ in_review: ready for kabir"
+    },
+    {
+      "t": "21 Nov 00:09",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

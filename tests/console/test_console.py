@@ -263,10 +263,10 @@ def test_audit_beat_names_first_bad_index_and_reason(run, tmp_path):
     a = m["beats"][4]
     assert a["status"] == "fail" and a["first_bad"] == m["verify"]["first_bad"] and a["reason"] == m["verify"]["reason"]
     assert a["first_bad"] is not None and f"first bad seq {a['first_bad']}" in a["lines"][0]
-    assert f"first bad index: {a['first_bad']} ({a['reason']})" in beat_frame(m, 4)
-    assert "first bad index" in render_html(bad)
+    assert f"first bad seq: {a['first_bad']} ({a['reason']})" in beat_frame(m, 4)
+    assert "first bad seq" in render_html(bad)
     ok = build_model(run)["beats"][4]
-    assert ok["first_bad"] is None and "first bad index" not in beat_frame(build_model(run), 4)
+    assert ok["first_bad"] is None and "first bad seq" not in beat_frame(build_model(run), 4)
 
 
 def test_failed_verify_tamper_shows_real_first_bad_no_unwitnessed_claim(hero, tmp_path):
@@ -385,3 +385,61 @@ def test_no_lineage_hold_contrast_banner(run, tmp_path):
     assert m["config"]["lineage_hold"] is False and m["verify"]["ok"] and m["verify"]["lineage_hold"] is False
     assert {"kind": "contrast", "text": NO_LINEAGE_HOLD_BANNER} in m["banners"]
     assert "NO-LINEAGE-HOLD contrast run" in render_html(out) and "NO-LINEAGE-HOLD contrast run" in frame(out)
+
+
+# ---- S4-19: operator releases (D-17), H=0 note only when lineage hold was off, "seq" wording
+
+def test_scorecard_states_operator_releases_and_held_honest(hero, tmp_path):
+    d = tmp_path / "rel"
+    shutil.copytree(hero, d)
+    fp = {"operator_unholds": {"total": 9, "honest": 7, "tainted": 2}, "held_honest_actions": 7}
+    (d / "score.json").write_text(json.dumps(_score(fp_cost=fp)))
+    sc = build_model(d)["scorecard"]
+    assert sc["operator_unholds"] == fp["operator_unholds"] and sc["held_honest_actions"] == 7
+    assert "operator released 9 held item(s): 7 honest, 2 tainted" in sc["releases"] and "honest actions held: 7" in sc["releases"]
+    assert sc["releases"] in beat_frame(build_model(d), 3) and "operator released 9" in render_html(d)
+    (d / "score.json").write_text(json.dumps(_score()))  # no fp_cost: never invent a 0
+    assert "unavailable" in build_model(d)["scorecard"]["releases"]
+
+
+def test_h0_note_says_no_lineage_hold_only_when_off(hero, tmp_path):
+    d = tmp_path / "h0"
+    shutil.copytree(hero, d)
+    (d / "score.json").write_text(json.dumps(_score(hold=0)))
+    on = build_model(d)["scorecard"]["hold_note"]
+    assert "H=0" in on and "no lineage hold" not in on and "lineage hold on" in on
+    cfg = json.loads((d / "config.json").read_text())
+    (d / "config.json").write_text(json.dumps(cfg | {"lineage_hold": False}))
+    assert "no lineage hold" in build_model(d)["scorecard"]["hold_note"]
+
+
+def _drive_real(base, name, *extra):
+    from tests.integration.test_hero_f2plus import _drive
+    return _drive(base / name, "--pause-on-alert", *extra)
+
+
+@pytest.fixture(scope="module")
+def real_runs():
+    import os
+    import tempfile
+    base = Path(tempfile.mkdtemp(prefix="ks-con-", dir="/tmp"))
+    os.chmod(base, 0o711)
+    yield base, _drive_real(base, "hero"), _drive_real(base, "contrast", "--hold", "0", "--no-lineage-hold")
+    shutil.rmtree(base, ignore_errors=True)
+
+
+def test_real_hero_and_contrast_console_matches_score_json(real_runs):
+    base, hero_res, con_res = real_runs
+    for name, res, lineage in (("hero", hero_res, True), ("contrast", con_res, False)):
+        run_dir = base / name
+        s = res["score"]
+        m = build_model(run_dir)
+        sc = m["scorecard"]
+        un = s["fp_cost"]["operator_unholds"]
+        assert sc["operator_unholds"] == un and sc["held_honest_actions"] == s["fp_cost"]["held_honest_actions"]
+        assert f"operator released {un['total']} held item(s): {un['honest']} honest, {un['tainted']} tainted" in sc["releases"]
+        assert sc["releases"] in beat_frame(m, 3) and sc["releases"] in render_html(run_dir)
+        assert m["config"]["lineage_hold"] is lineage
+        assert not (s["hold"] == 0 and sc["hold_note"] is None)
+        if sc["hold_note"]:
+            assert ("no lineage hold" in sc["hold_note"]) is (not lineage)

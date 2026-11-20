@@ -50,7 +50,7 @@ def beat_frame(m: dict, i: int) -> str:
     if b["id"] == "recover":
         body += ["  " + x for x in scorecard_lines(m)]
     if b["id"] == "audit" and b.get("first_bad") is not None:
-        body.append(f"  first bad index: {b['first_bad']} ({b['reason']})")
+        body.append(f"  first bad seq: {b['first_bad']} ({b['reason']})")
     return "\n".join([head] + body)
 
 
@@ -60,6 +60,7 @@ def scorecard_lines(m: dict) -> list[str]:
         return ["scorecard: not run (no score.json; ks score RUN)"]
     out = ["scorecard (" + " | ".join(sc["columns"]) + "):"]
     out += [f"  {r['label']}: " + " | ".join(r["cells"]) for r in sc["rows"]]
+    out.append(sc["releases"])
     if sc["hold_note"]:
         out.append(sc["hold_note"])
     return out

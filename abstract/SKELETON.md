@@ -132,14 +132,14 @@ Guard: ✗ kill · quarantine · block · cancel (as containment) [T §3 · X29]
 
 ### 2e. Recover (95; selective undo = the payoff, D1)
 
-Scores: brief's clean recovery → residual damage R 0 + collateral loss C 0, hero targets (defined in 3b) [CHARTER · D13]
+Scores: brief's clean recovery → residual damage R + collateral loss C, measured on the hero (defined in 3b) [CHARTER · D-19 · ALLOWED N4–N5]
 
 - MUST payoff = selective undo: taint-scoped revert, only writes still at the culprit's after-version [D1 · F9 · T: taint-scoped revert]
 - MUST triage edited the same supplier → its edit kept, no redo; only the bank account restored; no flag [W6 · F9 · CALL-02 B2/B3 · T: kept]
 - IF-ROOM conflict only when an honest agent later changed the same data (field or row) → flag, a person decides [F9 · L9 · T: write-write conflict, flag]
 - MUST dependants: deterministic → re-run via outbox, idempotency keys; LLM → re-plan, approval [F10 · D4 · X25 · T: re-run, re-plan]
 - MUST irreversible: hold window → compensate or report; ✗ reverse [F11 · X14 · L1 · T: compensate]
-- MUST held payment → cancel (outbox item), a step in the approved recovery plan [F11 · T: cancel (outbox item), recovery plan]
+- MUST held payment → re-run under the same outbox item, re-held, then the operator unholds it (clean payload); no cancel in the hero [F11 · B2-a · T: outbox, lineage hold]
 - MUST credit Taser, Retro, Warp, Aire → carried to multi-agent shared state + dependants [#14 · X5 · F1]
 - IF-ROOM records append-only; nothing erased [F9]
 - IF-ROOM over-taint > under-taint, by design (L2 states it in Limits) [F9 · L2]
@@ -174,14 +174,15 @@ Guard: "within the threat model" on every such claim [W2 · L4]
 - MUST brief's three scores: no agreed measurement in the standards we checked → we define checkable ones [RES-08 headline · W7]
 - MUST TTI-detect t0 → alert · TTI-attribute alert → culprit · TTC alert → first denied envelope [§1.5 · D13 · CHARTER]
 - MUST recovery scored vs oracle (S\*) = same seed, fault off, culprit stops from its suspension tick; not our taint graph [W1 · CALL-02 X3a · T: oracle (S*)]
-- MUST targets, to be measured · hero scenario only · residual damage R 0, collateral loss C 0 (in full) · post-alert tainted effects 0 · irreversible tainted effects released 0 → clean recovery [§1.5 D13 row, elements 1–4 · T §5 note · T: clean recovery]
+- MUST measured (T=40, 20 seeds, median) · hero scenario only · residual damage R 0 **after N operator releases, M honest** (D-17) · collateral loss C 0 (in full) · post-alert tainted effects 0 · irreversible tainted effects released 0 → clean recovery [ALLOWED N4–N7 · §1.5 D13 row, elements 1–4 · T §5 note · T: clean recovery]
 - MUST D13 clauses: honest agent's later change to the same data → a person decides → residual damage · culprit's own work between fault and suspension → reverted → collateral loss [§1.5 D13 row, elements 5–6 · F9 · L8]
-- IF-ROOM target 0: re-emitted effects [§1.5]
+- IF-ROOM measured 0: re-emitted effects · IF-ROOM TTI-detect / TTI-attribute / TTC in ticks [ALLOWED N1–N3, N8]
+- IF-ROOM F2+x disclosed: honest conflict → R 1/5, C 21/254, 29 honest held, "before resolver" [ALLOWED N15 · L9 · D-18]
 - IF-ROOM re-plan and re-run cost → reported openly [W3 · X27]
 
-Guard: TTI/TTC = definitions only; no seconds [§1.5 · D13 · X21]
+Guard: TTI/TTC in ticks only (ALLOWED N1–N3); no seconds [§1.5 · X21]
 Guard: alongside containment-style metrics, not instead; no second Airlock name [W1 · D3]
-Guard: label "target"; future tense [D13]
+Guard: "measured" only for ALLOWED-NUMBERS values with T=40 + 20 seeds; ✗ bare R = 0 (D-17); ✗ any F2+c value (⚑ S4-24) [D-19 · X21]
 Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" for S\* [§1.5 D13 row · W1]
 
 ### 3c. Path to banking (40)
@@ -207,14 +208,14 @@ Guard: production twins ≠ integrations [W5 · X28]
 
 Guard: key isolation, if mentioned → enforced in production, detected here [L5 · X24]
 
-### What we will show (40; future tense, D13)
+### What we measured / will show (40; D-19)
 
-- MUST ≥20 seeded runs · median, p95, max · "planned" [§1.5 · T: seeded run]
+- MUST 20 seeded runs, T=40 · median [min..max] · done (BENCH-S3); finale demo and jury break still future [ALLOWED §0 · §1.5 · T: seeded run]
 - MUST baselines: snapshot · revert-culprit-only (both oracle-assisted: given t0) · no-op [§1.5 · W1 · T: snapshot baseline, revert-culprit-only baseline, oracle-assisted]
-- IF-ROOM hold window 0 vs >0; escaped payment at 0 → residual damage [D10 · T: hold window]
+- IF-ROOM hold window 0 vs 6: both 0 escaped (lineage hold stays on at H=0); D10 contrast = lineage hold off, no recovery → 12 [6..18] payments escaped, "contrast, not a security result" [ALLOWED N16–N17 · D10 · T: hold window]
 - IF-ROOM threat model published before the jury's break attempts [F13 · D11]
 
-Guard: prototype from 25 Nov → ✗ achieved / showed / measured [GUARDRAILS tense rule]
+Guard: "measured" only for ALLOWED-NUMBERS values; demo, jury break, resolver → future [GUARDRAILS tense rule v5]
 
 ---
 
@@ -248,3 +249,9 @@ Guard: prototype from 25 Nov → ✗ achieved / showed / measured [GUARDRAILS te
 - 3b: S\* = same seed, fault off, culprit stops from its suspension tick; targets bullet carries D13 elements 1–4 (post-alert and irreversible targets promoted from IF-ROOM); new MUST for D13 clauses 5–6; new Guard (✗ "same field", ✗ unconditional C = 0, ✗ "culprit removed"). 3b may use its +15.
 - What we will show: snapshot and revert-culprit-only labelled oracle-assisted.
 - MUSTs 55 → 56 (3b 4 → 5); cap 60 holds.
+
+## Changes v4 (S4-18, zoya, 21 Nov; D-19, D-17, B2-a)
+
+- 2e: Scores line measured (D-19); held-payment MUST now re-run → re-held → operator unhold, no cancel (B2-a). MUST count unchanged (56).
+- 3b: targets bullet → measured values with D-17 release clause (ALLOWED N4–N7); new IF-ROOM ticks and F2+x "before resolver" bullet; Guards updated (ticks only, no bare R = 0, no F2+c value ⚑ S4-24).
+- What we measured / will show: 20 seeds done at T=40; hold window line now H=0 vs 6 with the D10 contrast labelled.

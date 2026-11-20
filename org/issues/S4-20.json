@@ -7,20 +7,40 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "done",
   "outcome": "The known t0 limit is visible, not silent",
   "acceptance": [
     "Rogue crm builds write 2 from its view of write 1; dry-run prints t0_seq_est_literal and t0_delta != 0; deleting the warning fails the test"
   ],
   "depends": [],
   "deliverable": "tests/redteam/",
-  "summary": "",
-  "review": "",
+  "summary": "tests/redteam/test_rt14_view_seed_gap.py: rogue crm write 2 built from view of write 1; dry-run prints t0_seq_est_literal and t0_delta != 0 plus the warning; removing the warning text in dryrun.render fails the test (checked by mutation).",
+  "review": "[kabir · done] Container (killswitch:kabir2, --network none): tests/redteam 92 passed. RT14: rogue crm write 2 has a source=view read of S-22; dry-run prints t0_seq_est, the literal walk (t0_seq_est_literal) and t0_delta != 0 with delta = est - literal. Mutation reproduced: replacing the warning text in dryrun.render (mounted over /app/src) makes the test fail at the warning assert. Nit, not blocking: the printed label is 'literal walk N', not the field name t0_seq_est_literal; THREAT-MODEL limit B3-45 names the field, so the wording is fine.",
   "log": [
     {
       "t": "20 Nov 17:06",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "21 Nov 00:01",
+      "who": "tara",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "21 Nov 00:01",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 00:01",
+      "who": "tara",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "21 Nov 00:06",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

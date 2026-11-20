@@ -7,6 +7,7 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TABS = [
     ("start", "Start here", None),
     ("facts", "Fact card", "abstract/FACT-CARD.md"),
+    ("allowed", "Allowed numbers", "abstract/ALLOWED-NUMBERS.md"),
     ("skeleton", "Skeleton", "abstract/SKELETON.md"),
     ("guard", "Guardrails", "abstract/GUARDRAILS.md"),
     ("terms", "Terms", "abstract/TERMS.md"),

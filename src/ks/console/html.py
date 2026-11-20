@@ -48,8 +48,9 @@ M.beats.forEach((b,i)=>{const s=E('section','');const h=E('h2','',(i+1)+'. '+B[i
   if(!sc)s.append(E('p','','not run: no score.json (ks score RUN)'));else{const t=E('table');const h=E('tr');h.append(E('th','','metric'),...sc.columns.map(c=>E('th','',c)));t.append(h);
    sc.rows.forEach(r=>{const tr=E('tr');tr.append(E('td','',r.label),...r.cells.map(c=>E('td',/^unavailable/.test(c)?'na':'mono',c)));t.append(tr)});s.append(t);
    if(sc.oracle_assisted.length)s.append(E('p','','oracle-assisted baselines: '+sc.oracle_assisted.join(', ')));
+   s.append(E('p','',sc.releases));
    if(sc.hold_note)s.append(E('div','banner warn',sc.hold_note))}}
- if(b.id==='audit'&&b.first_bad!==null&&b.first_bad!==undefined)s.append(E('div','banner','first bad index: '+b.first_bad+' ('+b.reason+')'));
+ if(b.id==='audit'&&b.first_bad!==null&&b.first_bad!==undefined)s.append(E('div','banner','first bad seq: '+b.first_bad+' ('+b.reason+')'));
  root.append(s)});
 const tl=E('section');tl.append(E('h2','','Timeline: records per tick'));const bars=E('div','tl');const mx=Math.max(1,...M.ticks.map(t=>t.n));
 M.ticks.forEach(t=>{const i=E('i');i.style.height=(100*t.n/mx)+'%';i.title='tick '+t.tick+': '+t.n+' records '+JSON.stringify(t.agents);bars.append(i)});tl.append(bars);

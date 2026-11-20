@@ -6,7 +6,7 @@ anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md
 
 **Tag key.** `#n` = fact-card row · `P/F/W/L/X` = GUARDRAILS row (`§1.5` = own-number table) · `D` = CALL-01 decision · `C1–C6` = THREAT-MODEL §4 claim · `B1–B4` = THREAT-MODEL §2 boundary · `rule n` = THREAT-MODEL §6 · `RT` = red-team test in SPEC §2 · `T§` = TERMS section · `SYN §` = SYNTHESIS · `RES-nn §` = research file.
 **TM scope** (only on security questions, for kabir): **in** = in scope for the adopted threat model (CALL-01 "Threat model, adopted"; THREAT-MODEL §3); **out** = declared out of scope, with the production mitigation named there.
-**Standing rule for every answer.** Our parts are design and target; nothing runs before 25 Nov (GUARDRAILS ground rules; D13; THREAT-MODEL §5 last line). Every RT pass value is a **target**, not a result.
+**Standing rule for every answer (v5, D-19).** Measured values come only from abstract/ALLOWED-NUMBERS.md (BENCH-S3, T=40, 20 seeds), each with its condition; any R = 0 carries D-17's release clause. Everything else is design or target. Every RT pass value stays a **target** until kabir's REDTEAM-S4 report (THREAT-MODEL §5 last line).
 
 ---
 
@@ -115,14 +115,15 @@ anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md
 
 - **TM scope (agent side):** **in** (rogue: TOCTOU flood, replay into outbox, persistence after suspend; colluding: laundering). **No claim:** splitting under thresholds (THREAT-MODEL §5, "no RT, no claim"); covert channels **out**.
 - **Evidence (agent racing it):** F6, C5 · D8 · rules 4, 5 (epoch and deny-list in the write transaction; dispatcher re-checks holds) · RT5, RT4 (outbox variant), RT12, RT10 (dispatch re-check race hook), RT9 (laundered value held) · T§3 (lineage hold, sensitive field: early hold) · CALL-01 §2 "Early hold".
-- **Evidence (us tuning it):** D10 (one config value; demo shows 0 vs >0) · RT10 H=0 run (passes when the escape **is scored**: R > 0) · §1.5 protocol row · SYN §6 (≥20 seeded runs; median, p95, max; snapshot, revert-culprit-only, no-op baselines; collateral stall and false-positive cost) · T§7 gap 5 (hold value in the run-dir config so the scorer sees it).
+- **Evidence (us tuning it):** D10 (one config value) · BENCH-S3 F2+ H=0 system: R 0, irreversible released 0 (lineage hold stays on at H=0; ALLOWED N16) · D10 contrast, lineage hold off + pause with no recovery: 12 [6..18] payments escaped, >0 on 20/20 seeds (N17, "contrast, not a security result") · §1.5 protocol row · SYN §6 (≥20 seeded runs; median, p95, max; snapshot, revert-culprit-only, no-op baselines; collateral stall and false-positive cost) · T§7 gap 5 (hold value in the run-dir config so the scorer sees it).
 - **Key distinction:** Holds follow recorded reads; hold zero shown and scored too.
 - **Traps:**
   - Holding effects released **before** the alert: not held; at hold 0 scored as residual damage (C5 refuse column; F6).
   - Agent-declared lineage as the basis of a hold: never trusted; holds come from **recorded** read sets only (D8; C5; RT10 pass line).
-  - "The hold is free": it delays honest irreversible effects; collateral stall and FP cost are reported (SYN §6). No seconds value exists (§1.5; X21).
+  - "The hold is free": it delays honest irreversible effects; collateral stall and FP cost are reported (SYN §6). Measured cost: 3 [0..7] honest items held, median 5 operator releases (N4, N10); no seconds value exists (X21).
   - "We cancel / block" as containment: we hold, never cancel (X29; CALL-01 "Release semantics").
-  - "0 escaped" stated as a result (X21; D13).
+  - "0 escaped" without its condition: say H=6 and H=0 both with the lineage hold on (N7, N16); the 12 escaped is the contrast, never a system result (N17; X21).
+  - Claiming H=0 means "no hold": the lineage hold is still on (GUARDRAILS F6 v5).
 
 ## Q9. "What about irreversible payments and emails?"
 
@@ -131,11 +132,12 @@ anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md
 - **Notes:**
   - Class I2 (uncontainable) runs only with prior human approval (T§3).
   - Terminology fork: containment **holds** and never cancels (X29); discarding a held item is a **recovery-plan step** (`cancel_outbox`) after the dry-run diff (F11; T§4). Do not merge the two.
+  - Hero (B2-a): no cancel at all. Payments re-run under the same `outbox:<id>` v+1, re-held, then the operator unholds them with clean payloads (scripts/demo.sh line 5; GUARDRAILS F11 v5).
 - **Traps:**
   - "Reverse", "undo", "refund" as our undo of a sent effect (X14; T§4 bans "reverse" for compensate).
   - Calling external effects Airlock's weak spot: it is Airlock's strongest part (RES-11 §3).
   - "Meets Art 14(4)(e) safe state": "maps to" only (W4; X19).
-  - Hiding the hold-0 escape: show it; it is the honest contrast (RT10; D10).
+  - Hiding the contrast: show it with its label. Escape appears only with the lineage hold off and no recovery (N17); at H=0 with the lineage hold on, 0 escaped (N16). Do not present 12 as a system result.
 
 ## Q10. "Why not just use Dolt or git revert?"
 
@@ -148,7 +150,7 @@ anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md
   - Dolt performance numbers: RES-06 never ran Dolt (F4/§4 caveat). The git run is one toy example, not a benchmark (RES-06 §5).
   - Overclaiming conflict handling: a write-write conflict is **flagged**, not merged (T§4; F9).
   - Hero conflict line (CALL-02): triage's edit on the same supplier is **kept**, no flag; the IBAN is its own field object, so they share no datum (W6; CALL-02 B1–B3). Do not call it a conflict.
-  - "So you never get a conflict?": an honest one exists in bench **F2+x** (triage edits the price row crm wrote → row-level write-write conflict → flag, unresolved, residual damage R > 0). Show it, do not hide it (L9; CALL-02 B5). Conflicts are field-level only for sensitive fields, row-level elsewhere (F9).
+  - "So you never get a conflict?": an honest one exists in bench **F2+x** (triage edits the price row crm wrote → row-level write-write conflict → flag, unresolved because the bench approver never resolves flags). Measured **before resolver** (D-18): R 1/5, C 21/254, 29 honest items held (medians; ALLOWED N15); quote all three. Show it, do not hide it (L9; CALL-02 B5). Conflicts are field-level only for sensitive fields, row-level elsewhere (F9).
 
 ## Q11. "Any real incident where this happened? Would this have stopped the METR / OpenAI–Hugging Face case?"
 
@@ -178,6 +180,20 @@ anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md
   - "We detect any misbehaviour": only declared data invariants and hard evidence (X30).
   - Over-taint presented as free: collateral holds are possible by design (L2); independents keep running is the RT10 target, not a result.
 
+## Q13. "Is R = 0 just the operator releasing things by hand?"
+
+- **Evidence:** ALLOWED-NUMBERS N4, N10 · BENCH-S3 §F2+ H=6 rows `fp_cost.operator_unholds.total/.honest/.tainted`, `fp_cost.held_honest_actions` · D-17 (CALL-02 resolutions B2-b) · TERMS §5 clean recovery · scripts/demo.sh line 5 (unhold step) · FACT-CARD O1–O2 (demo seed 2: 9 released, 7 honest).
+- **Key distinction:** Releases are logged decisions; R still counts anything held at T.
+- **Notes:**
+  - F2+ medians: 5 released [1..9] = 3 honest [0..7] + 2 tainted-lineage [1..2]. Tainted-lineage = payments recovery re-ran and re-held; they leave with clean payloads.
+  - Honest holds are the sensitive-field hold's over-taint cost (L2), not recovery errors.
+  - Items still held at run end count as left in R (TERMS §5), so not releasing would raise R, not hide it.
+- **Traps:**
+  - Bare R = 0 anywhere (D-17).
+  - Calling the releases automatic: they are operator `ks contain unhold` steps.
+  - Calling released tainted-lineage items "tainted payments sent": the payloads were re-run and clean.
+  - [Our view, gap] The console scorecard does not yet show release counts (S4-19); point to score.json until it does.
+
 ---
 
 ## Also likely (one-line pointers, no full entry)
@@ -205,3 +221,11 @@ anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md
 
 - Q10: hero conflict line updated: triage's edit is **kept**, no flag; the honest conflict lives in bench F2+x (R > 0), with field-or-row granularity. Nothing else edited.
 - Resolved by PMO (19 Nov) after CALL-02: Q5 trap cites `Alert.suspect` (no such field; suspect = `root_candidates[0]`, TERMS §1); Q4 note cites "T§7 gap 7: `idempotency_key` not yet a contract field" (resolved: C3 `OutboxItem.idempotency_key`); Q12 cites rule 10 "`release` = un-hold + restore epoch" (CALL-02 D4: fresh epoch, lifts suspension only).
+
+## Changes v5 (S4-18, zoya, 21 Nov; D-19, D-17, B2-a)
+
+- Standing rule: measured values from ALLOWED-NUMBERS only; RT pass values stay targets until REDTEAM-S4.
+- Q8: H=0 keeps the lineage hold (0 escaped); D10 contrast (12 escaped) labelled; measured hold cost added.
+- Q9: hero has no cancel (B2-a, operator unhold); hold-0 trap rewritten to the labelled contrast.
+- Q10: F2+x measured values, "before resolver" (D-18).
+- New Q13: operator releases and R = 0 (D-17).

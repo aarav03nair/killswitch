@@ -24,7 +24,7 @@ section{scroll-margin-top:120px}
 code{font-size:.9em;background:var(--pan);padding:1px 4px;overflow-wrap:anywhere}pre{overflow-x:auto;background:var(--pan);padding:10px}
 a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid var(--rule);color:var(--mut)}
 </style></head><body>
-<header><div class="brand"><b>Kill Switch</b>Abstract Kit · updated 19 Nov 2026, 11:00 IST</div><nav role="tablist"><button role="tab" id="t-start" aria-controls="start" aria-selected="true">Start here</button><button role="tab" id="t-facts" aria-controls="facts" aria-selected="false">Fact card</button><button role="tab" id="t-skeleton" aria-controls="skeleton" aria-selected="false">Skeleton</button><button role="tab" id="t-guard" aria-controls="guard" aria-selected="false">Guardrails</button><button role="tab" id="t-terms" aria-controls="terms" aria-selected="false">Terms</button><button role="tab" id="t-jury" aria-controls="jury" aria-selected="false">Jury Q&amp;A</button></nav></header>
+<header><div class="brand"><b>Kill Switch</b>Abstract Kit · updated 21 Nov 2026, 00:16 IST</div><nav role="tablist"><button role="tab" id="t-start" aria-controls="start" aria-selected="true">Start here</button><button role="tab" id="t-facts" aria-controls="facts" aria-selected="false">Fact card</button><button role="tab" id="t-allowed" aria-controls="allowed" aria-selected="false">Allowed numbers</button><button role="tab" id="t-skeleton" aria-controls="skeleton" aria-selected="false">Skeleton</button><button role="tab" id="t-guard" aria-controls="guard" aria-selected="false">Guardrails</button><button role="tab" id="t-terms" aria-controls="terms" aria-selected="false">Terms</button><button role="tab" id="t-jury" aria-controls="jury" aria-selected="false">Jury Q&amp;A</button></nav></header>
 <main><section id="start" role="tabpanel" >
 <h1>Abstract Kit</h1>
 <p class="lede">Everything you need to write the SEED abstract yourself: facts you may quote, how to phrase them safely, a notes-only skeleton, and the questions the jury will throw at you. Due <b>22 Nov 2026</b>, under 1,000 words, problem → fix → why it matters.</p>
@@ -219,6 +219,44 @@ a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid va
 </tbody>
 </table>
 <p><strong>Notes on the A~ rows.</strong> #1: METR does say "cyber evaluations" / "cyber task", but "internal" is unconfirmed for this evaluation; keep the safe wording "ExploitGym evaluation runs". #4: numbers confirmed on the arXiv abstract + Table 1, but ICML 2025 is not shown on the arXiv page and not yet confirmed from an official ICML page; cite the venue only once confirmed. #11: the new repo states no stability level, and the registry shows Deprecated keys plus Development values. #13: the PDF does not name SIGMOD. R: today's fetch failed; RES-08 read the report once through a summariser.</p>
+<h2>Our own results (B3-27, real container runs, F2+ hero, seeds 0/1/2; from score.json, re-checked by anaya 20 Nov)</h2>
+<p><strong>D-19 (21 Nov, zoya S4-18):</strong> the abstract cites our measured numbers only from <code>abstract/ALLOWED-NUMBERS.md</code> (BENCH-S3, T=40, 20 seeds, each with its source row and condition). Rows O1–O4 below are hero demo-seed facts (seeds 0/1/2) for the stage and Q&amp;A, not the abstract's bench numbers.</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Fact · exact number</th>
+<th>Must travel with it</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>O1</td>
+<td>Residual damage R = <strong>0/1, 0/5, 0/9</strong>; collateral loss C = <strong>0</strong>; both tainted-effect metrics and reemitted = <strong>0</strong></td>
+<td><strong>D-17:</strong> every R = 0 claim states it holds <em>after the operator released N held items, M of them honest</em>: seed 0: 1 (0 honest), seed 1: 5 (3 honest), seed 2: <strong>9 (7 honest)</strong></td>
+<td><code>fp_cost.operator_unholds</code></td>
+</tr>
+<tr>
+<td>O2</td>
+<td>Operator releases (<code>operator_unholds</code> tainted + honest): seed 0 <strong>1+0</strong>, seed 1 <strong>2+3</strong>, seed 2 <strong>2+7</strong>; <code>held_honest_actions</code> <strong>0 / 3 / 7</strong></td>
+<td>honest = an item recovery did not act on (ADR-06 A3)</td>
+<td>score.json <code>fp_cost</code></td>
+</tr>
+<tr>
+<td>O3</td>
+<td><code>collateral_stall</code> <strong>0/389, 0/382, 0/381</strong></td>
+<td><strong>proxy</strong> (<code>basis: s_star</code>, divergence from S* over non-culprit keys outside B), never "the S0 measure"</td>
+<td>ADR-06 A3</td>
+</tr>
+<tr>
+<td>O4</td>
+<td>TTI detect <strong>0 / 2 / 2</strong> ticks, attribute <strong>0</strong>; TTC <strong>1</strong> tick</td>
+<td>ticks, not seconds; 3 seeds only</td>
+<td>score.json</td>
+</tr>
+</tbody>
+</table>
 <h2>Not safe to print (never quote)</h2>
 <ul>
 <li><strong>Exact HF/METR dates or times</strong> (6, 8, 11, 13, 19, 21 Jul; 23:00 UTC). The outlets disagree. Say "July 2026" and "about two days later".</li>
@@ -229,6 +267,280 @@ a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid va
 <li><strong>MAST "94%"</strong>, Cordon <strong>45/45 vs 14/45</strong>, DeltaBox ms figures, any GoEx number. Any <strong>venue</strong> for MAST, Cordon, CHIEF, FAMAS, Atomix, GoEx, DeltaBox or State Footprints.</li>
 <li><strong>"First"</strong> (provenance containment, agent undo, agent gateway). <strong>"Tamper-proof"</strong>, <strong>"compliant"</strong>, <strong>"beats Who&amp;When"</strong>. Saying we reverse irreversible effects. Any Airlock "better / leaks / sim-only" claim.</li>
 <li><strong>"Tools kill one agent or all of them"</strong> as our own insight (it is Airlock's framing). <strong>"Multi-agent incidents are common"</strong>.</li>
+</ul></section><section id="allowed" role="tabpanel" hidden><h1>ALLOWED NUMBERS: our own measured values the abstract may cite (D-19, S4-18)</h1>
+<p>zoya · 21 Nov 2026 · Reviewer: anaya · Decision: <strong>D-19</strong> (Aarav, CALL-04 decision 3, revising D13): the abstract may cite measured BENCH-S3 numbers, each with its conditions. Conditions: <strong>D-17</strong> (CALL-02 B2-b), <strong>D-18</strong> (CALL-04 decision 2), <strong>D10</strong> (CALL-01). Source of every value: <code>org/reports/BENCH-S3.md</code> (raw in <code>runs/bench-b3-33/</code>, gitignored).</p>
+<p><strong>How to use.</strong> This is a list of values and the conditions that travel with them. It is not abstract text: Aarav writes every sentence (CHARTER). A number of ours <strong>not on this list</strong> stays out of the abstract. Outside numbers still come only from <code>abstract/FACT-CARD.md</code>.</p>
+<h2>0. Conditions that travel with every value below [Fact]</h2>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Condition</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>G1</td>
+<td><strong>T = 40</strong> ticks per run. Do not compare ratio metrics with T=120 (S4-14 rerun has no numbers yet)</td>
+<td>BENCH-S3 title + line 3</td>
+</tr>
+<tr>
+<td>G2</td>
+<td><strong>20 seeded runs</strong> (seeds 1..20); cells are <code>median [min..max]</code>, p95 = nearest-rank 19th of 20</td>
+<td>BENCH-S3 line 3</td>
+</tr>
+<tr>
+<td>G3</td>
+<td>Hold window <strong>H = 6</strong> unless the row says H=0</td>
+<td>BENCH-S3 section titles</td>
+</tr>
+<tr>
+<td>G4</td>
+<td>Times are in <strong>ticks</strong> (logical clock, tick barrier), never seconds</td>
+<td>TERMS §5; GUARDRAILS L7</td>
+</tr>
+<tr>
+<td>G5</td>
+<td>Our own simulated workspace: ~10 <strong>deterministic</strong> agents, single host. Not LLM agents</td>
+<td>GUARDRAILS L6, L7</td>
+</tr>
+<tr>
+<td>G6</td>
+<td>The system's recovery is <strong>not told</strong> the culprit or t_inject; baselines snapshot and revert-culprit-only <strong>are</strong> (oracle-assisted)</td>
+<td>BENCH-S3 lines 7–8</td>
+</tr>
+<tr>
+<td>G7</td>
+<td>Recovery is scored against the oracle S* (same seed, fault off, culprit stops from its suspension tick)</td>
+<td>TERMS §5; GUARDRAILS W1</td>
+</tr>
+<tr>
+<td>G8</td>
+<td>Say "median over 20 seeds" (or give the range) next to any median. Quote fractions as printed; convert to % only when exact (e.g. 1/5 = 20%)</td>
+<td>BENCH-S3 line 3</td>
+</tr>
+<tr>
+<td>G9</td>
+<td>Bench platform: run in the container (OrbStack, arm64, Linux) with per-agent uids, not native macOS (where attribution is VOID). Closed 21 Nov (anaya review; pmo statement). The run dir does not record this itself, so per-agent isolation may be stated only about BENCH-S3 values, not about other runs</td>
+<td>BENCH-S3 "Platform" line; HANDOFF line 3</td>
+</tr>
+</tbody>
+</table>
+<h2>1. Hero fault F2+ (system, H=6, T=40) [Fact]</h2>
+<p>All rows: BENCH-S3 §"F2+, H=6, T=40", column <code>system</code>, 20/20 seeds.</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Value (cell as printed)</th>
+<th>Metric row</th>
+<th>Must travel with it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>N1</td>
+<td>TTI-detect <strong>2 [0..2]</strong>, p95 2</td>
+<td><code>tti_detect</code></td>
+<td>ticks (G4); from t0 to first alert</td>
+</tr>
+<tr>
+<td>N2</td>
+<td>TTI-attribute <strong>0 [0..0]</strong></td>
+<td><code>tti_attribute</code></td>
+<td>attribution is a lookup on signed records (F5); not an accuracy claim (X20)</td>
+</tr>
+<tr>
+<td>N3</td>
+<td>TTC <strong>1 [1..1]</strong></td>
+<td><code>ttc</code></td>
+<td>ticks; alert → first denied culprit envelope</td>
+</tr>
+<tr>
+<td>N4</td>
+<td>residual damage R <strong>0 [0..0]</strong></td>
+<td><code>R</code></td>
+<td><strong>D-17, mandatory in the same sentence or the next:</strong> holds <em>after the operator released</em> a median <strong>5</strong> held items <strong>[1..9]</strong> (<code>fp_cost.operator_unholds.total</code>), of which <strong>3 [0..7]</strong> honest (<code>…honest</code>) and <strong>2 [1..2]</strong> tainted-lineage (<code>…tainted</code>). The tainted-lineage ones are payments recovery re-ran and re-held; they leave with clean payloads (scripts/demo.sh line 5). Never a bare R = 0</td>
+</tr>
+<tr>
+<td>N5</td>
+<td>collateral loss C <strong>0 [0..0]</strong>; culprit-window loss <strong>0 [0..0]</strong></td>
+<td><code>C</code>, <code>c_culprit_window</code></td>
+<td>Hero F2+ only. Holds because crm writes nothing else between fault and suspension (per-seed precondition, GUARDRAILS L8). Never "C = 0" as unconditional. Do not extend to F2+c (⚑ S4-24, §5)</td>
+</tr>
+<tr>
+<td>N6</td>
+<td>post-alert tainted effects <strong>0 [0..0]</strong></td>
+<td><code>post_alert_tainted_effects</code></td>
+<td>counted from the ledger, not from our taint graph</td>
+</tr>
+<tr>
+<td>N7</td>
+<td>irreversible tainted effects released <strong>0 [0..0]</strong></td>
+<td><code>irreversible_tainted_released</code></td>
+<td>at H=6 with the lineage hold on; see N17 for what the hold adds</td>
+</tr>
+<tr>
+<td>N8</td>
+<td>re-emitted effects <strong>0 [0..0]</strong></td>
+<td><code>reemitted</code></td>
+<td>pairs with "re-runs count as redo" (X27)</td>
+</tr>
+<tr>
+<td>N9</td>
+<td>false accusations <strong>0 [0..0]</strong>; honest suspensions <strong>0 [0..0]</strong></td>
+<td><code>false_accusations</code>, <code>fp_cost.honest_suspensions</code></td>
+<td>this fault only; not a general false-positive rate (X30)</td>
+</tr>
+<tr>
+<td>N10</td>
+<td>honest items held <strong>3 [0..7]</strong></td>
+<td><code>fp_cost.held_honest_actions</code></td>
+<td>the cost of over-taint (L2); same seeds as N4's honest releases</td>
+</tr>
+<tr>
+<td>N11</td>
+<td>collateral stall <strong>0 [0..0]</strong></td>
+<td><code>collateral_stall</code></td>
+<td>always "proxy" (basis <code>s_star</code>, ADR-06 A3), never "the S0 measure"</td>
+</tr>
+</tbody>
+</table>
+<p>Not on the list (do not cite): <code>kept_without_redo</code> (a median of fractions with different denominators, easy to misread), <code>revert_precision</code> / <code>revert_recall</code> (need a definition the abstract has no room for), <code>damage_in_window</code>, <code>exposure</code>.</p>
+<h2>2. Baselines on F2+ (H=6, T=40): comparison only [Fact]</h2>
+<p>BENCH-S3 §"F2+, H=6, T=40". Must travel with every row: <strong>oracle-assisted</strong> (given culprit and t_inject, which the system is not), "upper-bound-style baselines, not products" (BENCH-S3 line 8). Allowed verb: "compared with our own baselines". ✗ "beats", "outperforms" (GUARDRAILS §3).</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Value</th>
+<th>Column · metric row</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>N12</td>
+<td>snapshot: residual damage R <strong>3/5 [0..7/9]</strong>, collateral loss C <strong>34/263 [9/190..34/185]</strong></td>
+<td><code>snapshot</code> · <code>R</code>, <code>C</code></td>
+</tr>
+<tr>
+<td>N13</td>
+<td>revert-culprit-only: R <strong>3/5 [0..7/9]</strong>, C <strong>0 [0..0]</strong>, honest items held <strong>27 [1..29]</strong></td>
+<td><code>revert_culprit_only</code> · <code>R</code>, <code>C</code>, <code>fp_cost.held_honest_actions</code></td>
+</tr>
+<tr>
+<td>N14</td>
+<td>no-op (pause only, no recovery): R <strong>1 [1..1]</strong>, post-alert tainted effects <strong>20 [5..46]</strong></td>
+<td><code>no_op</code> · <code>R</code>, <code>post_alert_tainted_effects</code></td>
+</tr>
+</tbody>
+</table>
+<h2>3. Honest conflict variant F2+x (system, H=6, T=40): disclose, "before resolver" [Fact]</h2>
+<p>BENCH-S3 §"F2+x, H=6, T=40", column <code>system</code>, plus Reading notes bullet 1. <strong>Must travel with it:</strong> (a) triage edits the price row crm wrote → write-write conflict → flagged, and the bench approver never resolves flags; (b) label <strong>"before resolver"</strong>: D-18's auditable resolver (S4-12 design, S4-13 build) is not built yet, so these values may change; CALL-04 decision 2 requires F2+x reported before and after; (c) quote all three values together, never R alone.</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Value</th>
+<th>Metric row</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>N15</td>
+<td>residual damage R <strong>1/5 [0..1/5]</strong></td>
+<td><code>R</code></td>
+</tr>
+<tr>
+<td>N15</td>
+<td>collateral loss C <strong>21/254 [0..44/243]</strong></td>
+<td><code>C</code></td>
+</tr>
+<tr>
+<td>N15</td>
+<td>honest items held <strong>29 [0..35]</strong></td>
+<td><code>fp_cost.held_honest_actions</code></td>
+</tr>
+</tbody>
+</table>
+<h2>4. Hold window and the D10 contrast (T=40) [Fact]</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Value</th>
+<th>Source (BENCH-S3)</th>
+<th>Must travel with it</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>N16</td>
+<td>F2+ at hold window <strong>H=0</strong>, system: R <strong>0 [0..0]</strong>, irreversible tainted effects released <strong>0 [0..0]</strong>, after operator releases <strong>2 [1..2]</strong> (0 honest)</td>
+<td>§"F2+, H=0, T=40" · <code>system</code></td>
+<td>H=0 sets the hold window to 0; the <strong>lineage hold stays on</strong>. Do not describe H=0 as "no hold"</td>
+</tr>
+<tr>
+<td>N17</td>
+<td>D10 contrast, pause with no recovery: lineage hold <strong>off</strong> → irreversible tainted payments released <strong>12 [6..18]</strong>, &gt;0 on 20/20 seeds; lineage hold <strong>on</strong> → <strong>0 [0..0]</strong></td>
+<td>§"CONTRAST … F2+, H=0" · <code>no_op</code> · <code>irreversible_tainted_released</code>; §"F2+, H=0" · <code>no_op</code>; Reading notes bullet 3</td>
+<td>Label "contrast, not a security result" (BENCH-S3 line 123). Never aggregated with or quoted as a system result. The hold protects the gap before the operator decides; with recovery applied instantly the system contrast also reads 0 (Reading notes)</td>
+</tr>
+</tbody>
+</table>
+<h2>5. Not allowed yet (⚑ pending, or misleading) [Fact]</h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Why</th>
+<th>Owner</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Any <strong>F2+c</strong> value (BENCH-S3 shows C 0 [0..0], R 0 [0..1/6])</td>
+<td>⚑ Contradicts GUARDRAILS L8 (predicts C &gt; 0). Fixture or guardrail is wrong; not decided here</td>
+<td>anaya, S4-24</td>
+</tr>
+<tr>
+<td><strong>F3</strong> residual damage R = 1</td>
+<td>Not exfiltration: it is honest emails comms never sent while suspended; F3 has no recovery plan (<code>no_plan</code> 20/20). If F3 is mentioned, only N-style detection values: TTI-detect 0 [0..0], TTC 1 [1..1], irreversible tainted released 0 [0..0] (§"F3, H=6"), with "pytest, not live" (F13)</td>
+<td>BENCH-S3 Reading notes bullet 2</td>
+</tr>
+<tr>
+<td>F2+x after resolver</td>
+<td>Does not exist yet</td>
+<td>vikram, S4-13</td>
+</tr>
+<tr>
+<td>T=120 values</td>
+<td>Not run</td>
+<td>tara, S4-14</td>
+</tr>
+<tr>
+<td>Red-team pass values (RT1–RT14)</td>
+<td>Measured values go in <code>org/reports/REDTEAM-S4.md</code> first (kabir S4-c); until then targets only</td>
+<td>kabir</td>
+</tr>
+<tr>
+<td>Seconds, %, "accuracy", "leaks"</td>
+<td>No such measurement (G4; X20, X21)</td>
+<td>n/a</td>
+</tr>
+<tr>
+<td>Hero demo seed values (FACT-CARD O1–O4: seeds 0/1/2, B3-27 container runs)</td>
+<td>Demo facts, not BENCH-S3. Fine on stage with D-17; the abstract cites BENCH-S3 medians</td>
+<td>zoya, S4-10</td>
+</tr>
+</tbody>
+</table>
+<h2>6. Notes for the self-check [Our view]</h2>
+<ul>
+<li>Every number of ours in the draft should map to an ID above. If it does not, cut it or ask.</li>
+<li>Tense: past tense ("measured") is fine <strong>only</strong> for values on this list, with G1–G3. Design parts (finale demo, jury break, resolver) stay future or design tense.</li>
+<li>R = 0 without the release clause (N4) is the single most likely jury attack (JURY-QA Q13).</li>
 </ul></section><section id="skeleton" role="tabpanel" hidden><h1>SKELETON: abstract outline for Aarav to fill in (ABS-06)</h1>
 <p>zoya · 19 Nov 2026 · v3 (CALL-02 freeze) · Inputs: FACT-CARD.md (ABS-01), GUARDRAILS.md v4 (ABS-02), TERMS.md v2 (ABS-04), CALL-01.md D1/D2/D3/D12/D13, CALL-02.md (hero decision, revised D13 meaning, S*), CALL-01/zoya.md §2, research/RES-08.md (headline, ref [19]).</p>
 <p><strong>What this is.</strong> Headings, word budgets and note-form points only. No line here is a sentence to paste; Aarav writes every word (CHARTER).
@@ -376,14 +688,14 @@ Guard: field objects are generic (sensitive-field config), ✗ "IBAN-specific" [
 </ul>
 <p>Guard: ✗ kill · quarantine · block · cancel (as containment) [T §3 · X29]</p>
 <h3>2e. Recover (95; selective undo = the payoff, D1)</h3>
-<p>Scores: brief's clean recovery → residual damage R 0 + collateral loss C 0, hero targets (defined in 3b) [CHARTER · D13]</p>
+<p>Scores: brief's clean recovery → residual damage R + collateral loss C, measured on the hero (defined in 3b) [CHARTER · D-19 · ALLOWED N4–N5]</p>
 <ul>
 <li>MUST payoff = selective undo: taint-scoped revert, only writes still at the culprit's after-version [D1 · F9 · T: taint-scoped revert]</li>
 <li>MUST triage edited the same supplier → its edit kept, no redo; only the bank account restored; no flag [W6 · F9 · CALL-02 B2/B3 · T: kept]</li>
 <li>IF-ROOM conflict only when an honest agent later changed the same data (field or row) → flag, a person decides [F9 · L9 · T: write-write conflict, flag]</li>
 <li>MUST dependants: deterministic → re-run via outbox, idempotency keys; LLM → re-plan, approval [F10 · D4 · X25 · T: re-run, re-plan]</li>
 <li>MUST irreversible: hold window → compensate or report; ✗ reverse [F11 · X14 · L1 · T: compensate]</li>
-<li>MUST held payment → cancel (outbox item), a step in the approved recovery plan [F11 · T: cancel (outbox item), recovery plan]</li>
+<li>MUST held payment → re-run under the same outbox item, re-held, then the operator unholds it (clean payload); no cancel in the hero [F11 · B2-a · T: outbox, lineage hold]</li>
 <li>MUST credit Taser, Retro, Warp, Aire → carried to multi-agent shared state + dependants [#14 · X5 · F1]</li>
 <li>IF-ROOM records append-only; nothing erased [F9]</li>
 <li>IF-ROOM over-taint &gt; under-taint, by design (L2 states it in Limits) [F9 · L2]</li>
@@ -414,14 +726,15 @@ Guard: ✗ triage "flagged" / "conflict" in the hero; the conflict case is bench
 <li>MUST brief's three scores: no agreed measurement in the standards we checked → we define checkable ones [RES-08 headline · W7]</li>
 <li>MUST TTI-detect t0 → alert · TTI-attribute alert → culprit · TTC alert → first denied envelope [§1.5 · D13 · CHARTER]</li>
 <li>MUST recovery scored vs oracle (S*) = same seed, fault off, culprit stops from its suspension tick; not our taint graph [W1 · CALL-02 X3a · T: oracle (S*)]</li>
-<li>MUST targets, to be measured · hero scenario only · residual damage R 0, collateral loss C 0 (in full) · post-alert tainted effects 0 · irreversible tainted effects released 0 → clean recovery [§1.5 D13 row, elements 1–4 · T §5 note · T: clean recovery]</li>
+<li>MUST measured (T=40, 20 seeds, median) · hero scenario only · residual damage R 0 <strong>after N operator releases, M honest</strong> (D-17) · collateral loss C 0 (in full) · post-alert tainted effects 0 · irreversible tainted effects released 0 → clean recovery [ALLOWED N4–N7 · §1.5 D13 row, elements 1–4 · T §5 note · T: clean recovery]</li>
 <li>MUST D13 clauses: honest agent's later change to the same data → a person decides → residual damage · culprit's own work between fault and suspension → reverted → collateral loss [§1.5 D13 row, elements 5–6 · F9 · L8]</li>
-<li>IF-ROOM target 0: re-emitted effects [§1.5]</li>
+<li>IF-ROOM measured 0: re-emitted effects · IF-ROOM TTI-detect / TTI-attribute / TTC in ticks [ALLOWED N1–N3, N8]</li>
+<li>IF-ROOM F2+x disclosed: honest conflict → R 1/5, C 21/254, 29 honest held, "before resolver" [ALLOWED N15 · L9 · D-18]</li>
 <li>IF-ROOM re-plan and re-run cost → reported openly [W3 · X27]</li>
 </ul>
-<p>Guard: TTI/TTC = definitions only; no seconds [§1.5 · D13 · X21]
+<p>Guard: TTI/TTC in ticks only (ALLOWED N1–N3); no seconds [§1.5 · X21]
 Guard: alongside containment-style metrics, not instead; no second Airlock name [W1 · D3]
-Guard: label "target"; future tense [D13]
+Guard: "measured" only for ALLOWED-NUMBERS values with T=40 + 20 seeds; ✗ bare R = 0 (D-17); ✗ any F2+c value (⚑ S4-24) [D-19 · X21]
 Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" for S* [§1.5 D13 row · W1]</p>
 <h3>3c. Path to banking (40)</h3>
 <ul>
@@ -443,14 +756,14 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <li>IF-ROOM ~10 agents · single host · tick barrier [L7]</li>
 </ul>
 <p>Guard: key isolation, if mentioned → enforced in production, detected here [L5 · X24]</p>
-<h3>What we will show (40; future tense, D13)</h3>
+<h3>What we measured / will show (40; D-19)</h3>
 <ul>
-<li>MUST ≥20 seeded runs · median, p95, max · "planned" [§1.5 · T: seeded run]</li>
+<li>MUST 20 seeded runs, T=40 · median [min..max] · done (BENCH-S3); finale demo and jury break still future [ALLOWED §0 · §1.5 · T: seeded run]</li>
 <li>MUST baselines: snapshot · revert-culprit-only (both oracle-assisted: given t0) · no-op [§1.5 · W1 · T: snapshot baseline, revert-culprit-only baseline, oracle-assisted]</li>
-<li>IF-ROOM hold window 0 vs &gt;0; escaped payment at 0 → residual damage [D10 · T: hold window]</li>
+<li>IF-ROOM hold window 0 vs 6: both 0 escaped (lineage hold stays on at H=0); D10 contrast = lineage hold off, no recovery → 12 [6..18] payments escaped, "contrast, not a security result" [ALLOWED N16–N17 · D10 · T: hold window]</li>
 <li>IF-ROOM threat model published before the jury's break attempts [F13 · D11]</li>
 </ul>
-<p>Guard: prototype from 25 Nov → ✗ achieved / showed / measured [GUARDRAILS tense rule]</p>
+<p>Guard: "measured" only for ALLOWED-NUMBERS values; demo, jury break, resolver → future [GUARDRAILS tense rule v5]</p>
 <hr />
 <h2>5-minute writing plan (Aarav)</h2>
 <ol>
@@ -481,14 +794,20 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <li>3b: S* = same seed, fault off, culprit stops from its suspension tick; targets bullet carries D13 elements 1–4 (post-alert and irreversible targets promoted from IF-ROOM); new MUST for D13 clauses 5–6; new Guard (✗ "same field", ✗ unconditional C = 0, ✗ "culprit removed"). 3b may use its +15.</li>
 <li>What we will show: snapshot and revert-culprit-only labelled oracle-assisted.</li>
 <li>MUSTs 55 → 56 (3b 4 → 5); cap 60 holds.</li>
+</ul>
+<h2>Changes v4 (S4-18, zoya, 21 Nov; D-19, D-17, B2-a)</h2>
+<ul>
+<li>2e: Scores line measured (D-19); held-payment MUST now re-run → re-held → operator unhold, no cancel (B2-a). MUST count unchanged (56).</li>
+<li>3b: targets bullet → measured values with D-17 release clause (ALLOWED N4–N7); new IF-ROOM ticks and F2+x "before resolver" bullet; Guards updated (ticks only, no bare R = 0, no F2+c value ⚑ S4-24).</li>
+<li>What we measured / will show: 20 seeds done at T=40; hold window line now H=0 vs 6 with the D10 contrast labelled.</li>
 </ul></section><section id="guard" role="tabpanel" hidden><h1>GUARDRAILS: claims we can defend vs claims a jury will punish (ABS-02)</h1>
 <p>Owner: zoya · Reviewer: panel · 19 Nov 2026 · Inputs: abstract/FACT-CARD.md (only source for outside numbers), research/SYNTHESIS.md §0/§3/§6, research/RES-11.md §1/§4/§5, research/RES-10.md (DROP list), org/meetings/CALL-01.md D1–D13 (binding), org/meetings/CALL-02.md + CALL-02/resolutions.md (design freeze, binding; D13 meaning revised), CALL-02/anaya.md §2–4, org/adr/THREAT-MODEL.md C1–C6, abstract/TERMS.md v2 (locked terms).</p>
 <p><strong>How to use.</strong> Every row is a phrase or a rule. None of it is abstract text: Aarav writes every sentence (CHARTER). Use the locked terms from TERMS.md.</p>
 <p><strong>Three ground rules that apply to every row</strong></p>
 <ul>
-<li><strong>Tense.</strong> The abstract is due 22 Nov and prototyping starts 25 Nov, so nothing of ours has been run or measured when it is submitted. Our parts are design, plan or target. No "achieves", "showed", "reduced" or "measured".</li>
+<li><strong>Tense (v5, D-19).</strong> The 20-seed bench exists (org/reports/BENCH-S3.md, T=40). Past tense ("measured") is allowed <strong>only</strong> for values on abstract/ALLOWED-NUMBERS.md, with their conditions. Everything else (finale demo, jury break, D-18 resolver, red-team pass values) stays design, plan or target. No "achieves" or "showed" about anything not on that list.</li>
 <li><strong>External numbers</strong> come only from abstract/FACT-CARD.md (ABS-01), the only source, and carry its "must travel with it" wording (D13). Not SYNTHESIS §2: its wording differs from the card.</li>
-<li><strong>Our numbers</strong> appear only as definitions plus labelled targets (D13; §1.5 below).</li>
+<li><strong>Our numbers</strong> (v5, D-19 revises D13): measured values only from abstract/ALLOWED-NUMBERS.md, each with its source row, its condition and T=40; anything else of ours is a definition or a labelled target (§1.5 below). Superseded rule: "targets only, nothing measured by 22 Nov".</li>
 </ul>
 <hr />
 <h2>1. Safe claims (note form; Aarav phrases them)</h2>
@@ -586,7 +905,7 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <td>F6</td>
 <td>Contain <strong>per action</strong>: a lineage hold on writes and outbox items whose recorded read set touches tainted versions; independent agents keep running</td>
 <td>D8; principle 7; C5</td>
-<td>Effects released before the alert are not held; at hold window 0 they count as residual damage (D10)</td>
+<td>Effects released before the alert are not held and count as residual damage (D10). Hold window H=0 keeps the lineage hold on: measured F2+ H=0 escape is 0 (ALLOWED N16). The escape appears only with the lineage hold <strong>off</strong> and no recovery (D10 contrast, N17, "not a security result")</td>
 </tr>
 <tr>
 <td>F7</td>
@@ -616,7 +935,7 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <td>F11</td>
 <td>Irreversible effects: hold window in the outbox, then compensate or report, never reverse</td>
 <td>D10; C6; RES-11 §5 must-not #3</td>
-<td>Containment holds and never cancels. <code>release</code> = active again at a fresh epoch; it lifts suspension only, lineage holds stay (CALL-02 D4). Discarding a held item is an approved recovery-plan step after the dry-run diff</td>
+<td>Containment holds and never cancels. <code>release</code> = active again at a fresh epoch; it lifts suspension only, lineage holds stay (CALL-02 D4). Discarding a held item is an approved recovery-plan step after the dry-run diff. <strong>Hero (v5, B2-a):</strong> the hero plan has <strong>no</strong> cancel: payments re-run under the same <code>outbox:&lt;id&gt;</code> at v+1, are re-held, then the operator unholds them and they leave with clean payloads (scripts/demo.sh line 5). Those unholds count in D-17's release clause</td>
 </tr>
 <tr>
 <td>F12</td>
@@ -628,7 +947,7 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <td>F13</td>
 <td>The jury can try to break it live: <code>ks inject</code>, rogue agent with arbitrary Python, direct <code>state.db</code> bypass, log-line edit, full chain rewrite → <code>verify</code>; threat model published first</td>
 <td>D11; THREAT-MODEL §7</td>
-<td>F3 (exfiltration) is a pytest, not live. Pass values are targets</td>
+<td>F3 (exfiltration) is a pytest, not live. Red-team pass values stay targets until kabir's REDTEAM-S4 report (ALLOWED §5)</td>
 </tr>
 </tbody>
 </table>
@@ -734,17 +1053,18 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 </tr>
 <tr>
 <td>L8</td>
-<td><strong>F2+c honesty note.</strong> Hero C = 0 holds only because crm writes nothing else between fault and suspension (per-seed precondition, guard test). In bench F2+c crm does honest work in that window: it is reverted, collateral loss C &gt; 0, reported, not hidden</td>
-<td>CALL-02 X3b, X3c; anaya dissent note</td>
+<td><strong>F2+c honesty note.</strong> Hero C = 0 holds only because crm writes nothing else between fault and suspension (per-seed precondition, guard test). In bench F2+c crm does honest work in that window: it is reverted, collateral loss C &gt; 0, reported, not hidden. <strong>⚑ Pending S4-24 (anaya):</strong> BENCH-S3 F2+c system shows C 0 [0..0], <code>c_culprit_window</code> 0 [0..0], R 0 [0..1/6], which contradicts this row. Fixture or guardrail is wrong; not decided here. Until S4-24 closes: cite no F2+c value and do not state this limit with a number</td>
+<td>CALL-02 X3b, X3c; anaya dissent note; BENCH-S3 §F2+c</td>
 </tr>
 <tr>
 <td>L9</td>
-<td><strong>F2+x honesty note.</strong> In bench F2+x triage edits the non-sensitive row crm wrote (the ×10 price) → write-write conflict → flag → residual damage R &gt; 0, unresolved. This is the honest conflict case; show it if asked (JURY-QA Q10)</td>
-<td>CALL-02 B5</td>
+<td><strong>F2+x honesty note.</strong> In bench F2+x triage edits the non-sensitive row crm wrote (the ×10 price) → write-write conflict → flag, unresolved because the bench approver never resolves flags. Measured, <strong>before resolver</strong> (D-18 not built; values may change): residual damage R 1/5, collateral loss C 21/254, 29 honest items held (medians, ALLOWED N15). Quote all three together; this is the honest conflict case, show it if asked (JURY-QA Q10)</td>
+<td>CALL-02 B5; BENCH-S3 §F2+x + Reading notes; CALL-04 D-18</td>
 </tr>
 </tbody>
 </table>
-<h3>1.5 Our numbers: definitions and labelled targets only (D13)</h3>
+<h3>1.5 Our numbers: definitions, measured values (D-19) and remaining targets</h3>
+<p>v5: D-19 (Aarav, CALL-04) lets the abstract cite measured BENCH-S3 values. The value column below points to abstract/ALLOWED-NUMBERS.md (IDs N1–N17), which carries each value's source row and condition. All at T=40, 20 seeds, H=6 unless stated.</p>
 <table>
 <thead>
 <tr>
@@ -755,8 +1075,8 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 </thead>
 <tbody>
 <tr>
-<td>D13 meaning (CALL-02, ⚑ Aarav)</td>
-<td>Elements the targets sentence must carry, in Aarav's words: (1) label "targets, to be measured"; (2) scope = the hero scenario only; (3) residual damage R = 0 and collateral loss C = 0, both written in full; (4) zero post-alert tainted effects and zero irreversible tainted effects released; (5) an honest agent's later change to the <strong>same data</strong> → a person decides → counts in residual damage; (6) the culprit's own work between fault and suspension → reverted → counts in collateral loss</td>
+<td>D13 meaning (CALL-02; element 1 revised by D-19)</td>
+<td>Elements the numbers sentence must carry, in Aarav's words: (1) ~~label "targets, to be measured"~~ → measured values from ALLOWED-NUMBERS with T=40, 20 seeds, and D-17's release clause next to any R = 0; (2) scope = the hero scenario only (F2+x disclosed separately, "before resolver"); (3) residual damage R = 0 and collateral loss C = 0, both written in full; (4) zero post-alert tainted effects and zero irreversible tainted effects released; (5) an honest agent's later change to the <strong>same data</strong> → a person decides → counts in residual damage; (6) the culprit's own work between fault and suspension → reverted → counts in collateral loss</td>
 <td>Meaning only, not wording. ✗ "same field" (wrong outside sensitive fields, where conflicts are row-level) · ✗ C = 0 read as unconditional (needs clause 6) · ✗ bare R / C (§1.5 note) · ✗ seconds</td>
 </tr>
 <tr>
@@ -772,42 +1092,42 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <tr>
 <td>residual damage R</td>
 <td>|B left| / |B| at run end; items still held at T and unresolved flags count as left</td>
-<td><strong>target 0</strong></td>
+<td>F2+ measured 0 [0..0] <strong>with</strong> D-17 release clause (N4); F2+x 1/5 before resolver (N15)</td>
 </tr>
 <tr>
 <td>collateral loss C</td>
 <td>|G lost| / |G|; the culprit's reverted in-window work is reported separately (<code>c_culprit_window</code>)</td>
-<td><strong>target 0</strong> (hero only; F2+c &gt; 0, L8)</td>
+<td>F2+ measured 0 [0..0], hero only (N5); F2+x 21/254 before resolver (N15); F2+c ⚑ S4-24, cite nothing</td>
 </tr>
 <tr>
 <td>clean recovery</td>
 <td>R = 0 and C = 0 in the same run, every invariant holding at run end</td>
-<td><strong>target</strong></td>
+<td>F2+ only, with D-17 clause; never for F2+x</td>
 </tr>
 <tr>
 <td>post-alert tainted effects</td>
 <td>Bad effects by any agent after the alert, counted from the ledger (score key <code>post_alert_tainted_effects</code>)</td>
-<td><strong>target 0</strong></td>
+<td>F2+ measured 0 [0..0] (N6)</td>
 </tr>
 <tr>
 <td>irreversible tainted effects released</td>
 <td>Bad payments or emails that actually left (score key <code>irreversible_tainted_released</code>)</td>
-<td><strong>target 0</strong> (SYNTHESIS §6, THREAT-MODEL RT10)</td>
+<td>F2+ measured 0 [0..0] at H=6 (N7) and H=0 with lineage hold on (N16); D10 contrast only as N17</td>
 </tr>
 <tr>
 <td>re-emitted effects</td>
 <td>Effects sent twice by re-runs</td>
-<td><strong>target 0</strong> (SYNTHESIS §6)</td>
+<td>F2+ measured 0 [0..0] (N8)</td>
 </tr>
 <tr>
 <td>TTI-detect / TTI-attribute / TTC</td>
 <td>t0 → first alert / alert → correct agent + first bad action / alert → first denied culprit envelope</td>
-<td>definition only; <strong>no seconds</strong> (no value fixed yet)</td>
+<td>F2+ measured in <strong>ticks</strong>: TTI-detect 2 [0..2], TTI-attribute 0, TTC 1 (N1–N3); <strong>no seconds</strong></td>
 </tr>
 <tr>
 <td>protocol</td>
 <td>≥20 seeded runs; median, p95, max; snapshot and revert-culprit-only baselines (both <strong>oracle-assisted</strong>: given t0) and no-op; hold 0 vs &gt;0; collateral stall reported apart from collateral loss; F2+x and F2+c on the bench</td>
-<td>"planned"</td>
+<td><strong>done</strong> at T=40, seeds 1..20 (BENCH-S3). T=120 rerun not done (S4-14)</td>
 </tr>
 </tbody>
 </table>
@@ -946,9 +1266,9 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 </tr>
 <tr>
 <td>X21</td>
-<td>Any result number of ours (TTI in seconds, R achieved, "% recovered", "0 leaks")</td>
-<td>D13; nothing measured by 22 Nov; THREAT-MODEL §5 (targets, not results)</td>
-<td>Definition + "target" (§1.5)</td>
+<td>Any result number of ours <strong>not on ALLOWED-NUMBERS</strong>, or one without its condition (TTI in seconds, bare R = 0, "% recovered", "0 leaks", F2+c values, red-team pass values)</td>
+<td>D-19 (revises D13); THREAT-MODEL §5</td>
+<td>A listed value with its condition (ALLOWED-NUMBERS), else definition + "target"</td>
 </tr>
 <tr>
 <td>X22</td>
@@ -1061,9 +1381,9 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <td>Designed to; target; checked by <code>verify</code></td>
 </tr>
 <tr>
-<td><strong>eliminates</strong>, zero (as a result), no damage</td>
-<td>Irreversible residue and over-taint remain (L1, L2)</td>
-<td>Target 0 + residual damage scored</td>
+<td><strong>eliminates</strong>, zero (unscoped), no damage</td>
+<td>Irreversible residue and over-taint remain (L1, L2); measured zeros hold only under their conditions</td>
+<td>A listed zero with its condition (ALLOWED-NUMBERS; D-17 clause for R)</td>
 </tr>
 <tr>
 <td><strong>prevents</strong>, stops, blocks (attacks, injection, collusion)</td>
@@ -1112,8 +1432,8 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 </tr>
 <tr>
 <td>achieves, demonstrates, shows, reduced (past tense)</td>
-<td>Nothing run before 25 Nov</td>
-<td>Will show; target; designed</td>
+<td>Only BENCH-S3 values on ALLOWED-NUMBERS were measured (D-19); the finale demo, jury break and resolver are future</td>
+<td>"Measured" + listed value + conditions; otherwise will show / target / designed</td>
 </tr>
 <tr>
 <td>kill / kill switch (as an operation)</td>
@@ -1136,8 +1456,8 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <h2>4. 30-second self-check (run on the draft before sending it for review)</h2>
 <ol>
 <li><strong>Ctrl-F §3 words</strong>: no hits, or every hit has its scope attached.</li>
-<li><strong>Each number</strong>: external → on abstract/FACT-CARD.md (the only source), with its "must travel with it" wording? Ours → definition + "target"? No seconds anywhere? Targets sentence carries all six D13 elements (§1.5 first row)?</li>
-<li><strong>Tense</strong>: does any sentence say we built, ran, measured or achieved something? Change it to design / will show / target.</li>
+<li><strong>Each number</strong>: external → on abstract/FACT-CARD.md (the only source), with its "must travel with it" wording? Ours → an ID on abstract/ALLOWED-NUMBERS.md with T=40, 20 seeds and its condition (D-17 release clause next to any R = 0; F2+x "before resolver" with all three values), else definition + "target"? No seconds anywhere? Numbers sentence carries the D13 elements (§1.5 first row, element 1 as revised)?</li>
+<li><strong>Tense</strong>: "measured" only next to an ALLOWED-NUMBERS value; anything else built-or-achieved → design / will show / target.</li>
 <li><strong>Order (D1)</strong>: problem (dependency gap) → fix (provenance) → why (testimony vs evidence; oracle scoring).</li>
 <li><strong>Airlock</strong>: named once, credited, "complementary", no comparison adjective (D3, X3).</li>
 <li><strong>METR</strong>: blunt stop failed, and nothing more; no "would have stopped it"; no exact day; no "legitimately held credentials" (D2, X6–X8).</li>
@@ -1172,9 +1492,18 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <li>New limits L8 (F2+c: C &gt; 0 when crm works honestly in-window) and L9 (F2+x: honest conflict, R &gt; 0).</li>
 <li>§1.5: new first row with the six elements of the revised D13 meaning (⚑ Aarav; wording is his); B / G frozen at recovery start; R counts held-at-T and flagged items; C notes <code>c_culprit_window</code>; score keys <code>post_alert_tainted_effects</code> / <code>irreversible_tainted_released</code>; protocol adds oracle-assisted label, collateral stall, F2+x / F2+c. Self-check 2 checks the six elements.</li>
 <li>Release semantics (D4): F11, X29 and the §3 "cancelled" row no longer say "restore epoch"; release = fresh epoch, lifts suspension only.</li>
+</ul>
+<h2>Changes v5 (S4-18, zoya, 21 Nov; D-19, D-17, B2-a, BENCH-S3)</h2>
+<ul>
+<li>Ground rules (tense, our numbers), §1.5, X21, §3 "eliminates" and "achieves" rows, self-check 2–3: D-19 lets the abstract cite measured BENCH-S3 values (T=40, 20 seeds) listed in the new abstract/ALLOWED-NUMBERS.md, each with its condition. "Targets only, nothing measured by 22 Nov" retired; remaining targets: red-team pass values, finale demo, resolver.</li>
+<li>F6: H=0 keeps the lineage hold (measured escape 0); the escape is the D10 contrast with the lineage hold off and no recovery, "not a security result".</li>
+<li>F11: hero has no cancel (B2-a): re-run under the same <code>outbox:&lt;id&gt;</code> v+1, re-held, operator unhold.</li>
+<li>F13: red-team pass values stay targets until REDTEAM-S4.</li>
+<li>L8: ⚑ pending S4-24 (anaya): BENCH-S3 F2+c shows C = 0; not decided here; cite no F2+c value.</li>
+<li>L9: adds measured C 21/254 and 29 held honest items to R 1/5, labelled "before resolver" (D-18).</li>
 </ul></section><section id="terms" role="tabpanel" hidden><h1>TERMS: one name per concept (ABS-04; updated for the design freeze in ABS-08)</h1>
-<p>Owner: zoya · Reviewer: maya · 19 Nov 2026 · v2 · Inputs: CALL-01.md, contracts 1.0.0 (<code>src/ks/contracts</code>), ABS-04 review (maya), CALL-02.md + CALL-02/resolutions.md (v1.1.0 changes), CALL-02/anaya.md §2–4, SYNTHESIS §4/§6, PANEL-ENG-00, RES-02.</p>
-<p><strong>Rule.</strong> The abstract, diagram, demo narration, incident-console labels and code use the left-hand term and nothing else. If a banned synonym appears in a draft, reviewers flag it. Glosses are written for a banking reader and are at most 15 words. They are glosses, not abstract sentences: Aarav writes his own (CHARTER). Code names come from the frozen contracts 1.0.0 (<code>src/ks/contracts</code>), plus CALL-02/resolutions.md for v1.1.0 changes (marked <strong>v1.1</strong> with the resolution id). <code>⚠</code> marks a gap still open (see §7).</p>
+<p>Owner: zoya · Reviewer: maya · 19 Nov 2026 · v2 · Inputs: CALL-01.md, contracts 1.1.0 (<code>src/ks/contracts</code>), ABS-04 review (maya), CALL-02.md + CALL-02/resolutions.md (v1.1.0 changes), CALL-02/anaya.md §2–4, SYNTHESIS §4/§6, PANEL-ENG-00, RES-02.</p>
+<p><strong>Rule.</strong> The abstract, diagram, demo narration, incident-console labels and code use the left-hand term and nothing else. If a banned synonym appears in a draft, reviewers flag it. Glosses are written for a banking reader and are at most 15 words. They are glosses, not abstract sentences: Aarav writes his own (CHARTER). Code names come from the frozen contracts 1.1.0 (<code>src/ks/contracts</code>), with CALL-02/resolutions.md ids for the v1.1 changes (marked <strong>v1.1</strong> with the resolution id). <code>⚠</code> marks a gap still open (see §7).</p>
 <h2>1. Actors and the mediated path</h2>
 <table>
 <thead>
@@ -1249,7 +1578,7 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <tr>
 <td><strong>tick</strong></td>
 <td>One scheduling round: each agent submits at most one envelope, run in fixed order.</td>
-<td>C2 <code>tick</code>; barrier runs in the gateway (ADR-00), transport <code>TickFrame</code>; one frame per connection per tick (C2)</td>
+<td>C2 <code>tick</code>; barrier runs in the gateway (ADR-00), transport <code>TickFrame{tick, epoch, view}</code>; one frame per connection per tick (C2)</td>
 <td>step, turn, cycle, round</td>
 </tr>
 <tr>
@@ -1310,7 +1639,7 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <tr>
 <td><strong>verify</strong></td>
 <td>The audit check anyone can run to detect edited, missing or forged records.</td>
-<td><code>ks.verify</code>; CLI <code>ks verify RUN --head</code> (L3); <code>VerifyReport</code></td>
+<td><code>ks.verify</code>; CLI <code>ks verify RUN --head</code> (L3); <code>VerifyReport</code>, <code>RunAnchor</code> (<strong>v1.1</strong>, F1)</td>
 <td>validate, audit (as a verb), check, prove</td>
 </tr>
 <tr>
@@ -1493,7 +1822,7 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <tr>
 <td><strong>recovery plan</strong></td>
 <td>The proposed fix, step by step, shown as a dry-run diff before anything changes.</td>
-<td>C5 <code>RecoveryPlan</code> {culprit, t0_seq, taint_set, steps, diff}; <code>ks.recovery</code>; bound to approval by <code>plan_hash</code> (G6)</td>
+<td>C5 <code>RecoveryPlan</code> {culprit, t0_seq_est, taint_set, steps, diff}; <code>ks.recovery</code>; bound to approval by <code>plan_hash</code> (G6)</td>
 <td>rollback plan, remediation, playbook</td>
 </tr>
 <tr>
@@ -1572,7 +1901,7 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <tr>
 <td><strong>t0</strong></td>
 <td>Moment the first bad effect lands, as judged by the oracle.</td>
-<td>scorer: min tick over B ≥ <code>RunConfig.fault_tick</code> (scorer-only, A2). Planner estimate: <code>RecoveryPlan.t0_seq</code> (<code>t0_seq_est</code>, bounded backward walk over alert evidence; never reads RunConfig)</td>
+<td>scorer: min tick over B ≥ <code>RunConfig.fault_tick</code> (scorer-only, A2). Planner estimate: <code>RecoveryPlan.t0_seq_est</code> (bounded backward walk over alert evidence; never reads RunConfig)</td>
 <td>start of incident, fault time</td>
 </tr>
 <tr>
@@ -1589,13 +1918,13 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 </tr>
 <tr>
 <td><strong>residual damage (R)</strong></td>
-<td>Share of bad effects still wrong at run end, held or flagged included. Target 0.</td>
+<td>Share of bad effects still wrong at run end, held or flagged included. Hero F2+ measured value: ALLOWED-NUMBERS N4, only with D-17's release clause.</td>
 <td><code>ks.score</code> key <code>R</code> = {n,d}: |{k ∈ keys(B): final(k) ≠ S*(k)}| / |keys(B)|, scored at T; compares values only (X4)</td>
 <td>leftover damage, error rate, miss rate</td>
 </tr>
 <tr>
 <td><strong>collateral loss (C)</strong></td>
-<td>Share of good effects lost by recovery, including the culprit's own reverted work. Target 0.</td>
+<td>Share of good effects lost by recovery, including the culprit's own reverted work. Hero F2+ measured value: ALLOWED-NUMBERS N5 (hero only).</td>
 <td><code>ks.score</code> key <code>C</code> = {n,d}; split-out key <code>c_culprit_window</code> (X3d)</td>
 <td>collateral damage, false positives, overkill</td>
 </tr>
@@ -1608,18 +1937,18 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <tr>
 <td><strong>collateral stall</strong></td>
 <td>Delay that holds and recovery impose on honest work, reported apart from collateral loss.</td>
-<td><code>ks.score</code>, measured against the unmirrored S* (A1′); key name ⚠ (§7 item 10)</td>
+<td><code>ks.score</code>, measured against the unmirrored S* (A1′); score.json key <code>collateral_stall</code> <code>{n,d}</code>, apart from <code>fp_cost.stall_ticks</code> (§7 item 10). <strong>Real runs:</strong> <code>{n,d,basis: s_star}</code> is a proxy (divergence from S*, not S0; ADR-06 A3): always say "proxy"</td>
 <td>slowdown, overhead, latency cost</td>
 </tr>
 <tr>
 <td><strong>clean recovery</strong></td>
-<td>Residual damage R = 0 and collateral loss C = 0 together, all invariants holding.</td>
+<td>Residual damage R = 0 and collateral loss C = 0 together, all invariants holding. Any R = 0 claim also states the operator releases: N held items released, of which M honest (D-17, CALL-02 B2-b).</td>
 <td><code>ks.score</code>; also requires <code>invariants_ok</code> at T; no composite score</td>
 <td>perfect recovery, full undo, 100%</td>
 </tr>
 <tr>
 <td><strong>TTI-detect</strong></td>
-<td>Time from t0 to the first alert.</td>
+<td>Time from t0 to the first alert (for a bad action that was denied or held and never landed: from that action to the first alert naming the culprit, ADR-06-metrics A5).</td>
 <td><code>ks.score</code> key <code>tti_detect</code>, from chained <code>ks.alert</code> records (X8)</td>
 <td>detection time, MTTD, time to alert</td>
 </tr>
@@ -1637,20 +1966,20 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 </tr>
 <tr>
 <td><strong>post-alert tainted effects</strong></td>
-<td>Bad effects by any agent after the alert, counted from the ledger. Target 0.</td>
+<td>Bad effects by any agent after the alert, counted from the ledger. Hero F2+ measured value: ALLOWED-NUMBERS N6.</td>
 <td><code>ks.score</code> key <code>post_alert_tainted_effects</code> (A6); from the ledger, never from our taint or read sets (A5)</td>
 <td>leakage, spread, blast radius</td>
 </tr>
 <tr>
 <td><strong>irreversible tainted effects released</strong></td>
-<td>Bad payments or emails that actually left despite holds. Target 0.</td>
+<td>Bad payments or emails that actually left despite holds. Hero F2+ measured value: ALLOWED-NUMBERS N7, N16.</td>
 <td><code>ks.score</code> key <code>irreversible_tainted_released</code> (A6); dispatched payment / email sink effects in B, never the gateway's class</td>
 <td>escaped payments, leaks</td>
 </tr>
 <tr>
 <td><strong>seeded run</strong></td>
 <td>One reproducible scenario run; same seed gives the same records, signatures aside.</td>
-<td>C6 run dir; <code>ks.bench</code>; <code>ks repro A B</code> diffs <code>determinism_view()</code> (C4–C6)</td>
+<td>C6 run dir; <code>ks.bench</code>; <code>ks repro A B</code> diffs <code>determinism_view()</code>, exit <code>Exit.DIVERGED</code> if they differ (C4–C6)</td>
 <td>trial, episode, simulation</td>
 </tr>
 <tr>
@@ -1676,19 +2005,19 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <tr>
 <td><strong>hero scenario (F2+)</strong></td>
 <td>crm swaps a supplier IBAN; billing, payments, comms consume it; triage's later edit is kept.</td>
-<td>fault <code>F2+</code> in <code>ks.world</code> / <code>ks.inject</code>; golden B2 (restore iban + S-22, re-run billing / payments / comms / reporter, triage kept, no flag); per-seed precondition: crm writes nothing else in (t_inject+1, suspend], guard test (X3b)</td>
+<td>fault <code>F2+</code> in <code>ks.world</code> / <code>ks.inject</code>; golden B2 as amended by B2-a (D-16): restore iban + S-22, re-run billing / payments (same <code>outbox:&lt;id&gt;</code>, v+1, re-held, then operator unhold; no cancel) / comms; reporter independent, not re-run; triage kept, no flag; per-seed precondition: crm writes nothing else in (t_inject+1, suspend], guard test (X3b)</td>
 <td>demo case, use case, story, F2 (without +)</td>
 </tr>
 <tr>
 <td><strong>conflict variant (F2+x)</strong></td>
 <td>Bench variant: triage edits the price row crm wrote, so a person must decide.</td>
-<td>fault <code>F2+x</code>; <code>test_triage_conflict</code>; <code>flag(write_write_conflict)</code>, unresolved, R &gt; 0 (B5). Jury Q&amp;A backup, not the demo</td>
+<td>fault <code>F2+x</code>; <code>test_triage_conflict</code>; <code>flag(write_write_conflict)</code>, unresolved, R &gt; 0 (B5). Measured before resolver (D-18): R 1/5, C 21/254, 29 honest items held (BENCH-S3 medians; ALLOWED-NUMBERS N15). Jury Q&amp;A backup, not the demo</td>
 <td>failure case (F7 is the honest failure), edge case</td>
 </tr>
 <tr>
 <td><strong>culprit-work variant (F2+c)</strong></td>
 <td>Bench variant: crm also does honest work before suspension, so collateral loss C &gt; 0.</td>
-<td>fault <code>F2+c</code>; <code>test_culprit_honest_write_in_C</code>; golden C = {n,d} &gt; 0, reported (X3c)</td>
+<td>fault <code>F2+c</code>; <code>test_culprit_honest_write_in_C</code>; golden C = {n,d} &gt; 0, reported (X3c). ⚑ Pending S4-24: BENCH-S3 F2+c shows C 0 [0..0]; gloss not changed until anaya decides</td>
 <td>edge case, corner case</td>
 </tr>
 <tr>
@@ -1730,34 +2059,39 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 </tbody>
 </table>
 <h2>7. Contract check (Maya's ABS-04 answers + CALL-02)</h2>
-<p>All ⚠ from v1 are closed except item 10.</p>
+<p>All ⚠ from v1 are closed.</p>
 <ol>
 <li><strong>Revert vs <code>restore</code></strong>: confirmed. <code>restore</code> stays the per-object step; a taint-scoped revert = the set of <code>restore</code> steps (C5 docstring). "Restore" stays banned in prose.</li>
 <li><strong>Culprit vs suspect</strong>: there is no <code>Alert.suspect</code>. Culprit = <code>RunConfig.culprit</code> (scorer) / <code>RecoveryPlan.culprit</code> (person). Suspect = <code>root_candidates[0]</code>, console only (row added).</li>
 <li><strong>Provenance graph</strong>: confirmed, no graph type.</li>
 <li><strong>Witness checkpoint, side store</strong>: resolved, C2 <code>WitnessCheckpoint</code>, C3 <code>SideStore</code>.</li>
 <li><strong>Hold window, sensitive tag</strong>: resolved, <code>RunConfig.hold_window_ticks</code>, <code>RunConfig.sensitive_fields</code>.</li>
-<li><strong>Metric names</strong>: fixed by CALL-02 A6: <code>post_alert_tainted_effects</code>, <code>irreversible_tainted_released</code>. TERMS copies score.json keys exactly. ADR-06 text still shows the old names until tara's revision lands; TERMS wins for the kit.</li>
+<li><strong>Metric names</strong>: fixed by CALL-02 A6: <code>post_alert_tainted_effects</code>, <code>irreversible_tainted_released</code>. TERMS copies score.json keys exactly. ADR-06 now uses the PMO metric names; TERMS and ADR-06 agree.</li>
 <li><strong>Idempotency key</strong>: resolved, it exists as C3 <code>OutboxItem.idempotency_key</code>.</li>
 <li><strong>Connection suspend</strong>: resolved, Control target <code>conn:&lt;id&gt;</code> (row added).</li>
 <li><strong>Reconciliation</strong>: confirmed, detector <code>reconcile</code>, class U.</li>
-<li>⚠ <strong>Collateral stall</strong> (new, ABS-08): CALL-02 names the concept but no score.json key. tara (ADR-06) to name it; TERMS then copies it.</li>
+<li><strong>Collateral stall</strong> (ABS-08): resolved, score.json key <code>collateral_stall</code> <code>{n,d}</code> like R and C (ADR-06-metrics §3): the system run's <code>final_T</code> against the unmirrored fault-off run S0 over non-culprit keys; separate from <code>fp_cost.stall_ticks</code>. B3-27 (20 Nov): real runs have no S0, so they report the proxy <code>{n,d,basis: s_star}</code> (ADR-06 A3); never call it the S0 measure.</li>
 <li><strong><code>ks.console</code></strong>: removed from ids.py with no alias (E2, X7; grep test). Nowhere in the kit except as a banned synonym.</li>
 </ol>
 <h2>Changes v2 (ABS-04 review fixes + CALL-02 freeze, ABS-08, 19 Nov)</h2>
 <ul>
-<li>Code names now come from contracts 1.0.0 + CALL-02 resolutions, not maya.md §3 (Maya's ABS-04 review, applied row by row): culprit, new suspect row, alert fields (not signed), envelope (<code>expiry_tick</code>, <code>claimed_*</code>, <code>EnvelopeHeader</code>), act chain (<code>ActLink</code>), tick (gateway barrier, <code>TickFrame</code>), read set (<code>ReadEntry</code>), all five class rows (<code>ActionClass</code>), witness, verify / tamper-evident (<code>first_bad</code> is a seq), reconciliation, side store, outbox, lineage hold, hold window, sensitive field, invariant detector, taint, recovery plan, dry-run diff, write-write conflict, release, t0, metrics.</li>
+<li>Code names now come from contracts 1.1.0 + CALL-02 resolutions, not maya.md §3 (Maya's ABS-04 review, applied row by row): culprit, new suspect row, alert fields (not signed), envelope (<code>expiry_tick</code>, <code>claimed_*</code>, <code>EnvelopeHeader</code>), act chain (<code>ActLink</code>), tick (gateway barrier, <code>TickFrame</code>), read set (<code>ReadEntry</code>), all five class rows (<code>ActionClass</code>), witness, verify / tamper-evident (<code>first_bad</code> is a seq), reconciliation, side store, outbox, lineage hold, hold window, sensitive field, invariant detector, taint, recovery plan, dry-run diff, write-write conflict, release, t0, metrics.</li>
 <li>Accepted additions (workspace, trust boundary, idempotency key) moved into §1–§3 with Maya's code names. New rows: connection, operator (<code>ks.operator</code> replaces <code>ks.console</code>), field object, kept.</li>
 <li>CALL-02: oracle S* gloss = same seed, fault off, culprit stops from its suspension tick (X3a); B / G frozen at recovery start; G includes the culprit's honest work; R counts held-at-T and flagged items; C row mentions culprit's reverted work; new rows culprit-window loss (<code>c_culprit_window</code>), collateral stall, oracle-assisted.</li>
 <li>Hero row: triage's edit is <strong>kept</strong> (no conflict). Write-write conflict is field-or-row; the honest conflict lives in F2+x. New rows F2+x and F2+c.</li>
 <li>Release = fresh epoch, lifts suspension only (D4). Epoch gloss: every suspend / revoke / release sets a new value (D1).</li>
 <li>§7 rewritten as closed items; one open (collateral stall key, tara). Baseline glosses no longer use the banned word "restore".</li>
+</ul>
+<h2>Changes v3 (S4-18, zoya, 21 Nov)</h2>
+<ul>
+<li>Hero row: golden B2 now as amended by B2-a (D-16): reporter independent; payments re-run under the same <code>outbox:&lt;id&gt;</code>, re-held, operator unhold; no cancel.</li>
+<li>F2+x row: measured values, labelled "before resolver" (D-18). F2+c row: ⚑ pending S4-24 (BENCH-S3 shows C = 0).</li>
 </ul></section><section id="jury" role="tabpanel" hidden><h1>JURY-QA: hardest hostile questions, with evidence pointers only (ABS-05)</h1>
 <p>anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md (ABS-01), GUARDRAILS.md (ABS-02), TERMS.md (ABS-04), org/adr/THREAT-MODEL.md (SEC-01), tests/redteam/SPEC.md (SEC-02), research/RES-01, RES-06, RES-07, RES-11, SYNTHESIS.md, CALL-01.md (decisions checked against the source).</p>
 <p><strong>What this is.</strong> For each question: where the evidence lives, the one distinction that matters (note form, ≤12 words), and the trap a hostile juror is fishing for. <strong>No answer prose.</strong> Aarav answers in his own words (CHARTER).</p>
 <p><strong>Tag key.</strong> <code>#n</code> = fact-card row · <code>P/F/W/L/X</code> = GUARDRAILS row (<code>§1.5</code> = own-number table) · <code>D</code> = CALL-01 decision · <code>C1–C6</code> = THREAT-MODEL §4 claim · <code>B1–B4</code> = THREAT-MODEL §2 boundary · <code>rule n</code> = THREAT-MODEL §6 · <code>RT</code> = red-team test in SPEC §2 · <code>T§</code> = TERMS section · <code>SYN §</code> = SYNTHESIS · <code>RES-nn §</code> = research file.
 <strong>TM scope</strong> (only on security questions, for kabir): <strong>in</strong> = in scope for the adopted threat model (CALL-01 "Threat model, adopted"; THREAT-MODEL §3); <strong>out</strong> = declared out of scope, with the production mitigation named there.
-<strong>Standing rule for every answer.</strong> Our parts are design and target; nothing runs before 25 Nov (GUARDRAILS ground rules; D13; THREAT-MODEL §5 last line). Every RT pass value is a <strong>target</strong>, not a result.</p>
+<strong>Standing rule for every answer (v5, D-19).</strong> Measured values come only from abstract/ALLOWED-NUMBERS.md (BENCH-S3, T=40, 20 seeds), each with its condition; any R = 0 carries D-17's release clause. Everything else is design or target. Every RT pass value stays a <strong>target</strong> until kabir's REDTEAM-S4 report (THREAT-MODEL §5 last line).</p>
 <hr />
 <h2>Q1. "Isn't this just Airlock?"</h2>
 <ul>
@@ -1864,14 +2198,15 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <ul>
 <li><strong>TM scope (agent side):</strong> <strong>in</strong> (rogue: TOCTOU flood, replay into outbox, persistence after suspend; colluding: laundering). <strong>No claim:</strong> splitting under thresholds (THREAT-MODEL §5, "no RT, no claim"); covert channels <strong>out</strong>.</li>
 <li><strong>Evidence (agent racing it):</strong> F6, C5 · D8 · rules 4, 5 (epoch and deny-list in the write transaction; dispatcher re-checks holds) · RT5, RT4 (outbox variant), RT12, RT10 (dispatch re-check race hook), RT9 (laundered value held) · T§3 (lineage hold, sensitive field: early hold) · CALL-01 §2 "Early hold".</li>
-<li><strong>Evidence (us tuning it):</strong> D10 (one config value; demo shows 0 vs &gt;0) · RT10 H=0 run (passes when the escape <strong>is scored</strong>: R &gt; 0) · §1.5 protocol row · SYN §6 (≥20 seeded runs; median, p95, max; snapshot, revert-culprit-only, no-op baselines; collateral stall and false-positive cost) · T§7 gap 5 (hold value in the run-dir config so the scorer sees it).</li>
+<li><strong>Evidence (us tuning it):</strong> D10 (one config value) · BENCH-S3 F2+ H=0 system: R 0, irreversible released 0 (lineage hold stays on at H=0; ALLOWED N16) · D10 contrast, lineage hold off + pause with no recovery: 12 [6..18] payments escaped, &gt;0 on 20/20 seeds (N17, "contrast, not a security result") · §1.5 protocol row · SYN §6 (≥20 seeded runs; median, p95, max; snapshot, revert-culprit-only, no-op baselines; collateral stall and false-positive cost) · T§7 gap 5 (hold value in the run-dir config so the scorer sees it).</li>
 <li><strong>Key distinction:</strong> Holds follow recorded reads; hold zero shown and scored too.</li>
 <li><strong>Traps:</strong></li>
 <li>Holding effects released <strong>before</strong> the alert: not held; at hold 0 scored as residual damage (C5 refuse column; F6).</li>
 <li>Agent-declared lineage as the basis of a hold: never trusted; holds come from <strong>recorded</strong> read sets only (D8; C5; RT10 pass line).</li>
-<li>"The hold is free": it delays honest irreversible effects; collateral stall and FP cost are reported (SYN §6). No seconds value exists (§1.5; X21).</li>
+<li>"The hold is free": it delays honest irreversible effects; collateral stall and FP cost are reported (SYN §6). Measured cost: 3 [0..7] honest items held, median 5 operator releases (N4, N10); no seconds value exists (X21).</li>
 <li>"We cancel / block" as containment: we hold, never cancel (X29; CALL-01 "Release semantics").</li>
-<li>"0 escaped" stated as a result (X21; D13).</li>
+<li>"0 escaped" without its condition: say H=6 and H=0 both with the lineage hold on (N7, N16); the 12 escaped is the contrast, never a system result (N17; X21).</li>
+<li>Claiming H=0 means "no hold": the lineage hold is still on (GUARDRAILS F6 v5).</li>
 </ul>
 <h2>Q9. "What about irreversible payments and emails?"</h2>
 <ul>
@@ -1880,11 +2215,12 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <li><strong>Notes:</strong></li>
 <li>Class I2 (uncontainable) runs only with prior human approval (T§3).</li>
 <li>Terminology fork: containment <strong>holds</strong> and never cancels (X29); discarding a held item is a <strong>recovery-plan step</strong> (<code>cancel_outbox</code>) after the dry-run diff (F11; T§4). Do not merge the two.</li>
+<li>Hero (B2-a): no cancel at all. Payments re-run under the same <code>outbox:&lt;id&gt;</code> v+1, re-held, then the operator unholds them with clean payloads (scripts/demo.sh line 5; GUARDRAILS F11 v5).</li>
 <li><strong>Traps:</strong></li>
 <li>"Reverse", "undo", "refund" as our undo of a sent effect (X14; T§4 bans "reverse" for compensate).</li>
 <li>Calling external effects Airlock's weak spot: it is Airlock's strongest part (RES-11 §3).</li>
 <li>"Meets Art 14(4)(e) safe state": "maps to" only (W4; X19).</li>
-<li>Hiding the hold-0 escape: show it; it is the honest contrast (RT10; D10).</li>
+<li>Hiding the contrast: show it with its label. Escape appears only with the lineage hold off and no recovery (N17); at H=0 with the lineage hold on, 0 escaped (N16). Do not present 12 as a system result.</li>
 </ul>
 <h2>Q10. "Why not just use Dolt or git revert?"</h2>
 <ul>
@@ -1897,7 +2233,7 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <li>Dolt performance numbers: RES-06 never ran Dolt (F4/§4 caveat). The git run is one toy example, not a benchmark (RES-06 §5).</li>
 <li>Overclaiming conflict handling: a write-write conflict is <strong>flagged</strong>, not merged (T§4; F9).</li>
 <li>Hero conflict line (CALL-02): triage's edit on the same supplier is <strong>kept</strong>, no flag; the IBAN is its own field object, so they share no datum (W6; CALL-02 B1–B3). Do not call it a conflict.</li>
-<li>"So you never get a conflict?": an honest one exists in bench <strong>F2+x</strong> (triage edits the price row crm wrote → row-level write-write conflict → flag, unresolved, residual damage R &gt; 0). Show it, do not hide it (L9; CALL-02 B5). Conflicts are field-level only for sensitive fields, row-level elsewhere (F9).</li>
+<li>"So you never get a conflict?": an honest one exists in bench <strong>F2+x</strong> (triage edits the price row crm wrote → row-level write-write conflict → flag, unresolved because the bench approver never resolves flags). Measured <strong>before resolver</strong> (D-18): R 1/5, C 21/254, 29 honest items held (medians; ALLOWED N15); quote all three. Show it, do not hide it (L9; CALL-02 B5). Conflicts are field-level only for sensitive fields, row-level elsewhere (F9).</li>
 </ul>
 <h2>Q11. "Any real incident where this happened? Would this have stopped the METR / OpenAI–Hugging Face case?"</h2>
 <ul>
@@ -1926,6 +2262,20 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <li>Any FP rate or detection accuracy number (X21; D13). Any "beats Who&amp;When" (X20).</li>
 <li>"We detect any misbehaviour": only declared data invariants and hard evidence (X30).</li>
 <li>Over-taint presented as free: collateral holds are possible by design (L2); independents keep running is the RT10 target, not a result.</li>
+</ul>
+<h2>Q13. "Is R = 0 just the operator releasing things by hand?"</h2>
+<ul>
+<li><strong>Evidence:</strong> ALLOWED-NUMBERS N4, N10 · BENCH-S3 §F2+ H=6 rows <code>fp_cost.operator_unholds.total/.honest/.tainted</code>, <code>fp_cost.held_honest_actions</code> · D-17 (CALL-02 resolutions B2-b) · TERMS §5 clean recovery · scripts/demo.sh line 5 (unhold step) · FACT-CARD O1–O2 (demo seed 2: 9 released, 7 honest).</li>
+<li><strong>Key distinction:</strong> Releases are logged decisions; R still counts anything held at T.</li>
+<li><strong>Notes:</strong></li>
+<li>F2+ medians: 5 released [1..9] = 3 honest [0..7] + 2 tainted-lineage [1..2]. Tainted-lineage = payments recovery re-ran and re-held; they leave with clean payloads.</li>
+<li>Honest holds are the sensitive-field hold's over-taint cost (L2), not recovery errors.</li>
+<li>Items still held at run end count as left in R (TERMS §5), so not releasing would raise R, not hide it.</li>
+<li><strong>Traps:</strong></li>
+<li>Bare R = 0 anywhere (D-17).</li>
+<li>Calling the releases automatic: they are operator <code>ks contain unhold</code> steps.</li>
+<li>Calling released tainted-lineage items "tainted payments sent": the payloads were re-run and clean.</li>
+<li>[Our view, gap] The console scorecard does not yet show release counts (S4-19); point to score.json until it does.</li>
 </ul>
 <hr />
 <h2>Also likely (one-line pointers, no full entry)</h2>
@@ -1980,6 +2330,14 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <ul>
 <li>Q10: hero conflict line updated: triage's edit is <strong>kept</strong>, no flag; the honest conflict lives in bench F2+x (R &gt; 0), with field-or-row granularity. Nothing else edited.</li>
 <li>Resolved by PMO (19 Nov) after CALL-02: Q5 trap cites <code>Alert.suspect</code> (no such field; suspect = <code>root_candidates[0]</code>, TERMS §1); Q4 note cites "T§7 gap 7: <code>idempotency_key</code> not yet a contract field" (resolved: C3 <code>OutboxItem.idempotency_key</code>); Q12 cites rule 10 "<code>release</code> = un-hold + restore epoch" (CALL-02 D4: fresh epoch, lifts suspension only).</li>
+</ul>
+<h2>Changes v5 (S4-18, zoya, 21 Nov; D-19, D-17, B2-a)</h2>
+<ul>
+<li>Standing rule: measured values from ALLOWED-NUMBERS only; RT pass values stay targets until REDTEAM-S4.</li>
+<li>Q8: H=0 keeps the lineage hold (0 escaped); D10 contrast (12 escaped) labelled; measured hold cost added.</li>
+<li>Q9: hero has no cancel (B2-a, operator unhold); hold-0 trap rewritten to the labelled contrast.</li>
+<li>Q10: F2+x measured values, "before resolver" (D-18).</li>
+<li>New Q13: operator releases and R = 0 (D-17).</li>
 </ul></section></main>
 <script>{const bs=[...document.querySelectorAll('nav button')];
 function show(id,push){bs.forEach(b=>{const on=b.getAttribute('aria-controls')===id;b.setAttribute('aria-selected',on);document.getElementById(b.getAttribute('aria-controls')).hidden=!on});if(push)history.replaceState(null,'','#'+id);window.scrollTo(0,0)}

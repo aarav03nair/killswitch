@@ -7,20 +7,40 @@
   "reviewer": "nisha",
   "model": "sonnet",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "done",
   "outcome": "Bench table has no misleading rows",
   "acceptance": [
     "F3 revert_culprit_only shown as 'n/a: culprit wrote nothing landed' not under failures; F3 system 'pause-only' label in the table; the 1 xfailed test located and fixed or given a reason"
   ],
   "depends": [],
   "deliverable": "src/ks/bench/",
-  "summary": "",
-  "review": "",
+  "summary": "runner.py: F3 revert_culprit_only 'wrote nothing' now goes to a 'not applicable' list (bench.json not_applicable), not failures; F3 system column labelled 'system (pause-only)'. runs/bench-b3-33/bench.md regenerated from existing score.json and copied to org/reports/BENCH-S3.md. xfail: none exists (full suite 1076 passed, 12 skipped, 0 xfailed); the skips are Linux-root tests with stated reasons.",
+  "review": "[nisha · done] Diff is labels only (F3 header 'system (pause-only)', failures section renamed 'not applicable', n/a text); no numeric row changed. n/a cells hit 'continue' before results[] so are excluded from every aggregate. tests/bench 6 passed.",
   "log": [
     {
       "t": "20 Nov 17:06",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "21 Nov 00:01",
+      "who": "tara",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "21 Nov 00:01",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 00:01",
+      "who": "tara",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "21 Nov 00:02",
+      "who": "nisha",
+      "msg": "review: done"
     }
   ]
 }

@@ -7,20 +7,40 @@
   "reviewer": "anaya",
   "model": "opus",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "done",
   "outcome": "Abstract Kit matches the built system and lists exactly which numbers Aarav may cite",
   "acceptance": [
     "Each stale row in CALL-04/zoya.md §1 resolved (TERMS 110, SKELETON 142/214, GUARDRAILS L8/L9/§1.5, JURY-QA Q8-Q10 + releases Q); D-19 allowed-values list with conditions; no abstract prose"
   ],
   "depends": [],
   "deliverable": "abstract/",
-  "summary": "",
-  "review": "",
+  "summary": "New abstract/ALLOWED-NUMBERS.md: D-19 list N1-N17, each with BENCH-S3 section/column/metric row, condition, T=40, 20 seeds (G1-G9); D-17 release clause on R=0; F2+x 'before resolver' (D-18); D10 contrast labelled; F2+c, F3 R, T=120, RT values not allowed. FACT-CARD points to it. Resolved zoya.md §1 rows: TERMS 110 (B2-a, no reporter, no cancel) + F2+x/F2+c rows; SKELETON 142 (unhold, no cancel), 177/178/182/184/212/214; GUARDRAILS tense/our-numbers rules, F6, F11, F13, L9, §1.5, X21, §3, self-check; JURY-QA standing rule, Q8-Q10, new Q13 operator releases. L8 marked ⚑ pending S4-24 (not decided). Open ⚑ G9: bench platform/isolation not stated in BENCH-S3 (tara S4-15). kit.py tab added; kit.html not re-rendered (markdown module missing). No abstract prose.",
+  "review": "[anaya · done] [Fact] All N1-N17 match BENCH-S3 cells (tables identical to runs/bench-b3-33/bench.md); every R=0 carries D-17 clause; F2+x labelled before resolver, all three values together; L8 left flagged for S4-24; no abstract prose found. Reviewer fixes applied: BENCH-S3 Platform line (container, OrbStack arm64 Linux, per-agent uids; pmo statement) and G9 closed; ALLOWED line refs shifted (7-8, 8, 123); TERMS R/C/post-alert/irreversible glosses 'Target 0' -> ALLOWED N4-N7 pointers. kit.html rendered (markdown installed into .venv). [Our view] Nits, non-blocking: N15 used for three rows (suggest N15a-c); D-17 'operator released' collides with TERMS 'release' (= lift suspension); prefer 'unhold' in Aarav notes. N16 should name its 2 releases as tainted-lineage.",
   "log": [
     {
       "t": "20 Nov 17:06",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "20 Nov 17:15",
+      "who": "zoya",
+      "msg": "→ in_progress: started Kit v5 + D-19 allowed numbers"
+    },
+    {
+      "t": "21 Nov 00:05",
+      "who": "zoya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 00:10",
+      "who": "zoya",
+      "msg": "→ in_review: Kit v5 + ALLOWED-NUMBERS ready for anaya; L8 ⚑ S4-24; pytest 1078 passed, 12 skipped; not committed"
+    },
+    {
+      "t": "21 Nov 00:25",
+      "who": "anaya",
+      "msg": "review: done"
     }
   ]
 }

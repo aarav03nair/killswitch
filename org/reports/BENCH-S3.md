@@ -2,6 +2,8 @@
 
 Every number here is at **T=40**; do not compare ratio metrics with T=120. Cells are `median [min..max] k/n` (k = seeds with a non-null value), next to a p95 column (nearest-rank, 19th of 20; null = never = +inf).
 
+Platform: run in the container (OrbStack, arm64, Linux) with per-agent uids, not native macOS (stated by pmo, 21 Nov, closing ALLOWED-NUMBERS G9; run dir `runs/bench-b3-33/` does not record it).
+
 - `system`: the product path; its recovery is not told the culprit or t_inject.
 - `snapshot` and `revert_culprit_only` are **oracle-assisted**: they are given t_inject and the culprit from the inject spec, which the system is not. They are upper-bound-style baselines, not products.
 - `no_op`: pause (suspend) only, no recovery.
@@ -91,7 +93,7 @@ Every number here is at **T=40**; do not compare ratio metrics with T=120. Cells
 
 ### F3, H=6, T=40
 
-| metric | system | system p95 | snapshot | snapshot p95 | no_op | no_op p95 |
+| metric | system (pause-only) | system (pause-only) p95 | snapshot | snapshot p95 | no_op | no_op p95 |
 |---|---|---|---|---|---|---|
 | tti_detect | 0 [0..0] 20/20 | 0 | 0 [0..0] 20/20 | 0 | 0 [0..0] 20/20 | 0 |
 | tti_attribute | 0 [0..0] 20/20 | 0 | 0 [0..0] 20/20 | 0 | 0 [0..0] 20/20 | 0 |
@@ -232,7 +234,7 @@ H=0 for F2, F1, F4, F7, F2+c and F3 is deferred (B3-33 review: "other faults at 
 ## Reading notes (T=40)
 
 - **F2+x held_honest_actions** (system, H=6, median 29, max 35): `held_honest_outbox` is 27 on seed 1 and 35 on seed 2. These are triage lineage items that stay held because the conflict is flagged and the Section 4 bench approver never resolves flags. It is the cost of the flag, not a wrong revert; read it next to C=21/254 and R=1/5 (medians). `revert_culprit_only` shows 27 (median) for the same reason: its outbox is untouched, so held honest items are never released.
-- **F3**: system cell has no recovery plan (`no_plan`, listed under notes): it is scored as pause-only, R=1 is the honest emails comms never sent while suspended, not exfiltration. `revert_culprit_only` cannot run on F3 (the culprit wrote nothing landed): those 20 cells are listed under failures, not scored. tti_detect/ttc for F3 follow ADR-06-metrics A5.
+- **F3**: system cell has no recovery plan (`no_plan`, listed under notes): it is scored as pause-only, R=1 is the honest emails comms never sent while suspended, not exfiltration. `revert_culprit_only` is n/a on F3 (the culprit wrote nothing landed): those 20 cells are listed under "not applicable", not under failures, and not scored. tti_detect/ttc for F3 follow ADR-06-metrics A5.
 - **D10 contrast, honest reading** (contrast rows are D10 diagnostics, not system results; compare only against the same-fault no_op H=0 column above, which has the hold on): the lineage hold protects the window between the alert and the operator's decision. Contrast before recovery (no_op = pause, no recovery applied; `--hold 0 --no-lineage-hold` vs normal `--hold 0`), over seeds 1..20: with the hold off, irreversible_tainted_released is 12 median [6..18], 245 payments in total, >0 on 20/20 seeds (F2+ and F2+x identical; s1 = 10); with the hold on (normal no_op H=0 column) it is 0 [0..0] 20/20. With recovery applied instantly at the alert tick (the system contrast cells) the hold has nothing left to stop, because the apply re-runs and holds the tainted payment (queued at the alert tick) before it is dispatched, so system contrast also reads irreversible_tainted_released 0 on all 20 seeds. Read: the hold matters when the operator has not yet decided; an instant apply makes it redundant for F2+.
 
 ## notes (cells scored as run, not as planned)
@@ -258,25 +260,25 @@ H=0 for F2, F1, F4, F7, F2+c and F3 is deferred (B3-33 review: "other faults at 
 - F3/h6/system/s19: no_plan
 - F3/h6/system/s20: no_plan
 
-## failures
+## not applicable
 
-- F3/h6/revert_culprit_only/s1: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 15
-- F3/h6/revert_culprit_only/s2: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 11
-- F3/h6/revert_culprit_only/s3: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 18
-- F3/h6/revert_culprit_only/s4: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 12
-- F3/h6/revert_culprit_only/s5: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 10
-- F3/h6/revert_culprit_only/s6: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 18
-- F3/h6/revert_culprit_only/s7: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 20
-- F3/h6/revert_culprit_only/s8: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 20
-- F3/h6/revert_culprit_only/s9: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 12
-- F3/h6/revert_culprit_only/s10: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 19
-- F3/h6/revert_culprit_only/s11: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 10
-- F3/h6/revert_culprit_only/s12: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 15
-- F3/h6/revert_culprit_only/s13: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 11
-- F3/h6/revert_culprit_only/s14: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 13
-- F3/h6/revert_culprit_only/s15: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 17
-- F3/h6/revert_culprit_only/s16: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 11
-- F3/h6/revert_culprit_only/s17: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 12
-- F3/h6/revert_culprit_only/s18: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 11
-- F3/h6/revert_culprit_only/s19: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 10
-- F3/h6/revert_culprit_only/s20: RuntimeError: baseline_failed:ValueError:comms wrote nothing at tick >= 17
+- F3/h6/revert_culprit_only/s1: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 15)
+- F3/h6/revert_culprit_only/s2: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 11)
+- F3/h6/revert_culprit_only/s3: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 18)
+- F3/h6/revert_culprit_only/s4: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 12)
+- F3/h6/revert_culprit_only/s5: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 10)
+- F3/h6/revert_culprit_only/s6: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 18)
+- F3/h6/revert_culprit_only/s7: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 20)
+- F3/h6/revert_culprit_only/s8: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 20)
+- F3/h6/revert_culprit_only/s9: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 12)
+- F3/h6/revert_culprit_only/s10: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 19)
+- F3/h6/revert_culprit_only/s11: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 10)
+- F3/h6/revert_culprit_only/s12: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 15)
+- F3/h6/revert_culprit_only/s13: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 11)
+- F3/h6/revert_culprit_only/s14: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 13)
+- F3/h6/revert_culprit_only/s15: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 17)
+- F3/h6/revert_culprit_only/s16: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 11)
+- F3/h6/revert_culprit_only/s17: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 12)
+- F3/h6/revert_culprit_only/s18: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 11)
+- F3/h6/revert_culprit_only/s19: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 10)
+- F3/h6/revert_culprit_only/s20: n/a: culprit wrote nothing landed (comms wrote nothing at tick >= 17)

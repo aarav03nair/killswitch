@@ -45,6 +45,8 @@ anaya · 19 Nov 2026 · D13: every outside number in the abstract comes from thi
 
 ## Our own results (B3-27, real container runs, F2+ hero, seeds 0/1/2; from score.json, re-checked by anaya 20 Nov)
 
+**D-19 (21 Nov, zoya S4-18):** the abstract cites our measured numbers only from `abstract/ALLOWED-NUMBERS.md` (BENCH-S3, T=40, 20 seeds, each with its source row and condition). Rows O1–O4 below are hero demo-seed facts (seeds 0/1/2) for the stage and Q&A, not the abstract's bench numbers.
+
 | # | Fact · exact number | Must travel with it | Source |
 |---|---|---|---|
 | O1 | Residual damage R = **0/1, 0/5, 0/9**; collateral loss C = **0**; both tainted-effect metrics and reemitted = **0** | **D-17:** every R = 0 claim states it holds *after the operator released N held items, M of them honest*: seed 0: 1 (0 honest), seed 1: 5 (3 honest), seed 2: **9 (7 honest)** | `fp_cost.operator_unholds` |

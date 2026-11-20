@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "done",
   "outcome": "A design vikram can build in <=2 days that a jury can audit",
   "acceptance": [
     "Design note in org/adr/ (ADR-05 amendment): resolution is a signed c-0 record (rule id, key, versions, released items, rationale, plan_hash link); verify rule; console line; undo path through ks.recover with its own trace; additive contract change if needed",
@@ -15,13 +15,53 @@
   ],
   "depends": [],
   "deliverable": "org/adr/",
-  "summary": "",
-  "review": "",
+  "summary": "Rev 2 (kabir's 5 changes): (1) new check no_tainted_view_reads, because args are replayed; vikram asserts triage's h+2 record has no tainted view read. (2) verify rejects a replayed resolve per (plan_id,n) and any resolve after an unresolve of the same (O,H). (3) verify does not re-run the tool: named as a TCB residual, with a THREAT-MODEL row proposed for kabir. (4) undo-of-undo is a person's job; bench unresolve after release gives unresolve_blocked, with a test. (5) ks run --resolver ww_rebase/1; demo and bench after-row on, labelled 'resolver: ww_rebase/1 (on)'. B5-a updated.",
+  "review": "[kabir · changes] Strong design: one record and one version, a recheck on the head, verify recomputes the rule, refusal lines name the failed check. Five changes needed before Aarav signs. (1) LEAK: seed_reads_only allows VIEW reads of seed versions, and sim_clean re-runs H's tool with the ORIGINAL args. Some deterministic agents take values from their view and put them in args (crm does this: price*10 read from the view). Such an agent would carry the culprit's value into the rebased write, and every check would pass. Fix: add check no_tainted_view_reads (H has no view-source read of any tainted version). Vikram must confirm that triage's F2+x record has none, which _triage suggests (its args are seed-only). (2) Replay: verify step 4 must also require at most one executed resolve per (plan_id, n), and resolve must not come after an unresolve of the same (O, H). (3) Verify only matches rebased_hash to the plan and never re-runs the tool. Either re-run ToolRerunner in resolution_pass or name this as a TCB residual for THREAT-MODEL. (4) Undoing an undo is a person's job (not_undone blocks the rule forever). Say so in section 5. Also: the bench approver releases rerun_reheld items, so on bench runs unresolve will almost always hit unresolve_blocked. Say so and test it. (5) Off-by-default vs D-18: add a ks run --resolver ww_rebase/1 flag to the build list. The demo and the bench after-row run with it on. Console and score show 'resolver: ww_rebase/1 (on)', and abstract numbers say 'with resolver on'. Two days for vikram is tight but works with the cut line. WHAT AARAV IS ASKED TO APPROVE (B5-a, plain words): when a bad agent's edit is buried under exactly one honest agent's later edit, and every safety check passes, the system may remove the bad edit and redo the honest edit on clean data by itself. It does this as part of the plan you approve, and it writes a signed entry that verify checks. You can undo it with one command, and that undo is also recorded. Anything that fails a check still waits for you. It is off unless the run turns it on, and the demo and bench turn it on and label it.\n\n[kabir · done] Rev 2 closes all five. (1) no_tainted_view_reads in §2 + vikram asserts it in test_f2x_resolved, test_refuse_view_copied_arg. (2) §6 step 4 rejects a replayed (plan_id,n) and a resolve after an unresolve of (O,H). (3) TCB residual named in §6; I added the THREAT-MODEL known limit (D-18, ADR-05a §6). (4) §5: undo-of-undo is a person's job; bench gives unresolve_blocked, with a test. (5) --resolver flag, label on in demo/bench. Attack retried on paper: view copy -> no_tainted_view_reads; tool read of a derived tainted version -> seed_reads_only; tool read of the seed -> recomputed on clean state by sim_clean and checked at apply. Residual: a colluding non-root-candidate agent carrying the value in process memory (built-in agents are stateless); written into the THREAT-MODEL limit, C3 no prevention claim. WHAT AARAV IS ASKED TO APPROVE (B5-a, plain words): when a bad agent's edit sits under exactly one honest agent's later edit, and every check passes, the system may remove the bad edit and redo the honest edit on clean data by itself, as part of the plan you approve. It writes a signed entry that verify checks. One command undoes it, and the undo is recorded too. Anything that fails a check waits for you. It is off unless the run turns it on; the demo and bench turn it on and say so. Verify checks the inputs, not the recomputed value.",
   "log": [
     {
       "t": "20 Nov 17:06",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "20 Nov 17:12",
+      "who": "maya",
+      "msg": "→ in_progress: designing ADR-05a"
+    },
+    {
+      "t": "20 Nov 17:12",
+      "who": "maya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 17:12",
+      "who": "maya",
+      "msg": "→ in_review: ADR-05a ready for kabir"
+    },
+    {
+      "t": "21 Nov 00:01",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "21 Nov 00:02",
+      "who": "maya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 00:02",
+      "who": "maya",
+      "msg": "→ in_review: rev 2: kabir changes 1-5 applied"
+    },
+    {
+      "t": "21 Nov 00:06",
+      "who": "kabir",
+      "msg": "review: done"
+    },
+    {
+      "t": "21 Nov 00:15",
+      "who": "pmo",
+      "msg": "→ done: Aarav approved CALL-02 amendment B5-a on 21 Nov (D-18 resolver design; kabir passed). S4-13 unblocked."
     }
   ]
 }

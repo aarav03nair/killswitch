@@ -67,7 +67,7 @@ SCORE_ROWS = (("tti_detect", "time to identify: detect (ticks)"), ("tti_attribut
 BASELINE_COLUMNS = ("snapshot", "revert_culprit_only")
 
 
-def _scorecard(score, base: dict):
+def _scorecard(score, base: dict, lineage_hold: bool = True):
     """TTI/TTC/R/C of this run next to each baseline, straight from score.json files (nothing computed here).
     A missing file is "not run"; a metric key a file lacks is "unavailable (not in score.json)"."""
     if not isinstance(score, dict):
@@ -82,13 +82,25 @@ def _scorecard(score, base: dict):
     irr, r = score.get("irreversible_tainted_released"), score.get("R")
     note = None
     if hold == 0:
+        # "no lineage hold" only when the run config turned the lineage hold off (D10 contrast); else H=0 is the window.
+        why = "H=0 (no lineage hold)" if lineage_hold is False else "H=0 (hold window 0 ticks; lineage hold on)"
         if isinstance(irr, int) and not isinstance(irr, bool) and irr > 0:
-            note = (f"H=0 (no lineage hold): {irr} tainted irreversible effect(s) escaped, counted as residual damage "
-                    f"R = {fmt_metric(r)}")
+            note = f"{why}: {irr} tainted irreversible effect(s) escaped, counted as residual damage R = {fmt_metric(r)}"
         else:
-            note = f"H=0 (no lineage hold): residual damage R = {fmt_metric(r)}; irreversible tainted effects released = {fmt_metric(irr)}"
-    return {"columns": [n for n, _ in cols], "rows": rows, "hold": hold, "hold_note": note,
+            note = f"{why}: residual damage R = {fmt_metric(r)}; irreversible tainted effects released = {fmt_metric(irr)}"
+    fp = score.get("fp_cost")
+    un = fp.get("operator_unholds") if isinstance(fp, dict) else None
+    ha = fp.get("held_honest_actions") if isinstance(fp, dict) else None
+    if isinstance(un, dict) and all(k in un for k in ("total", "honest", "tainted")):
+        # D-17: every R = 0 is stated together with what the operator released; tainted = recovery re-holds, clean payloads
+        releases = (f"operator released {un['total']} held item(s): {un['honest']} honest, {un['tainted']} tainted "
+                    f"(recovery re-holds); honest actions held: {fmt_metric(ha) if ha is not None else 'unavailable (not in score.json)'}")
+    else:
+        releases = "operator releases: unavailable (no fp_cost.operator_unholds in score.json)"
+    return {"columns": [n for n, _ in cols], "rows": rows, "hold": hold, "hold_note": note, "releases": releases,
+            "operator_unholds": un, "held_honest_actions": ha,
             "oracle_assisted": [n for n, c in cols if isinstance(c, dict) and c.get("baseline_oracle_assisted")]}
+
 
 
 def _plan_view(plan: dict, recs: list[dict]) -> dict:
@@ -327,7 +339,7 @@ def build_model(run) -> dict:
          "verify": verify, "banners": banners, "records": recs, "alerts": alerts, "plans": plans,
          "approvals": [a["seq"] for a in appr], "score": score, "baselines": base,
          "ticks": [ticks[k] for k in sorted(ticks)], "held": held, "controls": controls,
-         "scorecard": _scorecard(score, base),
+         "scorecard": _scorecard(score, base, cfg.get("lineage_hold", True)),
          "beat_seconds": list(BEAT_SECONDS), "hero_line": HERO_LINE, "fixture": HERO_FIXTURE}
     m["beats"] = _beats(m, suspends, held)
     return m

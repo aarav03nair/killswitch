@@ -180,6 +180,7 @@ def bench(seeds: list[int], faults: list[str], holds: list[int], baselines: list
     results: dict[tuple[str, int, str], dict[int, dict]] = {}
     timings: dict[str, int] = {}
     failures: list[str] = []
+    na: list[str] = []
     notes: list[str] = []
     contrast: dict[tuple[str, str], dict[int, dict]] = {}
     for f, cb, seed in [(f, cb, s) for f in contrast_faults for cb in contrast_baselines for s in seeds]:
@@ -214,6 +215,10 @@ def bench(seeds: list[int], faults: list[str], holds: list[int], baselines: list
                     try:
                         s = run_cell(f, seed, h, b, ticks, d, star_cache=cache, notes_out=cn)
                     except Exception as e:  # noqa: BLE001 - listed in the summary, never dropped silently
+                        if "baseline_failed:ValueError:" in str(e) and "wrote nothing" in str(e):
+                            na.append(f"{name}: n/a: culprit wrote nothing landed")  # S4-15: not a failure
+                            log(f"n/a  {name}")
+                            continue
                         failures.append(f"{name}: {type(e).__name__}: {e}")
                         log(f"FAIL {name}: {e}")
                         continue
@@ -228,7 +233,7 @@ def bench(seeds: list[int], faults: list[str], holds: list[int], baselines: list
                     results.setdefault((f, h, b), {})[seed] = s
                     log(f"ok   {name} {ms} ms")
     summary: dict[str, Any] = {"contract": "ks.bench/1", "ticks": ticks, "seeds": seeds, "failures": failures,
-                               "notes": notes, "cells": {}, "contrast_cells": {}}
+                               "not_applicable": na, "notes": notes, "cells": {}, "contrast_cells": {}}
     md = [f"# ks bench: T={ticks} (ADR-06-metrics A4), seeds {seeds[0]}..{seeds[-1]} (n={len(seeds)})\n",
           f"Every number here is at **T={ticks}**; do not compare ratio metrics with T=120. Cells are `median [min..max] k/n` "
           "(k = seeds with a non-null value), next to a p95 column (nearest-rank, 19th of 20; null = never = +inf).\n",
@@ -247,6 +252,8 @@ def bench(seeds: list[int], faults: list[str], holds: list[int], baselines: list
             if not cells:
                 continue
             summary["cells"][f"{f}/h{h}"] = {b: aggregate(v) for b, v in cells.items()}
+            if f == "F3" and "system" in cells:  # S4-15: no recovery plan on F3, so say so in the table itself
+                cells = {("system (pause-only)" if b == "system" else b): v for b, v in cells.items()}
             md.append(render_table(f"{f}, H={h}, T={ticks}", cells))
     for f in contrast_faults:
         c = {f"{cb} (CONTRAST: no lineage hold)": [contrast[(f, cb)][s] for s in sorted(contrast[(f, cb)])]
@@ -256,6 +263,8 @@ def bench(seeds: list[int], faults: list[str], holds: list[int], baselines: list
             md.append(render_table(f"CONTRAST (D10, not a security result), {f}, H=0, T={ticks}", c))
     if notes:
         md.append("## notes (cells scored as run, not as planned)\n\n" + "\n".join(f"- {x}" for x in notes) + "\n")
+    if na:
+        md.append("## not applicable\n\n" + "\n".join(f"- {x}" for x in na) + "\n")
     if failures:
         md.append("## failures\n\n" + "\n".join(f"- {x}" for x in failures) + "\n")
     (out / "bench.json").write_bytes(canonical.dumps_line(summary))
