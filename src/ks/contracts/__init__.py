@@ -30,13 +30,14 @@ from .transport import (MAX_FRAME_BYTES, MAX_SIGN_PER_TICK, MAX_VIEW_ENTRIES, SI
                         TickFrame, WitnessClose, WitnessFiles, WitnessHead, WitnessInit, WitnessPub, WitnessReady,
                         decode_frame, decode_witness_frame, encode_frame, signer_refusal)
 
-CONTRACTS_VERSION = "1.4.0"
+CONTRACTS_VERSION = "1.5.0"
 """Contract version. 1.1.0 = CON-02 design freeze (CALL-02); 1.2.0 = B3-01, additive (witness link frames,
 SignRefusal, RunConfig.isolation/decisions_from, VerifyReport.isolation, reexec_invalid); 1.3.0 = B3-43, additive
 (``ks.seed`` system tool per D-15, deny reason ``tool_error``, verify reason ``seed_invalid``); 1.4.0 = B3-46,
 additive (``ReadEntry.source`` view|tool, read_set keyed by (obj, ver), ``RestoreStep.to`` may be ``None``,
-``RecoveryPlan.t0_seq_est_literal``); see README changelog. Any change to fields,
-patterns, canonical rules or domain tags bumps it, regenerates ``schema/`` and re-pins golden hashes."""
+``RecoveryPlan.t0_seq_est_literal``); 1.5.0 = B3-47, additive (verify reason ``replay_mismatch``); see README
+changelog. Any change to fields, patterns, canonical rules or domain tags bumps it, regenerates ``schema/``
+and re-pins golden hashes."""
 
 DOCUMENTS = {
     "c1.envelope": Envelope, "c1.envelope_header": EnvelopeHeader,

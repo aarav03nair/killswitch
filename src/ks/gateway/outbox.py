@@ -43,6 +43,8 @@ __all__ = ["Outbox", "TaintView", "Due", "OUTBOX_PREFIX", "outbox_obj"]
 
 OUTBOX_PREFIX = "outbox:"
 SYSTEM_AUTHOR = "ks.gateway"
+RERUN_TOOL = "ks.recover.rerun"
+"""B3-30: an item re-held by an approved re-run has this record as its creating record (``_unrecorded_rerun``)."""
 
 
 def outbox_obj(outbox_id: str) -> str:
@@ -154,16 +156,28 @@ class Outbox:
         update: dict[str, Any] = {"status": status}
         if status == OutboxStatus.DISPATCHED:
             update["dispatched_seq"] = seq
-        item = d.item.model_copy(update=update)
+        item = d.item
+        top = self.store.conn.execute("SELECT ver, hash FROM versions WHERE obj = ? ORDER BY ver DESC LIMIT 1",
+                                      (d.obj,)).fetchone()
+        if top is not None and top[0] != d.ver:
+            # The head was moved behind the chain (raw SQL). Append on top of the real chain, never raise: the hold
+            # is recorded on the true latest version, and a dispatched item stays dispatched.
+            self.store.conn.execute("UPDATE objects SET head_ver = ?, head_hash = ? WHERE obj = ?",
+                                    (top[0], top[1], d.obj))
+            real = OutboxItem.from_obj(self.store.value_at(d.obj, top[0]))
+            item = real
+            if real.status == OutboxStatus.DISPATCHED:
+                update = {}
+        item = item.model_copy(update=update)
         return self.store.put(d.obj, item.to_obj(), author=author, seq=seq, action_id=action_id)
 
     # --- provenance: an item leaves only if the record that created it says so ------------------------------
     def _unrecorded(self, d: Due) -> bool:
         """True if the item cannot be tied to the log. Checks: the stored value hashes to the head hash; the head
-        version was written by a record that lists it in its write_set; the creating record (``created_seq``) is an
+        version is the last write to the item in the record log and was written by a record that lists it in its write_set; the creating record (``created_seq``) is an
         agent record listing the id in ``outbox_ids`` with the item's obj in its write_set, and the item's author,
         action_id, class, sink, idempotency_key, lineage (= that record's read set) and release_tick are what the
-        gateway would have derived from it."""
+        gateway would have derived from it. A re-run's re-held item (B3-30) is checked by ``_unrecorded_rerun``."""
         if self._record_at is None:
             return False
         it = d.item
@@ -176,6 +190,14 @@ class Outbox:
         if hr is None or not any(w.obj == d.obj and w.after.ver == d.ver and w.after.hash == d.hash
                                  for w in hr.write_set):
             return True
+        top = self.store.conn.execute("SELECT MAX(ver) FROM versions WHERE obj = ?", (d.obj,)).fetchone()[0]
+        if top != d.ver:
+            return True  # head rolled back behind a newer version row
+        seq = head[0] + 1
+        while (r := self._record_at(seq)) is not None:  # the head must be the LAST write to the item in the log
+            if any(w.obj == d.obj for w in r.write_set):
+                return True
+            seq += 1
         cr = self._record_at(it.created_seq)
         if cr is None or cr.envelope is None or it.outbox_id not in cr.outbox_ids:
             return True
@@ -183,6 +205,8 @@ class Outbox:
             return True
         lineage = tuple(sorted(it.lineage, key=lambda e: (e.obj, e.ver)))
         want = tuple(sorted(cr.read_set, key=lambda e: (e.obj, e.ver)))
+        if cr.envelope.tool == RERUN_TOOL:
+            return self._unrecorded_rerun(it, cr, lineage, want)
         env = cr.envelope
         if (it.author, it.action_id) != (env.agent_id, env.action_id) or lineage != want:
             return True
@@ -190,6 +214,30 @@ class Outbox:
                                       for n in range(len(cr.outbox_ids))}:
             return True
         return it.release_tick != self.release_tick(cr.tick, want)
+
+    def _unrecorded_rerun(self, it: OutboxItem, cr: Any, lineage: tuple, want: tuple) -> bool:
+        """B3-30: an item re-held by an approved re-run (M14, CALL-02 B2). Its creating record is the executed
+        ``ks.recover.rerun`` of ``ks.recovery`` on c-0, which lists the item in ``outbox_ids`` and writes it, with
+        ``lineage`` = that record's read set (the re-run's tool reads). Author, action id, idempotency key and
+        ``release_tick`` stay the original's, so they are checked against the original agent record of
+        (author, action_id) that created the same ``outbox_id``, with the original tick and read set."""
+        from ks.contracts import SYSTEM_CONN, Decision
+
+        if (cr.envelope.agent_id != "ks.recovery" or cr.conn_id != SYSTEM_CONN or cr.decision != Decision.EXEC
+                or not cr.sig_ok or lineage != want):
+            return True
+        seq = 1
+        while (r := self._record_at(seq)) is not None and seq < cr.seq:
+            e = r.envelope
+            if (e is not None and r.conn_id != SYSTEM_CONN and r.decision == Decision.EXEC
+                    and (e.agent_id, e.action_id) == (it.author, it.action_id) and it.outbox_id in r.outbox_ids):
+                if it.idempotency_key not in {idempotency_key(e.agent_id, e.action_id, it.sink, n)
+                                              for n in range(len(r.outbox_ids))}:
+                    return True
+                orig = tuple(sorted(r.read_set, key=lambda x: (x.obj, x.ver)))
+                return it.release_tick != self.release_tick(r.tick, orig)
+            seq += 1
+        return True  # no original agent record created this item
 
     # --- internals ---------------------------------------------------------------------------------------
     def _tainted(self, lineage: Iterable[ReadEntry]) -> bool:

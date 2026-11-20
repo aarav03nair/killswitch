@@ -25,6 +25,11 @@
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "20 Nov 06:37",
+      "who": "pmo",
+      "msg": "→ todo: From kabir's B3-19 re-review (non-blocking, nisha): pii_egress allow-list keys on 'to' only; make extra recipients (cc/bcc) fail closed if ever added to the comms payload; find_pii misses lowercase IBANs; remove dead MANUAL_UNHOLD code."
     }
   ]
 }

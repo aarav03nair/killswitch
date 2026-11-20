@@ -15,10 +15,11 @@ main{max-width:1100px;margin:0 auto;padding:16px}h1{font-size:20px;margin:0 0 4p
 .banner.ok{border-color:var(--ok);background:#12301f;font-weight:400}.banner.warn{border-color:var(--amb);background:#3a2e12}
 .beats{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px;margin:12px 0}
 .beat{background:var(--pan);border-top:4px solid var(--rule);padding:8px}.beat.live{border-top-color:var(--ok)}
-.beat.pending{border-top-color:var(--amb)}.beat.fail{border-top-color:var(--red)}
+.beat.pending{border-top-color:var(--amb)}.beat.fail,.beat.unverified{border-top-color:var(--red)}
 .beat b{display:block}.beat span{color:var(--mut);font-size:12px}
 section{background:var(--pan);padding:12px;margin:10px 0}h2{font-size:16px;margin:0 0 6px}
-.tag{font-size:11px;padding:1px 6px;background:var(--rule);margin-left:6px}.tag.pending{background:var(--amb);color:#000}
+.tag{font-size:11px;padding:1px 6px;background:var(--rule);margin-left:6px}.tag.pending{background:var(--amb);color:#000}.tag.unverified,.tag.fail{background:var(--red)}
+tr.unw td{opacity:.6;font-style:italic}
 .lanes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.lane{border:1px solid var(--rule);padding:8px}
 .lane h3{margin:0 0 4px;font-size:13px}.lane.kept{border-color:var(--ok)}ul{margin:4px 0;padding-left:18px}
 table{border-collapse:collapse;width:100%;font-size:12px}td,th{border-bottom:1px solid var(--rule);padding:2px 6px;text-align:left}
@@ -36,7 +37,7 @@ root.append(E('h1','','Incident console: '+M.run_id));
 M.banners.forEach(b=>root.append(E('div','banner '+b.kind,b.text)));
 const v=M.verify;
 root.append(E('div','banner '+(v.ok?'ok':''),'verify (build time): '+(v.ok?'OK':'FAILED '+v.reason)+'; tamper-evident up to the last witnessed head (seq '+v.last_witnessed_seq+'); '+(v.anchored?'anchored':'not anchored ('+v.unanchored_reason+')')+'. Stale until rebuilt.'));
-const st=E('div','beats');M.beats.forEach((b,i)=>{const d=E('div','beat '+b.status);d.append(E('b','',(i+1)+'. '+B[i][1]),E('span','',b.status==='pending'?'PENDING (fixture)':B[i][2]),E('span','',' '+M.beat_seconds[i]+'s'));st.append(d)});root.append(st);
+const st=E('div','beats');M.beats.forEach((b,i)=>{const d=E('div','beat '+b.status);d.append(E('b','',(i+1)+'. '+B[i][1]),E('span','',b.status==='pending'?'PENDING (fixture)':b.status==='unverified'?'UNVERIFIED':B[i][2]),E('span','',' '+M.beat_seconds[i]+'s'));st.append(d)});root.append(st);
 M.beats.forEach((b,i)=>{const s=E('section','');const h=E('h2','',(i+1)+'. '+B[i][1]);h.append(E('span','tag '+b.status,b.status));s.append(h);
  const u=E('ul');b.lines.forEach(l=>u.append(E('li','',l)));s.append(u);
  if(b.lanes){const g=E('div','lanes');[['restore','Restore'],['rerun','Re-run'],['kept','Kept'],['independent','Independent']].forEach(k=>{const l=E('div','lane '+k[0]);l.append(E('h3','',k[1]));const q=E('ul');(b.lanes[k[0]]||[]).forEach(x=>q.append(E('li','',x)));l.append(q);g.append(l)});s.append(g)}
@@ -46,8 +47,8 @@ M.beats.forEach((b,i)=>{const s=E('section','');const h=E('h2','',(i+1)+'. '+B[i
 const tl=E('section');tl.append(E('h2','','Timeline: records per tick'));const bars=E('div','tl');const mx=Math.max(1,...M.ticks.map(t=>t.n));
 M.ticks.forEach(t=>{const i=E('i');i.style.height=(100*t.n/mx)+'%';i.title='tick '+t.tick+': '+t.n+' records '+JSON.stringify(t.agents);bars.append(i)});tl.append(bars);
 const sc=E('div','scroll');const tb=E('table');const hr=E('tr');hr.append(...['seq','tick','agent','tool','decision','reason','note'].map(x=>E('th','',x)));tb.append(hr);
-M.records.forEach(r=>{if(r.tool==='ks.seed')return;const tr=E('tr',r.control?'ctl':r.decision==='hold'?'hold':'');
- [r.seq,r.tick,r.agent,r.tool,r.decision,r.reason,r.control?(r.control.op+' '+r.control.target):(r.outbox.length?'outbox '+r.outbox.join(','):'')].forEach(x=>tr.append(E('td','mono',x===null?'':String(x))));tb.append(tr)});
+M.records.forEach(r=>{if(r.tool==='ks.seed')return;const tr=E('tr',(r.control?'ctl':r.decision==='hold'?'hold':'')+(r.unwitnessed?' unw':''));
+ [r.seq,r.tick,r.agent,r.tool,r.decision,r.reason,(r.control?(r.control.op+' '+r.control.target):(r.outbox.length?'outbox '+r.outbox.join(','):''))+(r.unwitnessed?' [unwitnessed]':'')].forEach(x=>tr.append(E('td','mono',x===null?'':String(x))));tb.append(tr)});
 sc.append(tb);tl.append(sc);root.append(tl);
 """
 

@@ -266,7 +266,8 @@ class Exit(IntEnum):
     RECONCILE = 4   # fold(record) != live state
     FROZEN = 5      # ks recover refused (M12): verify != OK, or a tamper/witness-stall alert open in the
     #                 records; lasts for the rest of the run (no resolve action in v1)
-    DIVERGED = 6    # ks repro A B: determinism views differ (C6)
+    DIVERGED = 6    # re-derived result differs from its source: ks repro A B (determinism views, C6) or a
+    #                 decisions replay (replay_mismatch, 1.5); not tampering
     USAGE = 64      # bad CLI arguments (incl. repro + --rogue, X7)
 
 
@@ -277,11 +278,12 @@ VERIFY_REASONS: dict[str, Exit] = {
     "gw_sig_invalid": Exit.TAMPER, "agent_sig_mismatch": Exit.TAMPER, "side_entry_mismatch": Exit.TAMPER,
     "alert_mismatch": Exit.TAMPER, "epoch_regression": Exit.TAMPER, "expired_admitted": Exit.TAMPER,
     "window_violation": Exit.TAMPER, "reexec_invalid": Exit.TAMPER, "seed_invalid": Exit.TAMPER,
+    "recovery_unbound": Exit.TAMPER,
     "witness_missing": Exit.WITNESS, "witness_sig_invalid": Exit.WITNESS, "witness_mismatch": Exit.WITNESS,
     "count_mismatch": Exit.WITNESS, "truncated": Exit.WITNESS, "head_mismatch": Exit.WITNESS,
     "keyring_mismatch": Exit.WITNESS, "config_mismatch": Exit.WITNESS,
     "reconcile_mismatch": Exit.RECONCILE, "no_state": Exit.RECONCILE,
-    "frozen": Exit.FROZEN, "diverged": Exit.DIVERGED, "usage": Exit.USAGE,
+    "frozen": Exit.FROZEN, "diverged": Exit.DIVERGED, "replay_mismatch": Exit.DIVERGED, "usage": Exit.USAGE,
 }
 """K16 reason vocabulary (closed) and the exit each implies. Check order (F3): record, side, witness, reconcile.
 Truncation (F4): ``truncated`` with ``first_bad = n + 1``; an anchor that disagrees: ``head_mismatch``,
@@ -289,6 +291,12 @@ Truncation (F4): ``truncated`` with ``first_bad = n + 1``; an anchor that disagr
 ``reexec_of`` that is not a valid unhold re-execution (no matching hold, released twice, or not released).
 v1.3 (D-15): ``seed_invalid`` -> TAMPER, an admitted ``ks.seed`` record off seq 1/tick 0/ks.gateway/c-0, or whose
 write_set differs from the scenario's ``seed_state``.
+v1.5 (B3-47, kabir's B3-20 ruling): ``replay_mismatch`` -> DIVERGED, re-deriving the recorded decisions
+(the ``ks.verify.decisions`` replay, or the ``RunConfig.decisions_from`` source run) gives a different result.
+The record chain itself may be intact, so this is neither ``hash_mismatch`` nor a TAMPER exit: an honest but
+divergent replay must not read as tampering. Also v1.5 (B3-30, G6/F5): ``recovery_unbound`` -> TAMPER, an
+admitted ``ks.recover.<op>`` record with no prior matching ``ks.approve``, or whose plan file does not hash to the
+approved ``plan_hash`` (edited), or a step applied twice.
 Adding a reason is a minor version bump."""
 
 

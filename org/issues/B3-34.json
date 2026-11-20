@@ -27,6 +27,16 @@
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "20 Nov 05:59",
+      "who": "pmo",
+      "msg": "→ todo: From maya's B3-28 review: fix the comment on the pinned-verify console test (verify fails on a ts-slot collision in vikram's fixture, hash_mismatch at seq 174, not for lack of a witness); remove the pin once vikram's fixture is fixed (B3-29)."
+    },
+    {
+      "t": "20 Nov 06:27",
+      "who": "pmo",
+      "msg": "→ todo: From maya's B3-29 review: console pin can't be removed yet: the console test's own injected alert bypasses the gateway; route it through the gateway first, then drop the pin."
     }
   ]
 }

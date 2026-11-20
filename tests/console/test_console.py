@@ -13,6 +13,7 @@ import pytest
 
 from ks.cli import main
 from ks.console import BEATS, build_model, frame, render_html, run_live
+from ks.console.live import beat_frame
 from ks.contracts import Exit
 
 
@@ -45,10 +46,12 @@ def test_degraded_banner_and_verify_always_present(run):
     cfg_iso = m["config"]["isolation"]
     assert ("isolation" in kinds) == (cfg_iso == "degraded")
     html = render_html(run)
-    assert "last witnessed head" in html and "attribution is VOID" in html
-    assert "last witnessed head" in frame(run)
+    assert "last witnessed head" in html and "last witnessed head" in frame(run)
     if cfg_iso == "degraded":
-        assert "VOID" in frame(run)
+        assert "attribution is VOID" in html and "VOID" in frame(run)
+    else:  # per_agent_uid: the per-agent banner, no VOID anywhere
+        assert cfg_iso == "per_agent_uid"
+        assert "VOID" not in html and "VOID" not in frame(run)
 
 
 def test_five_beats_in_order_and_pending_marked(run):
@@ -72,33 +75,111 @@ def test_edited_record_fails_audit_beat(run, tmp_path):
     assert any(b["kind"] == "verify" for b in m["banners"])
 
 
-def _hero(run, tmp_path):
-    """Run dir plus a hand-written alert, suspend record, hold and plan shaped like the contracts."""
-    d = tmp_path / "hero"
-    shutil.copytree(run, d)
-    recs = [json.loads(x) for x in (d / "record.jsonl").read_text().splitlines()]
-    crm = next(r for r in recs if r["envelope"]["agent_id"] == "crm")
-    (d / "alerts.jsonl").write_text(json.dumps({
-        "alert_id": "a-000001", "tick": crm["tick"], "seq": crm["seq"], "detector": "inv.iban_checksum", "kind": "invariant",
-        "hard": True, "evidence_seqs": [crm["seq"]], "root_candidates": ["crm"]}) + "\n")
-    plan = {"plan_id": "p-000001", "alert_id": "a-000001", "culprit": "crm", "t0_seq_est": crm["seq"] - 1, "as_of_seq": 203,
-            "taint_set": {"actions": [{"seq": 100, "agent_id": "billing", "action_id": "x"}], "versions": [], "outbox_ids": []},
-            "steps": [{"n": 0, "op": "restore", "reason": "tainted_write", "obj": "suppliers:S-17.iban"},
-                      {"n": 1, "op": "rerun", "reason": "tainted_read", "action": {"seq": 100, "agent_id": "billing", "action_id": "x"}}],
-            "diff": []}
-    (d / "plans").mkdir(exist_ok=True)
-    (d / "plans" / "p-000001.json").write_text(json.dumps(plan))
-    return d
+def _hero(tmp_path, *, alert=True, plan=True):
+    """Real ks.world F2+ run (tests/recovery/world.py: real gateway, suspend, outbox holds) plus a chained ks.alert
+    signed by ks.monitor, vikram's hero plan from plan_recovery + dry_run written to plans/."""
+    from ks.contracts import Alert, AlertKind, ObjVer, SideDomain, CONTROL_TOOL, Envelope, Decision, Reason, ActionClass, SYSTEM_CONN
+    from ks.contracts.hashing import args_hash
+    from ks.identity import KeyStore, sign_hex
+    from ks.contracts import SYSTEM_PRINCIPALS
+    from ks.recovery import plan_recovery
+    from ks.recovery.dryrun import dry_run, write_plan
+    from ks.world.agents import AGENT_IDS
+    from tests.recovery import world as W
+    w = W.run(tmp_path / "s.db")
+    if alert:
+        keys = KeyStore.create(sorted(SYSTEM_PRINCIPALS | set(AGENT_IDS)), key_mode="repro", seed=W.SEED, secret=W.SECRET)
+        g = w.gateway
+        ev = ObjVer(obj=W.IBAN, ver=w.store.history(W.IBAN)[-1].ver)
+        bad = next(r for r in w.records if r.write_set and any(x.obj == W.IBAN for x in r.write_set)
+                   and r.envelope.agent_id == "crm")
+        al = Alert(alert_id="a-000001", tick=bad.tick, seq=bad.seq, detector="inv.iban_checksum", kind=AlertKind.INVARIANT,
+                   hard=True, evidence_seqs=(bad.seq,), evidence_versions=(ev,), root_candidates=("crm",), conn_id=None)
+        body = al.to_obj()
+        g.recorder.put_side(SideDomain.ARGS, args_hash(body), body)
+        env = Envelope(agent_id="ks.monitor", action_id="alert-1", parent_action_id=None, act_chain=(), tool="ks.alert",
+                       args=body, nonce="2" * 32, expiry_tick=w.records[-1].tick, epoch=0, claimed_ts_us=None, claimed_seq=None, sig=None)
+        env = env.with_sig(sign_hex(keys.private("ks.monitor"), env.signing_bytes()))
+        cfg = g.config
+        g.recorder.append(tick=w.records[-1].tick, ts_us=cfg.start_ts_us + w.records[-1].tick * cfg.tick_us, conn_id=SYSTEM_CONN,
+                          envelope=env.header(), envelope_hash=env.content_hash(), sig_ok=True, decision=Decision.EXEC,
+                          reason=Reason.OK, policy_rule=None, action_class=ActionClass.R, read_set=(), write_set=(),
+                          outbox_ids=(), result_hash=None, control=None, reexec_of=None)
+    if plan:
+        pl = plan_recovery(w.records, w.taint, alert_id="a-000001", state=w.store)
+        write_plan(dry_run(w.store, pl).plan, w.rundir)
+    return w.rundir.path
 
 
-def test_alert_and_plan_render_live_with_lanes(run, tmp_path):
-    d = _hero(run, tmp_path)
+@pytest.fixture(scope="module")
+def hero(tmp_path_factory):
+    return _hero(tmp_path_factory.mktemp("h"))
+
+
+def test_alerts_from_chained_records_only(hero, tmp_path):
+    d = tmp_path / "x"
+    shutil.copytree(hero, d)
+    (d / "alerts.jsonl").write_text(json.dumps({  # forged unauthenticated copy must never show
+        "alert_id": "a-999999", "tick": 1, "seq": 1, "detector": "forged", "kind": "invariant", "hard": True,
+        "evidence_seqs": [1], "root_candidates": ["docs"]}) + "\n")
     m = build_model(d)
-    ident, rec = m["beats"][1], m["beats"][3]
-    assert ident["status"] == "live" and "crm" in ident["lines"][1]
-    assert rec["status"] == "live" and set(rec["lanes"]) >= {"restore", "rerun", "kept", "independent"}
-    assert rec["lanes"]["rerun"] == ["billing"] and rec["lanes"]["flags"] == 0
-    assert "bank account (IBAN)" in rec["lanes"]["restore"][0]
+    assert [a["alert_id"] for a in m["alerts"]] == ["a-000001"]
+    assert "root candidates: crm" in m["beats"][1]["lines"] and "forged" not in render_html(d) and "a-999999" not in render_html(d)
+    # no chained ks.alert (alerts.jsonl only) -> identify stays PENDING
+    n = _hero(tmp_path / "n", alert=False, plan=False) if (tmp_path / "n").mkdir() is None else None
+    (n / "alerts.jsonl").write_text((d / "alerts.jsonl").read_text())
+    assert build_model(n)["alerts"] == [] and build_model(n)["beats"][1]["status"] == "pending"
+
+
+def test_hero_beats_derived_from_record_and_plan(hero, monkeypatch):
+    # the in-process world fixture has no witness (verify cannot pass); pin an OK verify to read the live lines
+    from ks.console import model as M
+    real = M._verify(hero)
+    monkeypatch.setattr(M, "_verify", lambda run: real | {"ok": True, "reason": "ok", "first_bad": None})
+    m = build_model(hero)
+    b = {x["id"]: x for x in m["beats"]}
+    # held count comes from ks.control hold records on outbox:* objects (B3-23), not decision == hold
+    assert len(m["held"]) >= 1 and all(h["outbox"].startswith("ob-") for h in m["held"])
+    assert f"held items: {len(m['held'])}" in b["contain"]["lines"][1] and "held items: 0" not in b["contain"]["lines"][1]
+    assert all(x["status"] == "live" for x in m["beats"][:4])
+    assert {h["reason"] for h in m["held"]} <= {"lineage_hold", "sensitive_field"}
+    ln = b["recover"]["lanes"]
+    assert any("suppliers:S-17.iban" in x for x in ln["restore"]) and any("suppliers:S-22" in x for x in ln["restore"])
+    assert {"billing", "payments", "comms", "reporter"} <= set(ln["rerun"])
+    assert ln["kept"] == ["triage: risk note of S-17"] and "triage" not in ln["rerun"]
+    assert ln["flags"] == 1
+    assert "dry-run file, not in the record" in b["recover"]["lines"][0]
+    assert b["break"]["lines"][0].startswith("crm changed bank account (IBAN) of S-17")
+    # no hard-coded claims: the old fixture sentences appear only in PENDING beats
+    for x in m["beats"]:
+        if x["status"] != "pending":
+            t = " ".join(x["lines"])
+            assert "inventory and docs are independent" not in t
+            assert "we kept its edit and restored only the bank account" not in t
+    assert b["break"]["lines"][-1].startswith("read afterwards by: ")
+
+
+def test_verify_failure_no_beat_live(hero, tmp_path):
+    bad = tmp_path / "bad"
+    shutil.copytree(hero, bad)
+    lines = (bad / "record.jsonl").read_text().splitlines()
+    k = next(i for i, x in enumerate(lines) if '"decision":"exec"' in x and i > 5)
+    lines[k] = lines[k].replace('"decision":"exec"', '"decision":"deny"', 1)
+    (bad / "record.jsonl").write_text("\n".join(lines) + "\n")
+    m = build_model(bad)
+    assert not m["verify"]["ok"] and any(x["kind"] == "verify" for x in m["banners"])
+    assert not [x for x in m["beats"] if x["status"] == "live"]
+    data = [x for x in m["beats"] if x["id"] in ("break", "identify", "contain", "recover")]
+    assert all(x["status"] in ("unverified", "pending") for x in data)
+    assert any(x["status"] == "unverified" and x["lines"][0].startswith("UNTRUSTED") for x in data)
+    assert "LIVE" not in "".join(beat_frame(m, i) for i in range(5))
+    assert "VERIFY FAILED" in render_html(bad)
+
+
+def test_unwitnessed_records_marked(hero):
+    m = build_model(hero)
+    lw = m["verify"]["last_witnessed_seq"]
+    assert all(r["unwitnessed"] == (lw is None or r["seq"] > lw) for r in m["records"])
 
 
 def test_pace_stops_at_each_beat(run, tmp_path):

@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "maya",
-  "status": "changes",
+  "status": "done",
   "outcome": "Readers of reverted versions re-run against restored state inside a savepoint; changed payloads re-held",
   "acceptance": [
     "Hero: billing and reporter re-run, payment cancelled, 0 re-emitted effects (test)",
@@ -20,8 +20,8 @@
     "B3-05"
   ],
   "deliverable": "src/ks/recovery/rerun.py",
-  "summary": "src/ks/recovery/rerun.py: ToolRerunner(dispatcher, args_of) re-executes the original tool+args (M14) with the original agent_id/action_id in a GatewayTxn inside dry_run's simulate(); args from the side store (args_from_sidestore, re-hashed) or a mapping; recovery never imports ks.world (A3 guard), the caller injects WorldDispatcher. Effects: same outbox:<id> v+1 held (as B3-23 Outbox.create), dispatched -> nothing emitted, flag(dispatched_tainted) dropped iff the payload hash is equal; new/dropped/missing dispositions; DryRun.reemitted, reheld. dry_run: on_stale='halt' stops at the first stale restore or re-run (hold/stale_plan, M8) and reports it; 'raise' raises StaleRerun (a StaleExpect). Redacted args -> flag(redacted_args), their readers ride. Tests tests/recovery/test_rerun.py on real ks.world F2+ records (tests/recovery/world.py): hero 0 flags/cancels/replans, reemitted 0, payments same id v+1 held, simulated state == S* for every object and every re-held payload == S* payload, live digest unchanged, two runs byte-identical plan. Also folded in: maya B3-21 changes, contracts 1.4 (RestoreStep.to=None, RecoveryPlan.t0_seq_est_literal), B3-23 real outbox status (missing object -> flag(outbox_missing)). Native 790 passed/8 skipped; container 800 passed. Notes for others: native ks run --fault is not served yet (RunOptions), so the end-to-end test uses the in-process world loop; Outbox.create raises on a dispatched re-run, so B3-30 apply must skip create for dispatched items; a re-run whose value equals the head writes nothing, so the tainted (obj,ver) stays head (B3-30 must record that repair); ADR-05 M14 says 'queued' with a fresh release_tick but B2 and B3-23 use 'held': followed held, ADR-05 M14 wording needs a fix (maya).",
-  "review": "[maya · changes] Core accepted: ToolRerunner re-runs the original tool, args, agent and action in a savepoint. Keys match Outbox.create. Halt at the first stale step is tested (re-run and restore, hold/stale_plan, nothing simulated after the halt, digest unchanged). Recovery never reads InjectSpec, culprit or S*. Native 796/8 skipped; container 812. Ruling: B2 wins, so the item is held. I amended ADR-05 M14 (held, release_tick unchanged). Fidelity of tests/recovery/world.py: it uses the same agents, WorldDispatcher, sorted admission and visible_to = first seq of the tick. But it has no outbox release phase, so every item stays queued forever (ob-7..30 are due before tick 35). It has no TaintView hold, uses a flat release_tick (no G3), and builds the read set from a dict instead of merge_read_set. So '0 flags' does not yet prove that the tainted payment and email are held rather than dispatched. Changes: (1) world.py creates items via ks.gateway.outbox.Outbox and runs the due/hold_reason release phase every tick, with a TaintView that turns on at containment. Re-assert the hero, and report any tainted dispatch as R>0. (2) Use merge_read_set. (3) Document that re-run lineage = tool reads only (the live lineage is view+tool) for B3-30.",
+  "summary": "Maya ruling (narrowed A) implemented in ks.recovery. Planner still emits flag(no_compensator) for tainted class C without a compensator. It also lists the action in Planned.c_candidates when the landed record has no outbox item and every tainted read is repaired by then. The dry-run re-runs each candidate in a nested savepoint at its seq position. It clears the flag only if the re-run has no error, no outbox request, no stale write and changed == () (writes equal landed by obj+after.hash; the adapter skips unchanged writes, so 'no writes' is compared against the head). A cleared flag becomes rerun(reason=c_rerun_identical): it stays in the plan with its own reason code, and the plan hash covers it. Otherwise the savepoint rolls back and the flag stays. DryRun.class_c records both verdicts. The render prints 'class C      billing-t34 seq 178 billing.issue_credit: re-run identical, no compensation needed (...)' or 'flag(no_compensator) kept: <why>'. Tests: strict xfail test_hero_zero_flags is now a pass (0 flags, credit equals S*, 'flags 0'). New negative test, parametrized: a re-run with a different amount ('re-run writes differ: credits:CR-0034') or with an outbox request keeps the flag, leaves no diff entry and no rerun step, and keeps the digest unchanged. No rerunner keeps the flag. Note for B3-30: on apply a c_rerun_identical step re-executes billing.issue_credit with the original keys. The writes are identical by construction, and the step gives the credit row clean provenance; the stale check at apply still applies. Caveat [Our view]: a re-run uses the original args, so a view-tainted choice of args is not re-decided. The S* compare is the evidence that the credit matches the honest world. Compliance: compliance.record_finding at h+3/h+6 (seq 186, 204) read ledger:L-0032 v1 (and L-0036 v1). Those are tainted ledger rows written by billing in the window, so compliance is a correct re-run (no writes, changed 0); the console recover lane should show it. ADR-05 one-line amendment NOT written: the edit was outside my allowed paths (src/ks/recovery, tests/recovery) and was blocked. Proposed text for §6.4: 'Amended 20 Nov (maya, B3-24, narrowed A): without a compensator, flag(no_compensator) becomes rerun(c_rerun_identical) only if the landed record has no outbox item and the simulated re-run has no outbox request and writes equal to the landed ones by (obj, after.hash); otherwise the flag stays; both are rendered; issue_credit stays class C (CALL-02 G1).' Native 861 passed / 8 skipped; container 880 passed.",
+  "review": "[maya · changes] Core accepted: ToolRerunner re-runs the original tool, args, agent and action in a savepoint. Keys match Outbox.create. Halt at the first stale step is tested (re-run and restore, hold/stale_plan, nothing simulated after the halt, digest unchanged). Recovery never reads InjectSpec, culprit or S*. Native 796/8 skipped; container 812. Ruling: B2 wins, so the item is held. I amended ADR-05 M14 (held, release_tick unchanged). Fidelity of tests/recovery/world.py: it uses the same agents, WorldDispatcher, sorted admission and visible_to = first seq of the tick. But it has no outbox release phase, so every item stays queued forever (ob-7..30 are due before tick 35). It has no TaintView hold, uses a flat release_tick (no G3), and builds the read set from a dict instead of merge_read_set. So '0 flags' does not yet prove that the tainted payment and email are held rather than dispatched. Changes: (1) world.py creates items via ks.gateway.outbox.Outbox and runs the due/hold_reason release phase every tick, with a TaintView that turns on at containment. Re-assert the hero, and report any tainted dispatch as R>0. (2) Use merge_read_set. (3) Document that re-run lineage = tool reads only (the live lineage is view+tool) for B3-30.\n\n[maya · changes] Driver now on the real Gateway, release phase, LiveTaint, merge_read_set: verified, hero holds asserted as claimed. RULING on the class-C credit flag: option A, narrowed; B is out. B (reclassify issue_credit to R) contradicts binding CALL-02 G1 and ADR-03 (issue_credit is C, compensator billing.reverse_credit), so it would need a decision raised to Aarav, and it changes the world to fit the demo, which a jury will spot. A, narrowed, keeps B2 honest: drop flag(no_compensator) for a tainted class-C action only if (1) its landed Execution had no OutboxRequest, so the whole effect is in its write_set (true for every ks.world C tool), and (2) the simulated re-run's write_set equals the landed one by (obj, after.hash), the C analogue of dispatched_same for I1. It must stay visible: render a line such as 'billing-t<h+4> class C: re-run identical, no compensation needed' in the dry-run and keep it in the plan (reason code, not silent). If the writes differ, or the C action had any external effect, the flag stays. Jury answer: the credit the taint touched is the same credit the honest world issues; we show it, we do not hide it. Required: implement in ks.recovery dry-run, flip strict xfail test_hero_zero_flags to a pass, add a negative test (C re-run with different writes keeps flag(no_compensator)), add a one-line ADR-05 amendment. Also note: dry-run re-runs compliance too; B2 lists billing, payments, comms, reporter. Either explain it in the summary (compliance read the tainted row) or fix it; the console recover lane will show compliance.\n\n[maya · done] Re-review of narrowed A: accepted. The planner lists a class-C action as a candidate only when it is no_compensator, has no outbox_ids and all its tainted reads are repaired. The dry-run re-runs it in a nested savepoint at its seq position. The flag clears only if the re-run has no error, no effects or outbox writes, an empty changed set and no stale write. A cleared flag becomes rerun(reason=c_rerun_identical): it is in the plan hash, in seq order, and rendered as a 'class C' line. Otherwise the savepoint rolls back, the flag stays, and the render says 'flag(no_compensator) kept: <why>'. The strict xfail test_hero_zero_flags now passes, with the credit equal to S*. The parametrized negative test covers a different amount and an outbox request; the no-rerunner case also keeps the flag. Compliance re-run: accepted, since it read the tainted ledger rows L-0032/L-0036. Suites: tests/recovery 40 passed; local 861 passed / 8 skipped; container 880 passed. ADR-05 §6.4 amendment applied, using his text plus a known-gap note. Known gap, not blocking: _changed compares a landed write the re-run did not repeat against the current head. So a re-run that succeeds but skips the write would pass as identical. This is not reachable in ks.world, because issue_credit always writes or errors. Follow-up (B3-30 / adapter): report skipped-identical writes explicitly so this can fail closed. Note: the console hero test calls dry_run without a rerunner, so it still shows flags 1; it is consistent.",
   "log": [
     {
       "t": "19 Nov 11:34",
@@ -52,6 +52,41 @@
       "t": "19 Nov 21:38",
       "who": "maya",
       "msg": "→ changes: world.py needs the real outbox release phase before the hero claim holds"
+    },
+    {
+      "t": "20 Nov 05:35",
+      "who": "vikram",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 05:35",
+      "who": "vikram",
+      "msg": "→ in_review: Driver on real Gateway + release phase + LiveTaint + merge_read_set; hero holds asserted; one open decision (class C credit flag)."
+    },
+    {
+      "t": "20 Nov 05:40",
+      "who": "maya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "20 Nov 05:54",
+      "who": "vikram",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 05:54",
+      "who": "vikram",
+      "msg": "→ in_review: Narrowed A implemented; xfail flipped; negative tests; ADR line pending (path not allowed)"
+    },
+    {
+      "t": "20 Nov 05:55",
+      "who": "vikram",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 05:58",
+      "who": "maya",
+      "msg": "review: done"
     }
   ]
 }

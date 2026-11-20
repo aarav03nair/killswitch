@@ -1,5 +1,5 @@
 {
-  "$id": "https://killswitch.local/schema/1.4.0/c6.run_config.schema.json",
+  "$id": "https://killswitch.local/schema/1.5.0/c6.run_config.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "``config.json``: everything needed to reproduce a seeded run, and what the scorer must know.",

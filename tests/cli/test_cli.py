@@ -43,12 +43,20 @@ def test_validation_usage_without_exit(tmp_path):
 
 
 def test_unbuilt_commands_say_not_yet(tmp_path, capsys):
-    for argv in (["blame", str(tmp_path)], ["contain", "suspend", "agent:crm", str(tmp_path)],
-                 ["recover", str(tmp_path), "--dry-run"], ["score", str(tmp_path)],
+    for argv in (["blame", str(tmp_path)], ["score", str(tmp_path)],
                  ["bench"]):
         assert main(argv) == Exit.IO
         assert "not yet implemented" in capsys.readouterr().err
     assert main(["recover", str(tmp_path / "missing"), "--dry-run"]) == Exit.IO
+    # B3-30: recover is built; a directory that is not a run dir is IO (verify missing_file), never FROZEN
+    assert main(["recover", str(tmp_path), "--dry-run"]) == Exit.IO
+    assert "not a readable run dir" in capsys.readouterr().err
+
+
+def test_contain_on_a_finished_run_is_io(tmp_path, capsys):
+    """B3-13: contain needs a live gateway; no operator socket in the run dir gives IO (ADR-07)."""
+    assert main(["contain", "suspend", "agent:crm", str(tmp_path)]) == Exit.IO
+    assert "no live run" in capsys.readouterr().err
 
 
 def _capture(monkeypatch):
@@ -119,11 +127,10 @@ def test_remaining_placeholders_listed():
     """Visible punch list: every entry must be gone before the finale (CALL-02 / B3-12 review)."""
     from ks.runtime.options import SERVED, RunOptions
     unserved = sorted(f for f in RunOptions.__dataclass_fields__ if f not in SERVED)
-    commands = ["blame (B3-14)", "contain (B3-13)", "recover (B3-18+)", "score (ks.score)",
-                "bench (ADR-06 metrics runner)"]
+    commands = ["blame (B3-14)", "recover (B3-18+)", "score (ks.score)", "bench (ADR-06 metrics runner)"]
     print("PLACEHOLDERS runtime options:", unserved, "commands:", commands)
     assert set(unserved) | set(SERVED) == set(RunOptions.__dataclass_fields__)
-    assert len(commands) == 5  # update when one lands; delete this test when both lists are empty
+    assert len(commands) == 4  # update when one lands; delete this test when both lists are empty
 
 
 def test_repro_banner_ok_and_diverged(tmp_path, capsys):

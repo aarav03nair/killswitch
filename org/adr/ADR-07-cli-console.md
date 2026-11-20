@@ -81,3 +81,6 @@ Approval is a CLI act (`--approve`); the page only shows what the record says, s
 - F1 `verify --head`; seq, not index. J1 operator socket. L1 `--pause-at`/`--step`. L2 `--with-baselines`, `baselines/`. L3 live verify is the audit proof; `--dry-run` prints the apply command; `blame` is an alias.
 - Zoya: pacing, flag alignment with TERMS and SEC-02 §3, baselines in the run dir, terms fixed.
 - Integration pass: demo runs on live paused run, recover on finished run is dry-run only; RunAnchor location; `--rogue` runs identical under `determinism_view()`.
+
+## Amendments (B3-28 review, maya, 20 Nov)
+- `ks console RUN --live --pace` is accepted: it holds the read-only view at each of the five beat boundaries until Enter. It paces the presenter, not the run (that stays `ks run --pause-at`/`--step`, L1), writes nothing and never opens the operator socket.

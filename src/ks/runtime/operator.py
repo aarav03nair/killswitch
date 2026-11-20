@@ -12,8 +12,20 @@ signed by the client; the gateway turns each into a ``ks.operator``-signed envel
 carries the record (seq, record_id, tick, decision, reason, result). A refused request writes nothing.
 
 Served ops: ``suspend`` / ``release`` / ``revoke`` (target ``agent:<id>`` or ``conn:<id>``; revoke needs
-``"confirm": true``) and ``approve`` (``plan_id``, ``plan_hash``, ``steps``; the G6 args). Not served yet:
-``hold``/``unhold`` (B3-19) and ``recover`` (B3-30).
+``"confirm": true``), ``hold`` / ``unhold`` (target ``action:<record id>`` or ``outbox:<id>``, B3-19), ``approve``
+(``plan_id``, ``plan_hash``, ``steps``; the G6 args) and ``recover`` (same three keys, B3-30): served only when the
+run has a recovery service (``ks.runtime.recover.RecoveryService``, world scenario); it queues one ``ks.recovery``
+request per approved envelope step and replies once every step landed or was refused (``steps``: one reply each;
+``ok`` only if every step executed). The steps are bound to the operator's earlier recorded ``ks.approve`` by the
+gateway, not by this socket.
+
+Outcome honesty (B3-19): a reply is ``ok: true/false`` only from the recorded result. A request not admitted within
+the wait (or a client that times out first) gets ``ok: null, pending: true``: the request is still queued and may land.
+
+Pacing (ADR-07 §2, L1): every request this socket accepts (passes the peer uid and parses) sets :attr:`wake`, which
+resumes a run paused by ``--pause-at``/``--step``; the request itself lands in the control phase of the tick the run
+resumes into. ``{"op": "resume"}`` only sets ``wake``: it is pacing, like the keypress, not an operator action, so
+it writes nothing and the record of a paused run equals that of an unpaused one.
 """
 
 from __future__ import annotations
@@ -34,13 +46,17 @@ from ks.contracts import (APPROVE_TOOL, CONTROL_TOOL, Approval, CanonicalError, 
 from ks.gateway.system import SystemQueue, SystemRequest
 
 __all__ = ["OPERATOR_DIR", "OPERATOR_SOCK", "OperatorError", "OperatorServer", "allowed_operator_uid", "peer_uid",
-           "operator_request", "parse_request", "socket_path", "SERVED_OPS", "NOT_SERVED"]
+           "operator_request", "PENDING_REPLY", "parse_request", "socket_path", "SERVED_OPS", "NOT_SERVED", "RESUME_OP"]
 
 OPERATOR_DIR = "operator"
 OPERATOR_SOCK = "operator.sock"
 MAX_REQUEST_BYTES = 8192
-SERVED_OPS = ("suspend", "release", "revoke", "approve")
-NOT_SERVED = {"hold": "B3-19", "unhold": "B3-19", "recover": "B3-30"}
+PENDING_REPLY = {"ok": None, "pending": True,
+                 "error": "pending: queued, not admitted yet; it lands at the next control phase if the run continues. "
+                          "The record is authoritative: check record.jsonl before retrying"}
+SERVED_OPS = ("suspend", "release", "revoke", "approve", "hold", "unhold")
+RESUME_OP = "resume"
+NOT_SERVED = {"recover": "B3-30: served by the run's recovery service, not parse_request"}
 _TOKEN_OK = set("abcdefghijklmnopqrstuvwxyz0123456789_.-")
 
 
@@ -115,7 +131,18 @@ def parse_request(obj: Any, agents: Iterable[str]) -> SystemRequest:
     try:
         kind, ident = parse_target(obj.get("target", ""))
     except (ValueError, TypeError):
-        raise OperatorError("target must be agent:<id> or conn:<id>") from None
+        raise OperatorError("target must be agent:<id>, conn:<id>, action:<record id> or outbox:<id>") from None
+    if op in ("hold", "unhold"):  # B3-19: ks.gateway.holds; the Control validator pins the kinds
+        if kind not in (TargetKind.ACTION, TargetKind.OUTBOX):
+            raise OperatorError(f"{op} targets action:<record id> or outbox:<id>")
+        reason = _token(obj.get("reason", "operator"), "reason")
+        alert_id = obj.get("alert_id")
+        if alert_id is not None and (not isinstance(alert_id, str) or not alert_id.startswith("a-")):
+            raise OperatorError("alert_id must be an a-NNNNNN id")
+        target = obj["target"]
+        return SystemRequest("ks.operator", CONTROL_TOOL, build=lambda gw, tick, seq: Control(
+            control_id=f"k-{seq:06d}", op=ControlOp(op), target=target, epoch=None, alert_id=alert_id,
+            issued_by="ks.operator", auto=False, reason=reason).to_obj())
     if kind not in (TargetKind.AGENT, TargetKind.CONN):
         raise OperatorError(f"{op} targets an agent or a connection")
     if kind == TargetKind.AGENT and ident not in set(agents):
@@ -151,15 +178,20 @@ class OperatorServer:
     """Accepts operator connections on a background thread; requests are queued for the control phase."""
 
     def __init__(self, run: str | os.PathLike[str], queue: SystemQueue, agents: Iterable[str], *,
-                 allowed_uid: int | None = None, wait_s: float = 60.0, io_timeout_s: float = 2.0):
+                 allowed_uid: int | None = None, wait_s: float = 60.0, io_timeout_s: float = 2.0,
+                 recover: Any = None):
         self.dir = Path(run) / OPERATOR_DIR
         self.path = self.dir / OPERATOR_SOCK
         self.queue = queue
         self.agents = tuple(agents)
         self.allowed_uid = allowed_operator_uid() if allowed_uid is None else allowed_uid
         self.wait_s, self.io_timeout_s = wait_s, io_timeout_s
+        self.recover = recover
+        """B3-30: ``recover(obj) -> list[SystemRequest]`` (``RecoveryService.requests``), or None (not served)."""
         self.refused: list[tuple[int | None, str]] = []
         """(peer uid, why) per refused connection or request (evidence for tests and the banner)."""
+        self.wake = threading.Event()
+        """Set by every accepted request (and by the keypress reader of a paused run): resume (ADR-07 L1)."""
         self._stop = threading.Event()
         self._thread: threading.Thread | None = None
         self._sock: socket.socket | None = None
@@ -210,11 +242,16 @@ class OperatorServer:
                 continue
             except OSError:
                 return
-            with conn:
-                try:
-                    self._handle(conn)
-                except OSError:
-                    pass
+            # One thread per connection: a request waiting for the next control phase must not turn away a
+            # `resume` (kabir B3-13: the blocked single server deadlocked a paused run).
+            threading.Thread(target=self._serve_one, args=(conn,), name="ks-operator-conn", daemon=True).start()
+
+    def _serve_one(self, conn: socket.socket) -> None:
+        with conn:
+            try:
+                self._handle(conn)
+            except OSError:
+                pass
 
     def _send(self, conn: socket.socket, obj: dict) -> None:
         conn.sendall(canonical.dumps_line(obj))
@@ -236,7 +273,20 @@ class OperatorServer:
         try:
             if len(buf) > MAX_REQUEST_BYTES:
                 raise OperatorError("request too large")
-            req = parse_request(canonical.loads_line(buf), self.agents)
+            obj = canonical.loads_line(buf)
+            if obj == {"op": RESUME_OP}:  # pacing only: nothing queued, nothing recorded
+                self.wake.set()
+                self._send(conn, {"ok": True, "resumed": True})
+                return
+            if isinstance(obj, dict) and obj.get("op") == "recover":
+                if self.recover is None:
+                    raise OperatorError("recover is not served by this run (no recovery service: world scenario only)")
+                try:
+                    reqs = self.recover(obj)
+                except ValueError as e:
+                    raise OperatorError(f"recover refused: {str(e).splitlines()[0][:200]}") from None
+                return self._handle_many(conn, reqs)
+            req = parse_request(obj, self.agents)
         except (OperatorError, CanonicalError) as e:
             self.refused.append((uid, str(e)[:200]))
             self._send(conn, {"ok": False, "error": str(e)[:300]})
@@ -250,13 +300,42 @@ class OperatorServer:
 
         req.done = on_done
         self.queue.put(req)
+        self.wake.set()  # a paused run resumes into the control phase that admits this request
         if not done.wait(self.wait_s):
-            self._send(conn, {"ok": False, "error": "not admitted within the wait; the record is authoritative"})
+            # Never a false outcome: the request stays queued and WILL be admitted at a later control phase (or fail
+            # at teardown). Say so; the record, not this reply, is authoritative.
+            self._send(conn, PENDING_REPLY)
             return
         self._send(conn, _reply_of(box[0]))
 
+    def _handle_many(self, conn: socket.socket, reqs: list[SystemRequest]) -> None:
+        """B3-30 ``recover``: queue every step, wait for each, reply once (``pending`` if any is not admitted yet)."""
+        events = [threading.Event() for _ in reqs]
+        boxes: list[list[Any]] = [[] for _ in reqs]
+        for req, ev, box in zip(reqs, events, boxes):
+            def on_done(result: Any, ev=ev, box=box) -> None:
+                box.append(result)
+                ev.set()
+            req.done = on_done
+            self.queue.put(req)
+        self.wake.set()
+        for ev in events:
+            if not ev.wait(self.wait_s):
+                self._send(conn, PENDING_REPLY)
+                return
+        steps = [_reply_of(b[0]) for b in boxes]
+        self._send(conn, {"ok": all(s.get("ok") is True for s in steps), "steps": steps})
+
 
 def operator_request(run: str | os.PathLike[str], obj: dict, *, timeout_s: float = 90.0) -> dict:
+    """See below. A client timeout returns the pending reply (the request may still land), never an error."""
+    try:
+        return _operator_request(run, obj, timeout_s=timeout_s)
+    except TimeoutError:
+        return dict(PENDING_REPLY)
+
+
+def _operator_request(run: str | os.PathLike[str], obj: dict, *, timeout_s: float) -> dict:
     """Client side (``ks contain``, ``ks recover --apply``): send one request, return the reply object. Raises
     ``OSError`` if the socket is unreachable (no live run, or not the operator uid) and ``ConnectionError`` if the
     gateway closed without replying (e.g. a refused peer uid)."""

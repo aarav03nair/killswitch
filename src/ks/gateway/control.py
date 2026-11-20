@@ -86,7 +86,7 @@ class FoldedControl:
         """Raise ``ValueError`` if applying ``control`` now would break D1 or a permanent revoke."""
         kind, ident = parse_target(control.target)
         if control.op in (ControlOp.HOLD, ControlOp.UNHOLD):
-            raise NotImplementedError(f"{control.op} is served by containment/outbox (B3-19, B3-23)")
+            raise NotImplementedError(f"{control.op} is served by ks.gateway.holds (B3-19)")
         if kind == TargetKind.AGENT:
             if ident not in self.agents:
                 raise ValueError(f"{ident} is not an agent of this run")

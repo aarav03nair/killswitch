@@ -23,7 +23,8 @@ def test_world_hero_plan_b2(world):
     assert {s.obj for s in p.steps if s.op == "restore"} == {W.IBAN, W.S22}
     assert all(s.expect.ver == 2 and s.to.ver == 1 for s in p.steps if s.op == "restore")
     assert [s for s in p.steps if s.op in ("replan", "cancel_outbox")] == []
-    # open (test_rerun.test_hero_zero_flags): view-tainted class-C billing.issue_credit has no compensator
+    # planner stage: view-tainted class-C billing.issue_credit has no compensator; the dry-run clears it only if
+    # the re-run is identical (test_rerun.test_hero_zero_flags, B3-24 narrowed A)
     assert [(s.reason, s.action.action_id) for s in p.steps if s.op == "flag"] == [("no_compensator", f"billing-t{W.H + 4}")]
     rerun = {s.action.agent_id for s in p.steps if s.op == "rerun"}
     assert {"billing", "payments", "comms", "reporter"} <= rerun

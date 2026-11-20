@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "Verify F4 window check and F6 alerts.jsonl vs records, FROZEN derived from records",
   "acceptance": [
     "test_dispatch_window: a dispatch with a hold/taint seed/suspend in (created_seq, dispatched_seq) and no unhold -> TAMPER window_violation",
@@ -20,8 +20,8 @@
     "B3-23"
   ],
   "deliverable": "src/ks/verify/",
-  "summary": "",
-  "review": "",
+  "summary": "Round 2: window.py now (1) taints items created after a seed alert, (2) holds B2 re-created items, (3) side_pass fails side_entry_mismatch at seq when a chained ks.alert side entry is missing/redacted/non-Alert. Direct-seed limit noted in docstring. 3 regression tests in tests/verify/test_window.py; verify suite 44 pass.",
+  "review": "[kabir · changes] Probes: scratchpad/p31/test_p31.py (in kabir session scratchpad). HOLDS: early dispatch (tick < release_tick incl. G3 v+2H) caught; late is legal; double/orphan dispatch caught; alerts.jsonl drop/reorder/edit all give alert_mismatch at the right seq; side entry swapped into another hash's filename (same prefix dir) gives side_entry_mismatch; value re-hash enforced at parse; skeleton read_set/outbox_ids now seed_invalid; PMO relative-path fix (db.resolve().as_uri()) correct and its test is right. RULING: extra alerts.jsonl line -> alert_mismatch, first_bad = n+1 is accepted (same convention as truncated: the record that should exist). BLOCKERS (reproduced, verify OK): (1) an item CREATED after a tamper alert whose evidence_versions are in its lineage (the gateway creates it held) is dispatched with no unhold: window_pass passes, because taint is only applied to items existing at alert time. Fix: at creation set flags.taint if lineage meets any seed seen so far. (2) A B2 re-created item (outbox write with before != None: back on hold by creation) resets flags to empty and dispatches with no unhold: passes. Fix: re-creation sets flags.hold. Optionally check the dispatch's write before == the item's last written version. (3) Deleting (or redacting) the side entries of chained ks.alert records: verify OK and frozen_from_records -> None. That unfreezes recovery and drops taint seeds by editing an unsigned file, which contradicts F5. Fix: an executed chained ks.alert whose args side entry is missing, redacted or not an Alert -> side_entry_mismatch at that seq (alerts hold no PII, so they are never redactable). Add one test each. NON-BLOCKING: taint seeds are direct only (the alert's evidence_versions); derived versions are not followed the way TaintView does. Note this as an honest limit in the window.py docstring.\n\n[kabir · done] Round 2 re-review. My 3 p31 probes (scratchpad/p31/test_p31.py) now fail as intended: (1) item created after a seed alert with evidence in its lineage, dispatched with no unhold -> window_violation; (2) B2 re-created item (outbox write before != None) dispatched with no unhold -> window_violation; (3) deleting the side entries of chained ks.alert records -> side_entry_mismatch at seq 2 (redacted is also covered, since _side_value returns None for redacted entries). Arjun's 3 regression tests match these. Direct-seed limit is noted in the window.py docstring. False-positive check: the honest world F2+ hero driver (tests/recovery/world.py), with the alert chained as a real ks.alert through the gateway SystemQueue plus the alerts.jsonl copy, verifies OK at H=0/3/6. S* and F2+ without the alert also verify OK, and so does an honest ks run with 10 agents. Runs, on a tree that includes maya/vikram/nisha WIP: native 918 passed, 8 skipped; container 927 passed; make smoke OK (anchored, per_agent_uid). Note: ks inject (F2+, F1, F3) is still not implemented in the runtime, so the hero path can only be checked through the world driver. That is B3-27 scope, not this issue.",
   "log": [
     {
       "t": "19 Nov 11:34",
@@ -37,6 +37,46 @@
       "t": "19 Nov 21:38",
       "who": "pmo",
       "msg": "→ todo: PMO fixed a bug kabir found in his B3-46 review: ks verify on a RELATIVE run path failed reconcile (state.db opened via Path.as_uri on an unresolved path -> reconcile_mismatch, exit 4, on an honest run). Fix: src/ks/verify/core.py db.resolve().as_uri(). Regression test tests/runtime/test_world_runtime.py::test_verify_accepts_a_relative_run_path (fails without the fix). Kabir to glance at it when reviewing B3-31."
+    },
+    {
+      "t": "20 Nov 05:57",
+      "who": "arjun",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "20 Nov 06:08",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 06:08",
+      "who": "arjun",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "20 Nov 06:14",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "20 Nov 06:28",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 06:28",
+      "who": "arjun",
+      "msg": "→ in_review: round 2 fixes"
+    },
+    {
+      "t": "20 Nov 06:39",
+      "who": "kabir",
+      "msg": "review: done"
+    },
+    {
+      "t": "20 Nov 06:39",
+      "who": "kabir",
+      "msg": "→ done: re-review passed"
     }
   ]
 }

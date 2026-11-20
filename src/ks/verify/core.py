@@ -4,7 +4,8 @@ IO (config, keys, record) -> anchor hashes (keyring/config, before any signature
 record pass (parse, seq, prev_hash, hash, gw_sig, agent sig vs sig_ok, D-15 seed rule) -> witness pass (sig, count chain,
 truncation, heads) -> anchor vs last checkpoint.
 
-SKEL-01 scope: no side-store, dispatch-window, epoch or reconcile pass yet (Sprint 3, arjun).
+After the record pass: dispatch window (F4), alerts.jsonl cross-check (F6), side-store check (B3-31), recovery
+binding (B3-30, ``recovery_unbound``).
 """
 
 from __future__ import annotations
@@ -12,11 +13,14 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from ks.contracts import (GENESIS_HASH, RECOVER_TOOL_PREFIX, SEED_TOOL, SYSTEM_CONN, SYSTEM_PRINCIPALS, VERIFY_REASONS,
+from ks.contracts import (GENESIS_HASH, SEED_TOOL, SYSTEM_CONN, SYSTEM_PRINCIPALS, VERIFY_REASONS,
                           CanonicalError, Decision, EpochFold, Keyring, Record, RunAnchor, RunConfig, VerifyReport,
-                          WitnessCheckpoint, anchor_status, args_hash, witness_chain_problems)
+                          WitnessCheckpoint, anchor_status, args_hash, system_tool_signers, witness_chain_problems)
 from ks.contracts.rundir import CONFIG, KEYS, RECORD, STATE_DB, WITNESS
 from ks.identity import verify_hex
+
+from .recovery import recovery_pass
+from .window import Violation, alerts_pass, side_pass, window_pass
 
 __all__ = ["verify"]
 
@@ -64,7 +68,15 @@ def verify(run: str | Path, anchor: RunAnchor | None = None, *, log=lambda s: pr
         if keyring.problems(config):
             raise _Fail("unreadable", None, f"keys.json incomplete: {keyring.problems(config)}")
         writes: list = []
-        hashes = _record_pass(record_bytes, keyring, writes, config)
+        recs: list = []
+        hashes = _record_pass(record_bytes, keyring, writes, config, recs)
+        try:
+            window_pass(run, recs, config)
+            alerts_pass(run, recs)
+            side_pass(run, recs)
+            recovery_pass(run, recs)  # B3-30: ks.recover.* bound to a ks.approve and the plan file
+        except Violation as v:
+            raise _Fail(v.reason, v.first_bad, v.detail) from None
         last = _witness_pass(run, hashes, keyring, state)
         if anchor is not None:
             probs = anchor.checkpoint_problems(last)
@@ -109,7 +121,7 @@ def _needs_seed(config: RunConfig) -> bool:
     return minor >= (1, 3) and config.scenario != "skeleton"
 
 
-def _record_pass(data: bytes, keyring: Keyring, writes: list, config: RunConfig) -> list[str]:
+def _record_pass(data: bytes, keyring: Keyring, writes: list, config: RunConfig, recs: list | None = None) -> list[str]:
     """Per line: parse, seq == line, prev_hash, hash, gw_sig, agent signature consistent with sig_ok, then the
     per-record rules (ADR-02 section 6): seed, system tools only by system principals on c-0, epoch fold,
     ts_us formula, agents named by the config. Record validators already refuse expired admissions at parse."""
@@ -140,8 +152,8 @@ def _record_pass(data: bytes, keyring: Keyring, writes: list, config: RunConfig)
             raise _Fail("hash_mismatch", i, f"ts_us {rec.ts_us} does not follow start_ts_us + tick*tick_us + slot")
         last_slot[rec.tick] = slot
         env = rec.envelope
-        if stateless and rec.write_set:  # the label must not buy an exemption: a skeleton run writes no state
-            raise _Fail("seed_invalid", i, "a skeleton (stateless) run has a record with state writes")
+        if stateless and (rec.write_set or rec.read_set or rec.outbox_ids):  # the label must not buy an exemption
+            raise _Fail("seed_invalid", i, "a skeleton (stateless) run has a record with state reads/writes/outbox")
         if i == 1 and need_seed and (env is None or env.tool != SEED_TOOL or rec.decision == Decision.DENY):
             raise _Fail("seed_invalid", 1, "record 1 of a 1.3 run must be an admitted ks.seed")
         if env is not None:
@@ -160,8 +172,11 @@ def _record_pass(data: bytes, keyring: Keyring, writes: list, config: RunConfig)
                     raise _Fail("seed_invalid", i, "; ".join(probs))
             if rec.sig_ok and env.agent_id not in SYSTEM_PRINCIPALS and env.agent_id not in config.agents:
                 raise _Fail("agent_sig_mismatch", i, f"{env.agent_id} is not an agent of this run")
-            if rec.decision == Decision.EXEC and (env.tool == "ks.control" or env.tool.startswith(RECOVER_TOOL_PREFIX)):
-                if (env.agent_id not in SYSTEM_PRINCIPALS or rec.conn_id != SYSTEM_CONN or not rec.sig_ok
+            if rec.decision == Decision.EXEC and env.tool.startswith("ks."):
+                # B3-13 / K13: every reserved tool (ks.control, ks.alert, ks.approve, ks.dispatch, ks.seed,
+                # ks.recover.<op>) executes only for a principal allowed to sign it, verified, on c-0; an unknown
+                # ks.* tool has no signer at all
+                if (env.agent_id not in system_tool_signers(env.tool) or rec.conn_id != SYSTEM_CONN or not rec.sig_ok
                         or (rec.control is not None and rec.control.issued_by != env.agent_id)):
                     raise _Fail("agent_sig_mismatch", i, f"{env.tool} executed outside a verified system principal on c-0")
             if rec.control is not None and rec.decision == Decision.EXEC:
@@ -170,6 +185,8 @@ def _record_pass(data: bytes, keyring: Keyring, writes: list, config: RunConfig)
                 except ValueError as e:
                     raise _Fail("epoch_regression", i, str(e)[:200]) from None
         writes.extend(rec.write_set)
+        if recs is not None:
+            recs.append(rec)
         hashes.append(rec.hash)
         prev = rec.hash
     return hashes

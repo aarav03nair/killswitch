@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "in_review",
+  "status": "done",
   "outcome": "ks console --live renders ticks, alerts, controls and holds, with pacing for the CALL-01/zoya section 4 beats",
   "acceptance": [
     "Live view shows per-tick records, alerts, suspend and holds from the run dir/operator socket, read-only",
@@ -18,8 +18,8 @@
     "B3-12"
   ],
   "deliverable": "console/",
-  "summary": "ks.console (model/html/live) built; ks console RUN --html|--live [--once] [--pace]. Static single-file page, deterministic, offline, read-only, build-time verify + degraded/repro banners. 5 beats; hero beats (alert/suspend/dry-run lanes) render live when alerts/controls/plans exist, else marked PENDING from contract-shaped fixture. --pace stops per beat on Enter (300s budget). Run pacing (--pause-at/--step) still waits on RunOptions SERVED. ADR-07 amendment: --pace flag. tests/console 7 pass; test_cli placeholder list updated (console removed).",
-  "review": "",
+  "summary": "Maya review fixed: alerts from chained sig_ok ks.monitor ks.alert via side store + C4 Alert (alerts.jsonl ignored); plans show dry-run/not-in-record unless ks.approve matches recomputed plan_hash; failed verify => beats 'unverified' (red, UNTRUSTED) and unwitnessed records marked; holds counted from ks.control hold on outbox:* records; hard-coded LIVE lines derived (break readers from read sets, no HERO_LINE live); kept labelled by field; VOID banner only when degraded, per_agent_uid asserts none. Tests on real tests/recovery world + vikram hero plan (verify pinned OK for live-line test since fixture has no witness). Container tests/console green.",
+  "review": "[maya · changes] Good: one static file, inline CSS/JS, embedded JSON escaped, no URLs/fetch (offline OK); deterministic; run dir untouched; never imports gateway/signer, never opens the operator socket; THREAT-MODEL wording 'tamper-evident up to the last witnessed head' used; degraded VOID and repro banners render first; PENDING beats carry a PENDING first line and amber tag. --pace ACCEPTED: I added the ADR-07 amendment (org/adr/ADR-07-cli-console.md, 'Amendments (B3-28 review)'): presenter pacing of the read-only view, run pacing stays --pause-at/--step (now served, B3-13). I ran it on vikram's real hero dry-run plan (tests/recovery world + plan_recovery + dry_run, plan written to plans/). MUST-FIX: (1) Not verified-only. Alerts come from alerts.jsonl, the unauthenticated copy (rundir.py: the chained ks.alert records are authoritative; ks.score never reads it). Take alerts from EXEC ks.alert records on c-0 (args from the side store by hash), like ks.score. Plans are unchained files: show 'dry-run file, not in the record' unless a ks.approve with a matching plan_hash exists, and recompute plan_hash. (2) When verify fails, Contain/Recover/Identify still render LIVE from the tampered record (seen on the real plan: VERIFY FAILED banner, yet beats 3 and 4 LIVE). On a non-OK verify every data beat must be status 'unverified' (red), not live; records after last_witnessed_seq should be marked unwitnessed. (3) Held items are counted from decision=='hold', but the gateway records holds as EXEC ks.control op=hold target outbox:* (B3-23). On the real hero run Contain shows 'held items: 0' while the payment and email were held. Count hold controls. (4) Hard-coded claims in LIVE beats: Break always adds 'billing, payments and comms read it; inventory and docs are independent', and Recover adds HERO_LINE whenever kept is non-empty, though the real plan also restores S-22 and re-runs compliance. Derive both from the record/plan or show them only in the PENDING fixture. (5) Container failure (root, per_agent_uid): test_degraded_banner_and_verify_always_present asserts 'attribution is VOID' in the html unconditionally; make it conditional on degraded, and add a per_agent_uid run assertion that no VOID banner shows. Lanes on the real plan: restore S-17.iban + S-22, re-run billing/comms/compliance/payments/reporter, kept triage on suppliers:S-17, independent docs/intake/inventory, flags 1. The lanes match the plan; the differences from CALL-02 B3 (compliance re-run, 1 flag) are B3-24's, ruled there. Minor: label the kept lane by field (risk note), not by row. Add a golden test on the real hero plan once B3-24 lands.\n\n[maya · done] Re-review: all five fixed. (1) Alerts only from exec, sig_ok ks.alert by ks.monitor, body from side store checked against args_hash, parsed as C4 Alert; forged alerts.jsonl never shows. Plans show 'dry-run file, not in the record' unless a ks.operator ks.approve matches the recomputed content_hash (= contract plan_hash). (2) Failed verify: beats 1-4 UNVERIFIED (red) with an UNTRUSTED line, audit FAIL, records after last_witnessed_seq marked. (3) Holds counted from ks.control op=hold on outbox:*: 14 on the hero fixture. (4) Break readers come from read sets; HERO_LINE and the fixture sentences appear only in PENDING beats; kept is labelled by field (triage: risk note of S-17). (5) The VOID check depends on isolation mode; in the container (per_agent_uid) the world run shows no VOID. Suites: local 861 passed / 8 skipped, container 880 passed. About the pinned verify: it is not a stub that hides console behaviour. I ran the hero fixture without the pin and the beat lines are identical; only the status changes (UNVERIFIED and the UNTRUSTED line). The test comment's reason is wrong, though. verify fails with hash_mismatch at seq 174 (ts_us slot collision), not because the witness is missing. tests/recovery/world.py _suspend appends at slot 0 outside the gateway slot counter, so the gateway's hold record lands on the same slot. The console test's injected ks.alert copies that pattern. Follow-up for vikram (fixture, not blocking): append through the gateway slot so the hero fixture verifies, then drop the pin. Ishaan: fix the comment. The real world run has no fault (runtime does not serve --fault yet), so beats 1-4 show PENDING there correctly. Golden test on the real hero run still waits for runtime fault support.",
   "log": [
     {
       "t": "19 Nov 11:34",
@@ -35,6 +35,26 @@
       "t": "19 Nov 21:45",
       "who": "ishaan",
       "msg": "→ in_review: ready for review"
+    },
+    {
+      "t": "20 Nov 05:42",
+      "who": "maya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "20 Nov 05:49",
+      "who": "ishaan",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 05:49",
+      "who": "ishaan",
+      "msg": "→ in_review: Maya changes addressed"
+    },
+    {
+      "t": "20 Nov 05:57",
+      "who": "maya",
+      "msg": "review: done"
     }
   ]
 }

@@ -1,4 +1,4 @@
-# ks.contracts: C1–C6 reference (CON-01 → CON-02 → B3-01 → B3-43 → B3-46, contracts **1.4.0**, frozen 22 Nov)
+# ks.contracts: C1–C6 reference (CON-01 → CON-02 → B3-01 → B3-43 → B3-46 → B3-47, contracts **1.5.0**, frozen 22 Nov)
 
 Import from `ks.contracts`, never from submodules. Every type is a frozen pydantic model that rejects unknown
 fields. Each one has `to_canonical()` / `from_canonical()` (strict: the bytes must already be canonical) and
@@ -120,6 +120,23 @@ Each is a recorded envelope on `c-0`. Every outbox status change carries a `writ
 Metric and score keys and the `effects.jsonl` schema (tara, ADR-06); policy rule ids (nisha, ADR-03); the store implementation (vikram, ADR-05); side-store and verify internals (arjun, ADR-02).
 
 ## Changelog
+
+### 1.5.0 (B3-47, 20 Nov; kabir's B3-20 ruling) — additive only
+Nothing renamed or removed; no field changed. Tests: `tests/contracts/test_contracts_15.py`.
+
+- **C6:** verify reason `replay_mismatch` → DIVERGED, exit 6 (`VERIFY_REASONS["replay_mismatch"]`): re-deriving the recorded
+  decisions (the `ks.verify.decisions` replay, or the `RunConfig.decisions_from` source run) gives a different
+  result. The hash chain may be intact, so `hash_mismatch` was misleading; `hash_mismatch` keeps its meaning (a
+  record that fails the chain/content checks in `ks verify`). Not TAMPER: an honest but divergent replay must not
+  read as tampering; `Exit.DIVERGED` now means "a re-derived result differs from its source" (`ks repro` or replay).
+- **C6 (B3-30, G6/F5):** verify reason `recovery_unbound` → TAMPER: an admitted `ks.recover.<op>` record with no
+  prior matching `ks.approve` (`plan_id`, `plan_hash`, `n` listed), whose `plans/<plan_id>.json` no longer hashes to
+  the approved `plan_hash` (edited plan file), or a step applied twice. Logic: `ks.verify.recovery`.
+- **Additivity:** 1.3 and 1.4 runs still verify (`test_additive_13_run.py`; `test_contracts_15.py` with
+  `fixtures/run-1.4-world-s0`, a checked-in 1.4 world run with `source: "view"` read entries).
+- **Schemas:** regenerated (version string only; `VerifyReport.reason` is a pattern, not an enum).
+
+**Golden hashes.** Only `doc:run_config` moved (`contracts_version` = 1.5.0).
 
 ### 1.4.0 (B3-46, 19 Nov; B3-45 option C) — additive only
 Nothing renamed or removed. Tests: `tests/contracts/test_contracts_14.py`, `tests/gateway/test_b346.py`.

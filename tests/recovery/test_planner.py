@@ -242,26 +242,49 @@ def test_redacted_restore_source_flagged():
     assert [(f.reason, f.obj) for f in ops(pl.plan, "flag")] == [("redacted_restore_source", IBAN)]
 
 
+def _set_status(b, oid, status):
+    """Move the real ``outbox:<id>`` object to ``status`` (v+1 by the gateway), as release/dispatch would."""
+    cur = OutboxItem.model_validate(b.store.get(f"outbox:{oid}").value)
+    item = cur.model_copy(update={"status": status,
+                                  "dispatched_seq": cur.created_seq + 1 if status == OutboxStatus.DISPATCHED else None})
+    with b.store.txn():
+        b.store.put(f"outbox:{oid}", item.to_obj(), author="ks.gateway", seq=b.next_seq + 1, action_id=f"g-{oid}")
+
+
 def test_outbox_dispatched_is_flag_and_queued_is_cancelled():
+    """ADR-05 §6.1 as amended 20 Nov (maya, B3-29 review; B3-48): cancel_outbox only for the suspect's own window
+    items and for released items of actions that are not re-run. A replanned or riding action's queued/held item
+    gets no step, stays held and is listed in Planned.held with what blocks it; dispatched is always a flag."""
     b = seeded()
     _crm_fault(b)
-    pay = b.act("payments", H + 2, reads=[IBAN], outbox=1, tool="payments.send")
-    em = b.act("comms", H + 2, reads=[IBAN], outbox=1, tool="comms.send_email")
-    b.suspend("crm", H + 3)
-    item = OutboxItem(outbox_id="ob-000001", author="payments", action_id=pay.envelope.action_id,
-                      created_seq=pay.seq, sink="payments", action_class="I1", payload_hash=value_hash(1),
-                      idempotency_key=value_hash(2), lineage=(), status=OutboxStatus.DISPATCHED, release_tick=0,
-                      dispatched_seq=pay.seq + 1)
-    with b.store.txn():
-        b.store.put("outbox:ob-000001", item.to_obj(), author="ks.gateway", seq=b.next_seq + 1, action_id="d")
-    t, pl = _plan(b, [ov(IBAN, 2)], llm_agents=["comms"])
-    # comms is replanned (not re-run): its real queued outbox object (B3-23) is cancelled
-    assert [s.outbox_id for s in ops(pl.plan, "cancel_outbox")] == ["ob-000002"]
-    assert [s.action.seq for s in ops(pl.plan, "replan")] == [em.seq]
+    own = b.act("crm", H + 1, reads=[IBAN], outbox=1, tool="comms.send_email")          # ob-000001, culprit's
+    pay = b.act("payments", H + 2, reads=[IBAN], outbox=1, tool="payments.send")        # ob-000002, re-run
+    em = b.act("comms", H + 2, reads=[IBAN], outbox=1, tool="comms.send_email")         # ob-000003, replanned
+    rpt = b.act("reporter", H + 2, reads=[IBAN], writes={"docs:RPT-1": {"t": "x"}})     # replanned
+    rel = b.act("payments", H + 3, reads=["docs:RPT-1"], outbox=1, tool="payments.send")  # ob-000004, rider
+    hld = b.act("billing", H + 3, reads=["docs:RPT-1"], outbox=1, tool="payments.send")  # ob-000005, rider
+    b.suspend("crm", H + 4)
+    _set_status(b, "ob-000002", OutboxStatus.DISPATCHED)
+    _set_status(b, "ob-000004", OutboxStatus.RELEASED)
+    _set_status(b, "ob-000005", OutboxStatus.HELD)
+    t, pl = _plan(b, [ov(IBAN, 2)], llm_agents=["comms", "reporter"])
+    assert own.seq in {r.seq for r in t.actions} and "ob-000001" in t.outbox_ids
+    # culprit-created queued item: cancelled; released rider item: cancelled (about to leave)
+    assert [s.outbox_id for s in ops(pl.plan, "cancel_outbox")] == ["ob-000001", "ob-000004"]
+    assert [s.action.seq for s in ops(pl.plan, "replan")] == [em.seq, rpt.seq]
+    assert {r.action.seq for r in pl.riders} == {rel.seq, hld.seq}
+    # replanned comms item and the held rider item: no step, stay held, listed with their blocker
+    assert [(h.outbox_id, h.status, h.action.seq, h.blocked_by) for h in pl.held] == [
+        ("ob-000003", OutboxStatus.QUEUED, em.seq, (f"replan seq {em.seq}",)),
+        ("ob-000005", OutboxStatus.HELD, hld.seq, (f"replan seq {rpt.seq}",))]
+    txt = render(dry_run(b.store, pl))
+    held_lines = [x for x in txt.splitlines() if x.startswith("held ")]
+    assert len(held_lines) == 2 and "outbox:ob-000003 queued comms" in held_lines[0]
+    assert f"waits for replan seq {rpt.seq}" in held_lines[1]
     # payments is re-run but its item already left: flagged conservatively (B3-24 compares payload hashes)
     assert [s.action.seq for s in ops(pl.plan, "rerun")] == [pay.seq]
     fl = ops(pl.plan, "flag")
-    assert [(f.reason, f.obj, f.action.seq) for f in fl] == [("dispatched_tainted", "outbox:ob-000001", pay.seq)]
+    assert [(f.reason, f.obj, f.action.seq) for f in fl] == [("dispatched_tainted", "outbox:ob-000002", pay.seq)]
 
 
 def test_llm_reader_replan_and_its_reader_rides():

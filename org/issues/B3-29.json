@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "Honest later writes on restored objects become flags at plan time or hold/stale_plan at apply",
   "acceptance": [
     "F2+x: triage's edit of S-22 conflicts and is flagged, not overwritten (test_triage_conflict)",
@@ -18,13 +18,33 @@
     "B3-24"
   ],
   "deliverable": "src/ks/recovery/",
-  "summary": "",
-  "review": "",
+  "summary": "(1) Fixture: world.py appended the suspend at ts_us slot 0 outside the gateway counter (driver bug, not gateway). Now the suspend goes through SystemQueue/FoldedControl, the real Witness runs in process, state.db is under the run dir. F2+ and S* pass ks.verify (test_world_verify.py). (2) conflict.py: recheck/first_stale give hold/stale_plan at apply (M8), for B3-30 to call inside the gateway txn. baseline.py: revert_culprit_only (oracle-assisted, per object, no conflict check, reports clobbered). Planner rule unchanged. test_conflict.py: F2+x gives exactly 1 write_write_conflict on S-22 by triage, IBAN restored, S-22 differs from S* (R>0). Hero has 0 flags, triage kept. Baseline spares triage on F2+ and clobbers it on F2+x. A gateway write between dry-run and apply halts the S-22 restore, and the new plan has a later as_of_seq plus the flag. Question for maya: on F2+x the conservative view reads make most downstream actions ride, and ADR §6.1 cancels their held items (10 cancels). Should rider items stay held instead? Local 912 passed/8 skipped; container 920 passed.",
+  "review": "[maya · done] All three acceptance lines met; checked against CALL-02 B5 and ADR-05 §6.2/§8. Driver fix is right: the suspend now goes through SystemQueue/FoldedControl and the real Witness, and F2+/S* verify to the last seq (test_world_verify). F2+x: exactly 1 write_write_conflict (S-22, triage), no S-22 restore, IBAN restored, R>0. Hero: 0 flags, triage kept. M8 recheck gives hold/stale_plan and the replan has a later as_of_seq. Baseline is labelled oracle-assisted, spares triage on F2+, clobbers it on F2+x. Local 915 passed/8 skipped; container 926 passed. RULING on the question: riders stay held. ADR-05 §6.1 amended 20 Nov: cancel_outbox only for items of the suspect's own seed actions and for released items of non-re-run actions. Items of riders, replans and flagged actions get no step, stay held, and are listed. Reasons: X4, B2/B3-23 never-silently-dropped, cancel is irreversible. Follow-up is B3-48 (vikram). B3-30 (apply): call conflict.recheck inside the txn and halt at the first stale step. Execute only the cancels the planner emitted. The bench approver releases only items re-held by a re-run step of the approved plan, never rider items, which stay held to T and count in R. Console pin (B3-34): not removable yet. The fixture verifies, but the console test's injected ks.alert still appends at slot 0 outside the gateway and after the last witness push. Ishaan must queue it through SystemQueue (W._tick/extra_tick) first, then drop the pin.",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "20 Nov 06:02",
+      "who": "vikram",
+      "msg": "→ in_progress: Fixture fix first (maya B3-28): tests/recovery/world.py _suspend appended the ks.monitor suspend at ts_us slot 0 outside Gateway._slot; open() reset the slot so the tick's next record reused slot 0 -> verify hash_mismatch (seq 174). Driver bug, not gateway. Fix: suspend queued on the gateway SystemQueue (control phase, FoldedControl), in-process real Witness pushed per tick, state db at <run>/workspace/state.db. New tests/recovery/test_world_verify.py: F2+ and S* run dirs verify ok (witnessed to last seq). Console pin can now be dropped (ishaan's test)."
+    },
+    {
+      "t": "20 Nov 06:17",
+      "who": "vikram",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 06:17",
+      "who": "vikram",
+      "msg": "→ in_review: ready for review"
+    },
+    {
+      "t": "20 Nov 06:26",
+      "who": "maya",
+      "msg": "review: done"
     }
   ]
 }

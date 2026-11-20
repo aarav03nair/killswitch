@@ -19,7 +19,18 @@ only the steps before it (the console must build a new plan with ``as_of_seq`` =
 Plan refinement from the simulation (ADR-05 §6.3, M14). A re-run whose args are redacted or missing becomes
 ``flag(redacted_args)``, and later re-runs that read a version it wrote ride with it (no step). A dispatched
 item whose simulated payload hash equals the dispatched one drops the planner's conservative
-``flag(dispatched_tainted)``. Steps are renumbered; the returned plan (and its hash) is the one to approve.
+``flag(dispatched_tainted)``. Outbox items of a re-run the simulation drops (rider or redacted args) follow ADR-05
+§6.1 as amended (B3-48): a released item gets ``cancel_outbox``; a queued/held item gets no step, stays held and is
+listed in :attr:`DryRun.held` next to the planner's :attr:`Planned.held`. Steps are renumbered; the returned plan
+(and its hash) is the one to approve.
+
+Class C without a compensator (B3-24, maya's ruling "option A, narrowed"; ADR-05 §6.4 amendment). The planner
+flags it ``no_compensator`` and lists it in ``Planned.c_candidates`` when its landed record has no outbox item and
+its tainted reads are repaired. The dry-run re-runs it in a nested savepoint at its seq position: if the re-run has
+no outbox request, no error, no stale write and writes equal to the landed ones by (obj, after.hash) (the class-C
+analogue of ``dispatched_same``), the flag becomes ``rerun(c_rerun_identical)`` and the render says
+``class C ... re-run identical, no compensation needed``; otherwise the savepoint is rolled back, the flag stays
+and the render says why. Never silent: :attr:`DryRun.class_c` holds both verdicts.
 
 Lanes (B3): restore · re-run · kept (untainted honest writes on a touched row, e.g. triage's ``risk_note``) ·
 independent (agents that wrote after t0 and are untouched). The t0 report shows ``RecoveryPlan.t0_seq_est_literal``
@@ -38,16 +49,17 @@ from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Literal, Protocol
 
-from ks.contracts import VersionRef, WriteEntry
+from ks.contracts import OutboxStatus, VersionRef, WriteEntry
 from ks.contracts.record import Record
-from ks.contracts.recovery import DiffEntry, FlagStep, RecoveryPlan, RerunStep, RestoreStep
+from ks.contracts.recovery import (ActionRef, CancelOutboxStep, DiffEntry, FlagStep, RecoveryPlan, RerunStep,
+                                   RestoreStep)
 
 from ks.state import StaleExpect
 
-from .planner import Planned, Rider, apply_restore, with_diff
+from .planner import Held, Planned, Rider, _outbox_status, action_ref, apply_restore, with_diff
 from .rerun import ArgsUnavailable, RerunOutcome
 
-__all__ = ["Rerunner", "DryRun", "Stale", "StaleRerun", "StatePerturbed", "dry_run", "render", "write_plan"]
+__all__ = ["Rerunner", "DryRun", "ClassC", "C_IDENTICAL", "Stale", "StaleRerun", "StatePerturbed", "dry_run", "render", "write_plan"]
 
 
 class Rerunner(Protocol):
@@ -56,6 +68,28 @@ class Rerunner(Protocol):
 
     def __call__(self, store: Any, step: RerunStep, record: Record,
                  seq: int) -> Iterable[WriteEntry] | RerunOutcome: ...
+
+
+C_IDENTICAL = "c_rerun_identical"
+"""Reason code of the re-run step that replaces a cleared ``flag(no_compensator)`` (B3-24, ADR-05 §6.4)."""
+
+
+@dataclass(frozen=True)
+class ClassC:
+    """Dry-run verdict on one tainted class-C action with no compensator (B3-24 ruling, "option A, narrowed").
+    ``cleared`` only if (1) its landed record has no outbox item and (2) the simulated re-run's writes equal the
+    landed ones by (obj, after.hash), with no outbox request, no error and no stale write. Otherwise the flag stays
+    and ``why`` says which condition failed. Both outcomes are rendered (auditability)."""
+
+    action: ActionRef
+    tool: str
+    cleared: bool
+    why: str
+    outcome: RerunOutcome | None = None
+
+
+class _Differs(Exception):
+    """Roll back a class-C re-run whose writes differ (its flag stays)."""
 
 
 class StatePerturbed(RuntimeError):
@@ -89,6 +123,15 @@ class DryRun:
     stale: Stale | None = None
     riders: tuple[Rider, ...] = ()
     """Re-runs the simulation could not do and that ride with a ``flag(redacted_args)`` (added to the planner's)."""
+    class_c: dict[int, ClassC] = field(default_factory=dict)
+    """Verdicts on the planner's class-C candidates by seq: cleared (now ``rerun(c_rerun_identical)``) or flag kept."""
+    held_extra: tuple[Held, ...] = ()
+    """Queued/held items of re-runs the simulation dropped (rider, redacted args): no step, stay held (B3-48)."""
+
+    @property
+    def held(self) -> tuple[Held, ...]:
+        """Every tainted outbox item that stays held with no step (planner + dry-run), by outbox id (ADR-05 §6.1)."""
+        return tuple(sorted((*self.planned.held, *self.held_extra), key=lambda h: h.outbox_id))
 
     @property
     def plan_hash(self) -> str:
@@ -117,6 +160,48 @@ def _stale_rerun(store: Any, objs: Iterable[str], after_seq: int, before_seq: in
     return None
 
 
+def _try_class_c(store: Any, rerunner: Rerunner, step: RerunStep, rec: Record, seq: int,
+                 dropped: set[tuple[str, int]], sim_start: int, rerun_seqs: set[int],
+                 seed: set[tuple[str, int]]) -> ClassC:
+    """Simulate a class-C candidate in a nested savepoint; keep its writes only if they equal the landed ones."""
+    act = step.action
+    tool = rec.envelope.tool if rec.envelope is not None else "-"
+
+    def keep(why: str, out: RerunOutcome | None = None) -> ClassC:
+        return ClassC(action=act, tool=tool, cleared=False, why=why, outcome=out)
+
+    if rec.outbox_ids:  # condition (1); the planner already checks, fail closed if a caller did not
+        return keep("landed action has an outbox item (external effect)")
+    hit = sorted((e.obj, e.ver) for e in rec.read_set if (e.obj, e.ver) in dropped)
+    if hit:
+        return keep("reads a version no step repairs: " + ", ".join(f"{o} v{v}" for o, v in hit))
+    bad = _stale_rerun(store, (w.obj for w in rec.write_set), rec.seq, sim_start, rerun_seqs, seed)
+    if bad:
+        return keep(f"stale: {bad[1]}")
+    result: list[RerunOutcome | None] = [None]
+    try:
+        with store.savepoint():
+            out = rerunner(store, step, rec, seq)
+            if not isinstance(out, RerunOutcome):
+                raise _Differs("rerunner gave no outcome (writes cannot be compared)")
+            result[0] = out
+            if out.error is not None:
+                raise _Differs(f"re-run error {out.error}")
+            if out.effects or out.outbox_writes:
+                raise _Differs("re-run makes an outbox request (external effect)")
+            if out.changed:
+                raise _Differs("re-run writes differ: " + ", ".join(out.changed))
+            bad = _stale_rerun(store, (w.obj for w in out.tool_writes), rec.seq, sim_start, rerun_seqs, seed)
+            if bad:
+                raise _Differs(f"stale: {bad[1]}")
+    except ArgsUnavailable as e:
+        return keep(f"args unavailable ({e})")
+    except _Differs as e:
+        return keep(str(e), result[0])
+    return ClassC(action=act, tool=tool, cleared=True, outcome=result[0],
+                  why="re-run identical, no compensation needed (no outbox request; writes equal landed by obj+hash)")
+
+
 def dry_run(store: Any, planned: Planned, *, rerunner: Rerunner | None = None,
             on_stale: Literal["raise", "halt"] = "raise") -> DryRun:
     """Simulate ``planned`` on ``store`` (a :class:`~ks.state.Store`) and return the plan with its diff.
@@ -135,6 +220,7 @@ def dry_run(store: Any, planned: Planned, *, rerunner: Rerunner | None = None,
     dropped_versions: set[tuple[str, int]] = set()
     redacted: list[RerunStep] = []
     riders: list[Rider] = []
+    class_c: dict[int, ClassC] = {}
     stale: Stale | None = None
 
     def halt(n: int, op: str, obj: str, detail: str, exc: Exception | None = None) -> None:
@@ -155,8 +241,21 @@ def dry_run(store: Any, planned: Planned, *, rerunner: Rerunner | None = None,
                     break
                 seq += 1
         if rerunner is not None and stale is None:
-            for s in plan.steps:
-                if not isinstance(s, RerunStep):
+            work: list[tuple[int, RerunStep, bool]] = [(s.action.seq, s, False) for s in plan.steps
+                                                       if isinstance(s, RerunStep)]
+            work += [(q, RerunStep(n=0, reason=C_IDENTICAL, action=action_ref(r)), True)
+                     for q, r in planned.c_candidates.items()]
+            work.sort(key=lambda t: t[0])
+            for _, s, is_c in work:
+                if is_c:
+                    rec = planned.c_candidates[s.action.seq]
+                    verdict = _try_class_c(store, rerunner, s, rec, seq, dropped_versions, sim_start, rerun_seqs,
+                                           seed)
+                    class_c[s.action.seq] = verdict
+                    if verdict.cleared:
+                        outcomes[s.action.seq] = verdict.outcome
+                        rerun_writes[s.action.seq] = verdict.outcome.writes
+                        seq += 1
                     continue
                 rec = planned.rerun_records[s.action.seq]
                 hit = tuple((e.obj, e.ver) for e in rec.read_set if (e.obj, e.ver) in dropped_versions)
@@ -193,26 +292,54 @@ def dry_run(store: Any, planned: Planned, *, rerunner: Rerunner | None = None,
         raise StatePerturbed(f"dry-run changed the state digest {before_digest} -> {after_digest}")
     diff = [DiffEntry(obj=o, current=before.get(o), planned_hash=ref.hash)
             for o, ref in sorted(after.items()) if before.get(o) != ref]
-    refined = _refine(plan, outcomes, redacted, {r.action.seq for r in riders})
+    cleared = {q: v for q, v in class_c.items() if v.cleared}
+    # §6.1 amended (B3-48): items of dropped re-runs: released -> cancel_outbox, queued/held -> stay held, listed
+    why = {r.action.seq: ("rides: blocked by " + ", ".join(f"{o} v{v}" for o, v in r.blocked_by),) for r in riders}
+    why.update({s.action.seq: (f"flag(redacted_args) seq {s.action.seq}",) for s in redacted})
+    cancels: list[str] = []
+    held_extra: list[Held] = []
+    for q in sorted(why):
+        rec = planned.rerun_records[q]
+        for oid in rec.outbox_ids:
+            st = _outbox_status(store, oid)
+            if st == OutboxStatus.RELEASED:
+                cancels.append(oid)
+            elif st in (OutboxStatus.QUEUED, OutboxStatus.HELD):
+                held_extra.append(Held(outbox_id=oid, status=st, action=action_ref(rec), blocked_by=why[q]))
+    refined = _refine(plan, outcomes, redacted, {r.action.seq for r in riders}, cleared, cancels)
     return DryRun(plan=with_diff(refined, diff), planned=planned, digest_before=before_digest,
                   digest_after=after_digest, simulated_reruns=rerunner is not None, rerun_writes=rerun_writes,
-                  outcomes=outcomes, stale=stale, riders=tuple(riders))
+                  outcomes=outcomes, stale=stale, riders=tuple(riders), class_c=class_c,
+                  held_extra=tuple(held_extra))
 
 
 def _refine(plan: RecoveryPlan, outcomes: dict[int, RerunOutcome], redacted: list[RerunStep],
-            rides: set[int]) -> RecoveryPlan:
+            rides: set[int], cleared: dict[int, ClassC] | None = None,
+            cancels: Iterable[str] = ()) -> RecoveryPlan:
     same = {f"outbox:{e.outbox_id}" for o in outcomes.values() for e in o.effects
             if e.disposition == "dispatched_same"}
     gone = rides | {s.action.seq for s in redacted}
-    if not same and not gone:
+    cleared = cleared or {}
+    have = {s.outbox_id for s in plan.steps if s.op == "cancel_outbox"}
+    new_cancels = [CancelOutboxStep(n=0, reason="tainted_effect", outbox_id=o) for o in sorted(set(cancels) - have)]
+    if not same and not gone and not cleared and not new_cancels:
         return plan
     keep = [s for s in plan.steps
             if not (isinstance(s, RerunStep) and s.action.seq in gone)
-            and not (isinstance(s, FlagStep) and s.reason == "dispatched_tainted" and s.obj in same)]
+            and not (isinstance(s, FlagStep) and s.reason == "dispatched_tainted" and s.obj in same)
+            and not (isinstance(s, FlagStep) and s.reason == "no_compensator" and s.action is not None
+                     and s.action.seq in cleared)]
     flags = [s for s in keep if isinstance(s, FlagStep)]
     flags += [FlagStep(n=0, reason="redacted_args", obj=None, action=s.action) for s in redacted]
     flags.sort(key=lambda f: (f.reason, f.obj or "", f.action.seq if f.action else 0))
-    ordered = [s for s in keep if not isinstance(s, FlagStep)] + flags
+    reruns = sorted([s for s in keep if isinstance(s, RerunStep)]
+                    + [RerunStep(n=0, reason=C_IDENTICAL, action=v.action) for v in cleared.values()],
+                    key=lambda s: s.action.seq)
+    rest = [s for s in keep if not isinstance(s, (FlagStep, RerunStep))]
+    co = sorted([s for s in rest if s.op == "cancel_outbox"] + new_cancels, key=lambda s: s.outbox_id)
+    before = co + [s for s in rest if s.op == "restore"]
+    after = [s for s in rest if s.op not in ("cancel_outbox", "restore")]
+    ordered = before + reruns + after + flags
     steps = tuple(s.model_copy(update={"n": i}) for i, s in enumerate(ordered))
     return RecoveryPlan.model_validate({**plan.to_obj(), "steps": [s.to_obj() for s in steps]})
 
@@ -251,6 +378,8 @@ def render(d: DryRun) -> str:
                 if o is not None:
                     tail += f"  changed {len(o.changed)}" + (f"  error {o.error}" if o.error else "")
                     tail += "".join(f"  effect outbox:{e.outbox_id or 'NEW'} {e.disposition}" for e in o.effects)
+            if s.reason == C_IDENTICAL:
+                tail += "  (class C, cleared: see below)"
             out.append(f"rerun        {s.action.agent_id} seq {s.action.seq} {s.action.action_id}  {tail}")
     for s in p.steps:
         if s.op == "cancel_outbox":
@@ -260,6 +389,14 @@ def render(d: DryRun) -> str:
         elif s.op == "flag":
             who = f" {s.action.agent_id} seq {s.action.seq}" if s.action else ""
             out.append(f"flag         {s.reason} {s.obj or '-'}{who}")
+    for q in sorted(d.class_c):
+        v = d.class_c[q]
+        out.append(f"class C      {v.action.action_id} seq {q} {v.tool}: "
+                   + (v.why if v.cleared else f"flag(no_compensator) kept: {v.why}"))
+    for h in d.held:
+        who = f"{h.action.agent_id} seq {h.action.seq}" if h.action else "no creating record"
+        out.append(f"held         outbox:{h.outbox_id} {h.status.value} {who}  no step, waits for "
+                   + "; ".join(h.blocked_by))
     for k in pl.kept:
         out.append(f"kept         {k.obj} v{k.ver} by {k.author} (seq {k.seq})  no step")
     for r in (*pl.riders, *d.riders):

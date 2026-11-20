@@ -1,5 +1,5 @@
 {
-  "$id": "https://killswitch.local/schema/1.4.0/c2.witness_checkpoint.schema.json",
+  "$id": "https://killswitch.local/schema/1.5.0/c2.witness_checkpoint.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Signed ``(seq, head, tick, count)`` from the separate witness process; one line per tick in ``witness.jsonl``.\nNo-op ticks repeat ``(seq, head)`` with a new ``count``. Stall (F6): the gateway waits to the deadline,\nproceeds and raises a ``witness_stall`` alert; heads live in ``<run>/witness-heads/`` (0700, witness uid).",

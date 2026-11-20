@@ -12,7 +12,8 @@ from dataclasses import dataclass, fields
 __all__ = ["RunOptions", "SERVED"]
 
 # Fields ks.runtime.run implements today. Grow this as features land; the CLI placeholder test reads it.
-SERVED: frozenset[str] = frozenset()
+SERVED: frozenset[str] = frozenset({"pause_at", "step", "monitor", "decisions", "decisions_head"})
+# B3-13 pacing (ADR-07 L1); B3-19 monitor; B3-30 anchored decisions replay (R3, B3-20)
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -25,6 +26,8 @@ class RunOptions:
     rogue: str | os.PathLike[str] | None = None  # jury Python run in place of ``slot``
     slot: str | None = None                   # agent replaced by ``rogue``
     decisions: str | os.PathLike[str] | None = None  # anchored run whose operator decisions are replayed
+    decisions_head: str | None = None         # that run's RunAnchor line (ks verify --head); needs decisions
+    monitor: bool = False                     # B3-19: scan records after every tick; hard alert -> suspend (world only)
     with_baselines: bool = False              # also run the baseline recoveries for scoring
 
     def __post_init__(self) -> None:
@@ -36,6 +39,10 @@ class RunOptions:
             raise ValueError("pause_at and step are mutually exclusive")
         if self.rogue is not None and self.fault is not None:
             raise ValueError("rogue and fault are mutually exclusive")
+        if self.decisions is not None and self.rogue is not None:
+            raise ValueError("decisions and rogue are mutually exclusive (R3)")
+        if self.decisions_head is not None and self.decisions is None:
+            raise ValueError("decisions_head needs decisions")
         if self.slot is not None and self.rogue is None:
             raise ValueError("slot needs rogue")
         if self.culprit is not None and self.fault is None:

@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "--decisions RUN replays only operator-signed Controls from a source that passes anchored verify --head",
   "acceptance": [
     "Source without a matching anchor, or repro, is refused; config.decisions_from = source anchor hash",
@@ -20,13 +20,53 @@
     "B3-15"
   ],
   "deliverable": "src/ks/verify/decisions.py",
-  "summary": "",
-  "review": "",
+  "summary": "Fix: load_decisions only extracts rows with seq <= anchor.seq (unwitnessed tail never replayed); test_unwitnessed_tail_is_not_replayed. Switched to replay_mismatch (B3-47): replay and decisions_from mismatches now report replay_mismatch (TAMPER); tests updated.",
+  "review": "[kabir · changes] BLOCKER (reproduced): load_decisions replays Controls from the unwitnessed tail. If a source has records after the last witness checkpoint, verify --head passes (anchored=True, last_witnessed_seq=2), but _extract reads the whole record.jsonl. A seq-3 ks.operator Control past anchor.seq was returned. That breaks 'tamper-evident up to the last witnessed head'. Fix: only use rows with seq <= anchor.seq (pass the anchor into _extract) and add a test: control at seq anchor.seq+1 is not replayed. OK: a different run's anchor fails on config_hash (binds run_id); an older head of the same run gives head_mismatch; agent/monitor/non-c-0 Controls are filtered and verify enforces system_tool_signers. RULING on reason: hash_mismatch/TAMPER is wrong for a divergent replay. The records are intact, and the jury would read it as tampering. A dedicated reason 'replay_mismatch' (own exit code, not TAMPER) goes to maya as a minor contracts bump. The decisions_from mismatch also reuses config_mismatch (an anchor-hash meaning); move it to the same new reason. WIRING: the library-level acceptance is met once the tail is fixed. End-to-end '--decisions RUN replays' is not, so it needs a linked follow-up. Add an acceptance line to B3-30 (approval-bound apply, where approval replay matters): 'ks run --decisions SRC sets config.decisions_from=anchor_hash and replays controls at source ticks; verify_replay ok', and move decisions into SERVED there.\n\n[kabir · done] Blocker fixed. My tail PoC now passes: load_decisions reads only seq <= anchor.seq, and test_unwitnessed_tail_is_not_replayed covers it. The replay_mismatch switch has landed: verify_replay uses replay_mismatch for control/approval divergence and for decisions_from (config_mismatch is no longer used there). Tests assert the reason. Exit code follows VERIFY_REASONS, so it moves automatically if B3-47's mapping changes (see my B3-47 review). Still owed, as already agreed: an end-to-end 'ks run --decisions SRC' acceptance line on B3-30.",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "20 Nov 05:57",
+      "who": "arjun",
+      "msg": "→ in_progress: started"
+    },
+    {
+      "t": "20 Nov 05:57",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 05:57",
+      "who": "arjun",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "20 Nov 06:00",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "20 Nov 06:08",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 06:08",
+      "who": "arjun",
+      "msg": "→ in_review: kabir blocker fixed"
+    },
+    {
+      "t": "20 Nov 06:12",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 06:14",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

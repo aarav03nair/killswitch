@@ -410,256 +410,6 @@
   ],
   "activity": [
     {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-17 — ks.inject: F2+, F2+c, F2+x, F3 and hero guard"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-18 — ks.taint: closure and seed rule"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-19 — ks.containment: suspend, release, revoke, unhold re-exec"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-20 — R3: anchored decisions replay"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-21 — ks.recovery: planner (restore, cancel_outbox, flag) and dry-run diff"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-22 — ks.oracle: S* run and self test"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-23 — ks.gateway: outbox, lineage/sensitive holds, dispatch record (F4)"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-24 — ks.recovery: re-run simulation in a savepoint"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-25 — F9: cross-record reexec_of check in verify"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-26 — ks.score: score.json metrics"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-27 — Integration: hero path F2+ end to end"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-28 — Console: live timeline and 5-beat pacing"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-29 — ks.recovery: conflict rule and replan/flag (F2+x)"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-30 — Recovery apply via c-0 (approval-bound)"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-31 — ks.verify: dispatch window (F4) and alerts cross-check (F6)"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-32 — F8: frame and flood budget"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-33 — ks.bench: baselines and seed harness"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-34 — Console: recovery diff, scorecard, hold=0 toggle, audit beat"
-    },
-    {
-      "t": "19 Nov 11:34",
-      "who": "maya",
-      "msg": "opened B3-35 — Red-team suite wiring RT1-RT13"
-    },
-    {
-      "t": "19 Nov 11:35",
-      "who": "panel",
-      "msg": "reviewed SKEL-01: changes"
-    },
-    {
-      "t": "19 Nov 11:35",
-      "who": "nisha",
-      "msg": "moved B3-07 to in_progress"
-    },
-    {
-      "t": "19 Nov 11:35",
-      "who": "maya",
-      "msg": "moved B3-01 to in_progress"
-    },
-    {
-      "t": "19 Nov 11:36",
-      "who": "vikram",
-      "msg": "moved B3-03 to in_progress"
-    },
-    {
-      "t": "19 Nov 11:36",
-      "who": "maya",
-      "msg": "moved B3-02 to in_review"
-    },
-    {
-      "t": "19 Nov 11:38",
-      "who": "maya",
-      "msg": "opened B3-36 — SKEL-01 Panel fixes: late final ack anchor (M1), signer flood caps (M2), agent_id↔connection check (S3), unprivileged shared uid (S2)"
-    },
-    {
-      "t": "19 Nov 11:38",
-      "who": "maya",
-      "msg": "opened B3-37 — Skeleton refactor before parallel build: Gateway.tick() seam, tool dispatch interface, RNG module"
-    },
-    {
-      "t": "19 Nov 11:38",
-      "who": "pmo",
-      "msg": "reviewed SKEL-01: done"
-    },
-    {
-      "t": "19 Nov 11:38",
-      "who": "pmo",
-      "msg": "moved ORG-05 to done"
-    },
-    {
-      "t": "19 Nov 11:40",
-      "who": "nisha",
-      "msg": "moved B3-07 to in_review"
-    },
-    {
-      "t": "19 Nov 11:40",
-      "who": "maya",
-      "msg": "opened B3-38 — ks.monitor: rate and tamper detectors (ADR-04 catalogue remainder)"
-    },
-    {
-      "t": "19 Nov 11:40",
-      "who": "nisha",
-      "msg": "moved B3-38 to in_progress"
-    },
-    {
-      "t": "19 Nov 11:41",
-      "who": "maya",
-      "msg": "moved B3-01 to in_review"
-    },
-    {
-      "t": "19 Nov 12:21",
-      "who": "maya",
-      "msg": "opened B3-39 — Run on Mac: Dockerfile + one-command demo (Apple Silicon + x86)"
-    },
-    {
-      "t": "19 Nov 12:22",
-      "who": "nisha",
-      "msg": "moved B3-38 to in_review"
-    },
-    {
-      "t": "19 Nov 12:23",
-      "who": "vikram",
-      "msg": "moved B3-03 to in_review"
-    },
-    {
-      "t": "19 Nov 12:23",
-      "who": "maya",
-      "msg": "moved B3-01 to in_review"
-    },
-    {
-      "t": "19 Nov 16:01",
-      "who": "vikram",
-      "msg": "moved B3-04 to in_progress"
-    },
-    {
-      "t": "19 Nov 16:01",
-      "who": "ishaan",
-      "msg": "moved B3-39 to in_progress"
-    },
-    {
-      "t": "19 Nov 16:01",
-      "who": "ishaan",
-      "msg": "moved B3-39 to in_review"
-    },
-    {
-      "t": "19 Nov 16:01",
-      "who": "maya",
-      "msg": "reviewed B3-03: done"
-    },
-    {
-      "t": "19 Nov 16:01",
-      "who": "kabir",
-      "msg": "reviewed B3-01: done"
-    },
-    {
-      "t": "19 Nov 16:01",
-      "who": "kabir",
-      "msg": "reviewed B3-02: done"
-    },
-    {
-      "t": "19 Nov 16:01",
-      "who": "kabir",
-      "msg": "reviewed B3-07: done"
-    },
-    {
-      "t": "19 Nov 16:01",
-      "who": "kabir",
-      "msg": "reviewed B3-38: done"
-    },
-    {
-      "t": "19 Nov 16:06",
-      "who": "vikram",
-      "msg": "moved B3-04 to in_review"
-    },
-    {
-      "t": "19 Nov 16:07",
-      "who": "maya",
-      "msg": "moved B3-37 to in_progress"
-    },
-    {
-      "t": "19 Nov 16:07",
-      "who": "maya",
-      "msg": "moved B3-37 to in_review"
-    },
-    {
-      "t": "19 Nov 16:19",
-      "who": "kabir",
-      "msg": "reviewed B3-39: changes"
-    },
-    {
-      "t": "19 Nov 16:19",
-      "who": "panel",
-      "msg": "reviewed B3-37: done"
-    },
-    {
-      "t": "19 Nov 16:20",
-      "who": "kabir",
-      "msg": "reviewed B3-04: changes"
-    },
-    {
       "t": "19 Nov 16:20",
       "who": "pmo",
       "msg": "opened B3-40 — B3-37 follow-ups: view provider, Execution.outbox, sets checked against txn, indirect-import test"
@@ -1408,6 +1158,256 @@
       "t": "19 Nov 21:45",
       "who": "ishaan",
       "msg": "moved B3-28 to in_review"
+    },
+    {
+      "t": "20 Nov 05:35",
+      "who": "vikram",
+      "msg": "moved B3-24 to in_review"
+    },
+    {
+      "t": "20 Nov 05:37",
+      "who": "nisha",
+      "msg": "moved B3-23 to in_review"
+    },
+    {
+      "t": "20 Nov 05:39",
+      "who": "pmo",
+      "msg": "moved B3-23 to in_review"
+    },
+    {
+      "t": "20 Nov 05:40",
+      "who": "maya",
+      "msg": "reviewed B3-24: changes"
+    },
+    {
+      "t": "20 Nov 05:42",
+      "who": "maya",
+      "msg": "moved B3-13 to in_review"
+    },
+    {
+      "t": "20 Nov 05:42",
+      "who": "maya",
+      "msg": "reviewed B3-28: changes"
+    },
+    {
+      "t": "20 Nov 05:43",
+      "who": "kabir",
+      "msg": "reviewed B3-23: changes"
+    },
+    {
+      "t": "20 Nov 05:43",
+      "who": "pmo",
+      "msg": "moved B3-30 to todo"
+    },
+    {
+      "t": "20 Nov 05:49",
+      "who": "kabir",
+      "msg": "reviewed B3-13: done"
+    },
+    {
+      "t": "20 Nov 05:49",
+      "who": "pmo",
+      "msg": "moved B3-19 to todo"
+    },
+    {
+      "t": "20 Nov 05:49",
+      "who": "pmo",
+      "msg": "moved B3-35 to todo"
+    },
+    {
+      "t": "20 Nov 05:49",
+      "who": "ishaan",
+      "msg": "moved B3-28 to in_review"
+    },
+    {
+      "t": "20 Nov 05:50",
+      "who": "nisha",
+      "msg": "moved B3-23 to in_review"
+    },
+    {
+      "t": "20 Nov 05:53",
+      "who": "kabir",
+      "msg": "reviewed B3-23: done"
+    },
+    {
+      "t": "20 Nov 05:54",
+      "who": "nisha",
+      "msg": "moved B3-19 to in_progress"
+    },
+    {
+      "t": "20 Nov 05:54",
+      "who": "vikram",
+      "msg": "moved B3-24 to in_review"
+    },
+    {
+      "t": "20 Nov 05:57",
+      "who": "maya",
+      "msg": "reviewed B3-28: done"
+    },
+    {
+      "t": "20 Nov 05:57",
+      "who": "arjun",
+      "msg": "moved B3-20 to in_progress"
+    },
+    {
+      "t": "20 Nov 05:57",
+      "who": "arjun",
+      "msg": "moved B3-20 to in_review"
+    },
+    {
+      "t": "20 Nov 05:57",
+      "who": "arjun",
+      "msg": "moved B3-31 to in_progress"
+    },
+    {
+      "t": "20 Nov 05:58",
+      "who": "maya",
+      "msg": "reviewed B3-24: done"
+    },
+    {
+      "t": "20 Nov 05:59",
+      "who": "pmo",
+      "msg": "moved B3-34 to todo"
+    },
+    {
+      "t": "20 Nov 06:00",
+      "who": "kabir",
+      "msg": "reviewed B3-20: changes"
+    },
+    {
+      "t": "20 Nov 06:00",
+      "who": "pmo",
+      "msg": "moved B3-30 to todo"
+    },
+    {
+      "t": "20 Nov 06:00",
+      "who": "pmo",
+      "msg": "opened B3-47 — Contracts 1.5: replay_mismatch verify reason (B3-20)"
+    },
+    {
+      "t": "20 Nov 06:01",
+      "who": "pmo",
+      "msg": "moved B3-30 to todo"
+    },
+    {
+      "t": "20 Nov 06:02",
+      "who": "vikram",
+      "msg": "moved B3-29 to in_progress"
+    },
+    {
+      "t": "20 Nov 06:08",
+      "who": "nisha",
+      "msg": "moved B3-19 to in_review"
+    },
+    {
+      "t": "20 Nov 06:08",
+      "who": "arjun",
+      "msg": "moved B3-31 to in_review"
+    },
+    {
+      "t": "20 Nov 06:08",
+      "who": "arjun",
+      "msg": "moved B3-20 to in_review"
+    },
+    {
+      "t": "20 Nov 06:11",
+      "who": "maya",
+      "msg": "moved B3-47 to in_review"
+    },
+    {
+      "t": "20 Nov 06:14",
+      "who": "kabir",
+      "msg": "reviewed B3-31: changes"
+    },
+    {
+      "t": "20 Nov 06:14",
+      "who": "kabir",
+      "msg": "reviewed B3-20: done"
+    },
+    {
+      "t": "20 Nov 06:14",
+      "who": "kabir",
+      "msg": "reviewed B3-47: changes"
+    },
+    {
+      "t": "20 Nov 06:16",
+      "who": "kabir",
+      "msg": "reviewed B3-19: changes"
+    },
+    {
+      "t": "20 Nov 06:17",
+      "who": "vikram",
+      "msg": "moved B3-29 to in_review"
+    },
+    {
+      "t": "20 Nov 06:20",
+      "who": "maya",
+      "msg": "moved B3-47 to in_review"
+    },
+    {
+      "t": "20 Nov 06:22",
+      "who": "maya",
+      "msg": "opened B3-48 — ks.recovery: rider/replan/flagged outbox items stay held, not cancelled (ADR-05 §6.1 amended)"
+    },
+    {
+      "t": "20 Nov 06:24",
+      "who": "nisha",
+      "msg": "moved B3-19 to in_review"
+    },
+    {
+      "t": "20 Nov 06:26",
+      "who": "maya",
+      "msg": "reviewed B3-29: done"
+    },
+    {
+      "t": "20 Nov 06:27",
+      "who": "pmo",
+      "msg": "moved B3-30 to todo"
+    },
+    {
+      "t": "20 Nov 06:27",
+      "who": "pmo",
+      "msg": "moved B3-34 to todo"
+    },
+    {
+      "t": "20 Nov 06:27",
+      "who": "kabir",
+      "msg": "reviewed B3-47: done"
+    },
+    {
+      "t": "20 Nov 06:27",
+      "who": "pmo",
+      "msg": "moved B3-35 to todo"
+    },
+    {
+      "t": "20 Nov 06:28",
+      "who": "maya",
+      "msg": "moved B3-30 to in_progress"
+    },
+    {
+      "t": "20 Nov 06:28",
+      "who": "arjun",
+      "msg": "moved B3-31 to in_review"
+    },
+    {
+      "t": "20 Nov 06:37",
+      "who": "kabir",
+      "msg": "reviewed B3-19: done"
+    },
+    {
+      "t": "20 Nov 06:37",
+      "who": "pmo",
+      "msg": "moved B3-32 to todo"
+    },
+    {
+      "t": "20 Nov 06:39",
+      "who": "kabir",
+      "msg": "reviewed B3-31: done"
+    },
+    {
+      "t": "20 Nov 06:39",
+      "who": "kabir",
+      "msg": "moved B3-31 to done"
     }
   ]
 }

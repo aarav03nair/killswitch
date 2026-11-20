@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "ADR-04 controls with fresh epochs and the gateway side of F9",
   "acceptance": [
     "Hard alert -> Control{suspend} on c-0 in the same tick; zero culprit writes after quarantine seq (test)",
@@ -19,13 +19,53 @@
     "B3-14"
   ],
   "deliverable": "src/ks/containment/",
-  "summary": "",
-  "review": "",
+  "summary": "Kabir blocker fixed: pii_egress now allows a payee IBAN only when the email payload 'to' equals that IBAN's own supplier pk (taken from the read object id, src/ks/monitor/detectors.py). Tests in tests/monitor/test_detectors_pii_egress.py: remittance to S-17 silent; outsider and other-supplier (S-22) fire. Native 915 passed, container pass, smoke OK (anchored).",
+  "review": "[kabir · changes] Attacked 4 ways. PASS: (1) re-exec only reaches policy NEEDS_APPROVAL holds; lineage holds are outbox items and unhold only re-queues them (dispatcher re-checks taint); re-exec outbox items get the creation-time lineage check; agents cannot send ks.control; ks.monitor cannot unhold an action (Control contract rejects auto=False from non-operator). (2) same-tick frame after suspend -> deny/suspended; old epoch -> stale_epoch. (4) once: admission is single-threaded control phase, second unhold denied, re-exec runs as original conn. FAIL (3): pii_egress allow-list ignores recipient: comms reads suppliers:S-17.iban then emails it to attacker@evil.example -> no alert (scratchpad test). Fix: allow payee IBAN only when payload 'to' equals that payee's supplier id; add both-way test (remittance to S-17 silent, outsider fires). Nit: MANUAL_UNHOLD is dead code. Native 912 passed, container 920 passed.\n\n[kabir · done] Blocker fixed. Re-attack (scratchpad test, 19 pass): outsider, S-22, list/comma recipients, 's-17', padded, NB-hyphen, 'suppliers:S-17' all fire; laundered IBAN via customer record fires. Detector-level gap: to=S-17 plus cc/bcc attacker is silent, but unreachable (comms adapter builds payload; agents cannot add cc). Nits for follow-up: allow-list keys on 'to' only, ignore-extra-recipient should fail closed if cc/bcc ever added; lowercase IBAN not matched by find_pii; MANUAL_UNHOLD dead code. Native 917 pass + 1 unrelated in-flight recovery test (passes alone); container 927 passed.",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "20 Nov 05:49",
+      "who": "pmo",
+      "msg": "→ todo: From kabir's B3-13 review: an operator request arriving mid-tick waits behind the next pause and the blocked server turns away resume; the CLI reports refused after 60s yet the request still lands later. Containment must not report a false outcome: make the CLI wait for the recorded result or report 'pending' honestly."
+    },
+    {
+      "t": "20 Nov 05:54",
+      "who": "nisha",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "20 Nov 06:08",
+      "who": "nisha",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 06:08",
+      "who": "nisha",
+      "msg": "→ in_review: ready for kabir"
+    },
+    {
+      "t": "20 Nov 06:16",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "20 Nov 06:24",
+      "who": "nisha",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 06:24",
+      "who": "nisha",
+      "msg": "→ in_review: pii_egress recipient fix"
+    },
+    {
+      "t": "20 Nov 06:37",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

@@ -20,15 +20,23 @@ the seed). An honest deterministic action is ``rerun`` when every tainted versio
 (a seed version of a restored or kept object, or a version written by an earlier re-run); otherwise it *rides*
 with the flag that blocks it (no step of its own, reported in :attr:`Planned.riders`). LLM agents
 (``llm_agents``) get ``replan``. Class C gets ``compensate`` when a compensator is registered for its tool, else
-``flag(no_compensator)``. Tainted I2 gets ``flag(tainted_i2)``.
+``flag(no_compensator)``. Tainted I2 gets ``flag(tainted_i2)``. A ``no_compensator`` action with no outbox item and
+all tainted reads repaired is a :attr:`Planned.c_candidates` entry: the dry-run replaces its flag with
+``rerun(c_rerun_identical)`` only if the simulated re-run's writes equal the landed ones (B3-24, maya's ruling).
 
 Outbox (§6.1, M14; B3-23). Every outbox id in a record is a real ``outbox:<id>`` object (C3 ``OutboxItem``)
 written in the creating record; the planner reads its status from ``state``. Dispatched is irreversible: always
 ``flag(dispatched_tainted)``, never cancel; for a re-run action the dry-run (B3-24) drops that flag when the
 simulated payload hash equals the dispatched one. Item of a re-run action otherwise: no step (the re-run writes v+1
-of the same ``outbox:<id>``, back on hold). Item of an action that is not re-run: queued/held/released ->
-``cancel_outbox``. An id with no readable object (record and store disagree, or no ``state`` given) fails closed:
-``flag(outbox_missing)``, scored in R.
+of the same ``outbox:<id>``, back on hold). ``cancel_outbox`` (ADR-05 §6.1 as amended 20 Nov, maya B3-29 review,
+B3-48) only for (a) queued/held/released items created by the **suspect's own window records** and (b) released
+items of any other action that is not re-run (about to leave; cancel is the only stop). Every other tainted
+queued/held item of a non-re-run action (rider, replan, ``flag(no_compensator | tainted_i2)``, compensate, or no
+creating record) gets **no step and stays held**: it leaves only by approval (X4) and ``cancel_outbox`` is
+irreversible, so it is not spent before a person resolves the flag or approves the replan. Each is listed in
+:attr:`Planned.held` with what blocks it, and the dry-run renders one ``held`` line per item. An id with no
+readable object (record and store disagree, or no ``state`` given) fails closed: ``flag(outbox_missing)``, scored
+in R.
 
 Step order: cancel_outbox (by id), restore (by obj), rerun (by seq), compensate, replan (by seq), flag.
 The plan diff is filled by :mod:`ks.recovery.dryrun` (simulation in a rolled-back savepoint, §7).
@@ -47,7 +55,7 @@ from ks.contracts.recovery import (ActionRef, CancelOutboxStep, CompensateStep, 
                                    ReplanStep, RerunStep, RestoreStep)
 from ks.taint import RecordIndex, Taint
 
-__all__ = ["NoPlan", "Kept", "Rider", "Planned", "plan_recovery", "restores_to_absent", "apply_restore",
+__all__ = ["NoPlan", "Kept", "Rider", "Held", "Planned", "plan_recovery", "restores_to_absent", "apply_restore",
            "action_ref", "default_plan_id", "with_diff"]
 
 RECOVERY_AUTHOR = "ks.recovery"
@@ -77,6 +85,20 @@ class Rider:
 
 
 @dataclass(frozen=True)
+class Held:
+    """A tainted outbox item that gets no step and stays held (ADR-05 §6.1 amended, B3-48): it waits for a person.
+
+    ``action`` is the creating action (``None`` if no record created it). ``blocked_by`` names what must be resolved
+    first, e.g. ``replan seq 177``, ``flag(no_compensator) seq 178``, ``flag(write_write_conflict suppliers:S-22)``,
+    ``rides seq 175`` (redacted args or a dry-run rider), ``sticky_taint`` (no repairable read)."""
+
+    outbox_id: str
+    status: OutboxStatus
+    action: ActionRef | None
+    blocked_by: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class Planned:
     """Planner output: the C5 plan (diff empty until the dry-run) plus the console lanes and t0 report."""
 
@@ -86,6 +108,12 @@ class Planned:
     riders: tuple[Rider, ...]
     rerun_records: Mapping[int, Record]
     notes: tuple[str, ...] = field(default=())
+    c_candidates: Mapping[int, Record] = field(default_factory=dict)
+    """Class-C actions flagged ``no_compensator`` that the dry-run may clear (ADR-05 §6.4, B3-24 ruling "option A,
+    narrowed"): the landed record has no outbox item (whole effect in its write set) and every tainted read is
+    repaired by then. Cleared only if the simulated re-run's writes equal the landed ones by (obj, after.hash)."""
+    held: tuple[Held, ...] = field(default=())
+    """Tainted queued/held items with no step (ADR-05 §6.1 amended, B3-48), by outbox id; never cancelled here."""
 
 
 def action_ref(r: Record) -> ActionRef:
@@ -214,9 +242,26 @@ def plan_recovery(records: RecordIndex | Iterable[Record], taint: Taint | None, 
     replans: list[ReplanStep] = []
     compensates: list[CompensateStep] = []
     riders: list[Rider] = []
+    c_candidates: dict[int, Record] = {}
 
     def repaired(o: str, v: int) -> bool:
         return ((o, v) in seed_keys and o in repaired_objs) or (o, v) in rerun_written
+
+    # what blocks each non-re-run tainted action (for Planned.held): seq -> labels
+    seed_flag = {obj: f"flag({reason} {obj})" for reason, obj, _ in flags if obj is not None}
+    blockers: dict[int, tuple[str, ...]] = {}
+
+    def block_labels(hits: Iterable[tuple[str, int]]) -> tuple[str, ...]:
+        out: set[str] = set()
+        for o, v in hits:
+            w = ix.writer(o, v)
+            if (o, v) in seed_keys and o in seed_flag:
+                out.add(seed_flag[o])
+            elif w is not None and w.seq in blockers:
+                out.update(blockers[w.seq])
+            else:
+                out.add(f"unrepaired {o} v{v}")
+        return tuple(sorted(out))
 
     for r in taint.actions:
         agent = r.attributed_agent
@@ -225,21 +270,29 @@ def plan_recovery(records: RecordIndex | Iterable[Record], taint: Taint | None, 
         ref = action_ref(r)
         if agent in llm:
             replans.append(ReplanStep(n=0, reason="tainted_llm", action=ref))
+            blockers[r.seq] = (f"replan seq {r.seq}",)
             continue
         if r.action_class == ActionClass.I2:
             flags.append(("tainted_i2", None, ref))
+            blockers[r.seq] = (f"flag(tainted_i2) seq {r.seq}",)
             continue
         if r.action_class == ActionClass.C:
             comp = comps.get(r.envelope.tool)
             if comp is None:
                 flags.append(("no_compensator", None, ref))
+                blockers[r.seq] = (f"flag(no_compensator) seq {r.seq}",)
+                via = taint.via.get(r.seq, ())
+                if not r.outbox_ids and via and all(repaired(h.obj, h.ver) for h in via):
+                    c_candidates[r.seq] = r  # B3-24 narrowed A: the dry-run may prove the re-run identical
             else:
                 compensates.append(CompensateStep(n=0, reason="tainted_effect", action=ref, compensator=comp))
+                blockers[r.seq] = (f"compensate seq {r.seq}",)
             continue
         blocked = tuple((h.obj, h.ver) for h in taint.via.get(r.seq, ()) if not repaired(h.obj, h.ver))
         if blocked or not taint.via.get(r.seq):
             # not taint.via: sticky-only taint (no tainted read) cannot be repaired by re-running either
             riders.append(Rider(action=ref, blocked_by=blocked))
+            blockers[r.seq] = block_labels(blocked) if blocked else ("sticky_taint",)
             continue
         reruns.append(RerunStep(n=0, reason="tainted_read", action=ref))
         rerun_records[r.seq] = r
@@ -250,6 +303,7 @@ def plan_recovery(records: RecordIndex | Iterable[Record], taint: Taint | None, 
         for oid in r.outbox_ids:
             creator.setdefault(oid, r)
     cancels: list[CancelOutboxStep] = []
+    held: list[Held] = []
     for oid in sorted(taint.outbox_ids):
         c = creator.get(oid)
         status = _outbox_status(state, oid)
@@ -263,7 +317,13 @@ def plan_recovery(records: RecordIndex | Iterable[Record], taint: Taint | None, 
             continue
         if c is not None and c.seq in rerun_records:
             continue  # M14: the re-run updates the same outbox:<id> (v+1, back on hold)
-        cancels.append(CancelOutboxStep(n=0, reason="tainted_effect", outbox_id=oid))
+        own = c is not None and c.attributed_agent == culprit and t0 <= c.seq <= as_of
+        if own or status == OutboxStatus.RELEASED:
+            cancels.append(CancelOutboxStep(n=0, reason="tainted_effect", outbox_id=oid))
+            continue
+        # §6.1 amended (B3-48): rider / replan / flagged / compensated item stays held, listed, no step
+        why = ("no_creating_record",) if c is None else blockers.get(c.seq, (f"unrepaired seq {c.seq}",))
+        held.append(Held(outbox_id=oid, status=status, action=None if c is None else action_ref(c), blocked_by=why))
 
     flag_steps = [FlagStep(n=0, reason=reason, obj=obj, action=act)
                   for reason, obj, act in sorted(flags, key=lambda f: (f[0], f[1] or "",
@@ -291,7 +351,8 @@ def plan_recovery(records: RecordIndex | Iterable[Record], taint: Taint | None, 
     plan = RecoveryPlan(plan_id=plan_id or default_plan_id(as_of), alert_id=alert_id, culprit=culprit,
                         t0_seq_est=t0, t0_seq_est_literal=taint.t0_seq_est_literal, as_of_seq=as_of, taint_set=taint.taint_set(), steps=steps, diff=())
     return Planned(plan=plan, kept=tuple(kept), independent=tuple(independent), riders=tuple(riders),
-                   rerun_records=rerun_records, notes=tuple(notes))
+                   rerun_records=rerun_records, notes=tuple(notes), c_candidates=c_candidates,
+                   held=tuple(held))
 
 
 def with_diff(plan: RecoveryPlan, diff: Iterable[DiffEntry]) -> RecoveryPlan:

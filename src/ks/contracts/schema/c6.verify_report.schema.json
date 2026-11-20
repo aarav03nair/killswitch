@@ -1,5 +1,5 @@
 {
-  "$id": "https://killswitch.local/schema/1.4.0/c6.verify_report.schema.json",
+  "$id": "https://killswitch.local/schema/1.5.0/c6.verify_report.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Last stdout line of ``ks verify`` (canonical JSON).",

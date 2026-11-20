@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "changes",
+  "status": "done",
   "outcome": "I1 outbox with hold window, lineage-based early hold and the ks.dispatch record",
   "acceptance": [
     "release_tick = max(tick+H, v+2H) when lineage holds a sensitive field written at v; H=0 disables it (test)",
@@ -18,8 +18,8 @@
     "B3-14"
   ],
   "deliverable": "src/ks/gateway/outbox.py",
-  "summary": "Rework: gateway denies (tool_error) any tool write to outbox:*; creation-time taint hold now a ks.control hold/lineage_hold record (item created queued, held by record); tick of a sensitive-field version derived from durable records (loud LookupError otherwise). 4 new tests (forge create, held->queued flip, creation hold record, restart).",
-  "review": "[kabir · changes] Attacked: G4 pure (ks.dispatch only in _release_due; agent-submitted ks.dispatch -> deny/out_of_scope). Idempotency key is tagged_hash(agent,action,sink,n): collision-proof; re-run reuses outbox:<id> at v+1 HELD. Lineage = gateway-merged read set, not agent-declared. H=0 keeps the lineage hold. iban move after creation -> ks.control hold/sensitive_field, recorded. No unhold path = fail-closed. Native 787 passed; container 797 passed, 1 failed (tests/recovery/test_rerun.py, not B3-23). CHANGES: (1) BLOCKING bypass, proven by probe: a tool write_set entry on outbox:ob-N (status queued, release_tick 0, lineage ()) is accepted as exec and dispatched next tick at H=6, skipping hold window and lineage; it could also flip held->queued (unhold bypass). Gateway must refuse any tool write to outbox:* (deny/tool_error), and the release phase should check that the item's created_seq record lists it in outbox_ids. (2) Hold at creation is an exec record with a HELD item, not the ADR-03 p.lineage_hold / ADR-04 s5 hold/lineage_hold record. Emit the hold/lineage_hold decision or a ks.control hold, or raise a decision. (3) _seq_tick is in-memory: after restart or for a version with no known tick, G3 silently falls back to t+H. Derive the tick from the record, or fail loudly. Note for unhold issue: hold action_id hold-<oid>-<why> repeats after unhold+rehold; the re-run test calls Outbox.create directly, not through the gateway (replay check).\n\n[kabir · changes] Re-review. Fixed: (1) tool write to outbox:* -> deny/tool_error, re-probed: forged item and held->queued flip never dispatch. (2) creation-time taint hold is a ks.control hold/lineage_hold record. (3) early-hold tick from durable record; restart test OK. Native 805 passed, container 815 passed. BLOCKING (b), proven by probe (scratchpad test_zz_kabir_probe.py): an outbox item no record created is dispatched. (i) off-log store.put of a queued outbox:ob-000099 (release_tick 0, lineage ()) -> signed ks.dispatch next tick; (ii) raw SQL UPDATE objects.head_value of a HELD item to queued with lineage [] -> dispatched (store.get does not re-check head hash vs versions). This is the RT1 'else' branch: D6 reconcile flags it after the fact but the effect has already left, and our own ks.dispatch signs it. Fix in _release_due before dispatch, fail closed (ks.control hold, a recorded refusal): the head (ver, hash) must equal value_hash(head_value) and the versions row; that version's seq must be a record whose write_set has (outbox:<id>, ver, hash) and whose author is the item author or ks.gateway; the created_seq record must list the id in outbox_ids, have the same agent/action_id and read_set == item.lineage. Add tests for (i) and (ii). (a) NON-BLOCKING, B3-30 follow-up: a re-run item re-held without a hold record breaks ADR-03 s7 ('holds and unholds are Controls') the same way as finding 2, and console/score would not show B2 'back on hold' (score.py says real_ledger emits no held items). Today it only happens in the rolled-back dry-run and in Outbox.create's existing-key branch, which the gateway cannot reach (action replay deny). B3-30 apply must emit a ks.control hold per re-held item (or the ks.recover write_set must be counted by verify/console/score as the hold); also make the gateway post-create loop record a hold for any item that is HELD at creation, not only QUEUED+reason.",
+  "summary": "Re-review 3 blocker fixed in outbox.py: _unrecorded now requires head_ver == MAX(versions.ver) and no later record writing the item (head is the last write in the log). set_status never raises on a moved head: it re-bases on the true latest version, so a recorded ks.control hold lands (a dispatched item stays dispatched). Two regression tests (rollback to creation with v2 row dropped; row kept -> hold recorded, no crash). Native 854 passed, 8 skipped, 1 xfailed; container 861 passed, 1 xfailed, 4 errors (console, known non-B3-23); make smoke OK (anchored).",
+  "review": "[kabir · changes] Attacked: G4 pure (ks.dispatch only in _release_due; agent-submitted ks.dispatch -> deny/out_of_scope). Idempotency key is tagged_hash(agent,action,sink,n): collision-proof; re-run reuses outbox:<id> at v+1 HELD. Lineage = gateway-merged read set, not agent-declared. H=0 keeps the lineage hold. iban move after creation -> ks.control hold/sensitive_field, recorded. No unhold path = fail-closed. Native 787 passed; container 797 passed, 1 failed (tests/recovery/test_rerun.py, not B3-23). CHANGES: (1) BLOCKING bypass, proven by probe: a tool write_set entry on outbox:ob-N (status queued, release_tick 0, lineage ()) is accepted as exec and dispatched next tick at H=6, skipping hold window and lineage; it could also flip held->queued (unhold bypass). Gateway must refuse any tool write to outbox:* (deny/tool_error), and the release phase should check that the item's created_seq record lists it in outbox_ids. (2) Hold at creation is an exec record with a HELD item, not the ADR-03 p.lineage_hold / ADR-04 s5 hold/lineage_hold record. Emit the hold/lineage_hold decision or a ks.control hold, or raise a decision. (3) _seq_tick is in-memory: after restart or for a version with no known tick, G3 silently falls back to t+H. Derive the tick from the record, or fail loudly. Note for unhold issue: hold action_id hold-<oid>-<why> repeats after unhold+rehold; the re-run test calls Outbox.create directly, not through the gateway (replay check).\n\n[kabir · changes] Re-review. Fixed: (1) tool write to outbox:* -> deny/tool_error, re-probed: forged item and held->queued flip never dispatch. (2) creation-time taint hold is a ks.control hold/lineage_hold record. (3) early-hold tick from durable record; restart test OK. Native 805 passed, container 815 passed. BLOCKING (b), proven by probe (scratchpad test_zz_kabir_probe.py): an outbox item no record created is dispatched. (i) off-log store.put of a queued outbox:ob-000099 (release_tick 0, lineage ()) -> signed ks.dispatch next tick; (ii) raw SQL UPDATE objects.head_value of a HELD item to queued with lineage [] -> dispatched (store.get does not re-check head hash vs versions). This is the RT1 'else' branch: D6 reconcile flags it after the fact but the effect has already left, and our own ks.dispatch signs it. Fix in _release_due before dispatch, fail closed (ks.control hold, a recorded refusal): the head (ver, hash) must equal value_hash(head_value) and the versions row; that version's seq must be a record whose write_set has (outbox:<id>, ver, hash) and whose author is the item author or ks.gateway; the created_seq record must list the id in outbox_ids, have the same agent/action_id and read_set == item.lineage. Add tests for (i) and (ii). (a) NON-BLOCKING, B3-30 follow-up: a re-run item re-held without a hold record breaks ADR-03 s7 ('holds and unholds are Controls') the same way as finding 2, and console/score would not show B2 'back on hold' (score.py says real_ledger emits no held items). Today it only happens in the rolled-back dry-run and in Outbox.create's existing-key branch, which the gateway cannot reach (action replay deny). B3-30 apply must emit a ks.control hold per re-held item (or the ks.recover write_set must be counted by verify/console/score as the hold); also make the gateway post-create loop record a hold for any item that is HELD at creation, not only QUEUED+reason.\n\n[kabir · changes] Re-review 3. Fixed and re-probed: off-log queued item and raw-SQL held->queued flip are held with a recorded ks.control unrecorded_item hold; variants also held: release_tick edit, lineage strip, created_seq repoint, value with wrong hash. Native 852 passed (container not re-run: verdict does not depend on it). BLOCKING, proven by probe (scratchpad test_zz_kabir_probe2.py): HEAD ROLLBACK. Take an item held by a release-phase ks.control hold (v2), set objects.head_* back to v1 (the queued creation version) and remove the versions v2 row (DROP TRIGGER versions_no_delete; same raw-SQL attacker as case ii). _unrecorded passes, because v1 is genuinely written by the creating record, and a signed ks.dispatch goes out. If the v2 row is kept, hold_reason is still None. Nothing is dispatched, but set_status crashes open() with UNIQUE versions(obj,ver): no record, gateway down. Fix: the head (ver, hash) must be the LAST write to outbox:<id> in the record log, not just some record's write. Build an index from the records: obj -> last (seq, ver, hash). Also head_ver must equal MAX(versions.ver). On a mismatch, record a hold, don't raise. Add a test. NON-BLOCKING, for B3-30 (code reading): a re-run item gets created_seq = the re-run seq but keeps the old release_tick. If the re-run's record is ks.recover, outbox_ids/agent do not match, and the release_tick check uses the new cr.tick. After any future unhold it is held as unrecorded_item forever. The unhold/recovery hook has to verify against the recovery record, using the original tick for release_tick.\n\n[kabir · done] Re-review 4. Head-rollback blocker fixed: probe2 all 5 pass (rollback with v2 dropped and v2 kept both held with a recorded hold, no crash; release_tick/lineage/created_seq edits held). Native 872 passed, 8 skipped. KNOWN LIMIT / follow-up (non-blocking, fail-closed, needs a state.db writer which Rule 1 / RT1 blocks): probe1 offlog_flip: a raw store.put on outbox:<id> at seq = recorder.seq+1 makes the gateway's ks.control hold hit SeqOrderError, so open() crashes with no record (nothing dispatched). Suggest: in set_status/_system_record catch SeqOrderError and record a ks.control hold/alarm without the outbox write. Also: the last-write log scan in _unrecorded is O(log) per due item per tick; fine at demo scale, index it if runs grow.",
   "log": [
     {
       "t": "19 Nov 11:34",
@@ -70,6 +70,41 @@
       "t": "19 Nov 21:41",
       "who": "kabir",
       "msg": "→ changes: release-phase provenance check missing: off-log item dispatched"
+    },
+    {
+      "t": "20 Nov 05:37",
+      "who": "nisha",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 05:37",
+      "who": "nisha",
+      "msg": "→ in_review: provenance check + regression tests"
+    },
+    {
+      "t": "20 Nov 05:39",
+      "who": "pmo",
+      "msg": "→ in_review: PMO correction: container run (858 passed, 2 failed) failures are tests/console/test_console.py::test_degraded_banner_and_verify_always_present (B3-28) and tests/runtime/test_operator.py::test_operator_sock_rejects_agent (B3-13 WIP), not B3-23. The summary's 'container passed' is inaccurate."
+    },
+    {
+      "t": "20 Nov 05:43",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "20 Nov 05:50",
+      "who": "nisha",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 05:50",
+      "who": "nisha",
+      "msg": "→ in_review: re-review 3 fix"
+    },
+    {
+      "t": "20 Nov 05:53",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

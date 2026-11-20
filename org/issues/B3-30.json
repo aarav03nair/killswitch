@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "maya",
-  "status": "todo",
+  "status": "in_progress",
   "outcome": "Approved plan steps execute as ks.recover.<op> envelopes on c-0 bound to the ks.approve plan_hash (F5)",
   "acceptance": [
     "ks.approve by ks.operator with {plan_id, plan_hash, steps}; each ks.recover.<op> carries {plan_id, plan_hash, n, step}",
@@ -36,6 +36,31 @@
       "t": "19 Nov 21:41",
       "who": "pmo",
       "msg": "→ todo: From kabir's B3-23 re-review: re-run outbox items re-enter HELD via the exec record with no ks.control hold record (breaks ADR-03 §7 like B3-23 finding 2). Only reachable in the rolled-back dry-run today; apply must emit the hold record."
+    },
+    {
+      "t": "20 Nov 05:43",
+      "who": "pmo",
+      "msg": "→ todo: From kabir's B3-23 review: re-run outbox items would stay held forever after an unhold (release-phase provenance check must accept the recovery record as the item's creating/last writer)."
+    },
+    {
+      "t": "20 Nov 06:00",
+      "who": "pmo",
+      "msg": "→ todo: From kabir's B3-20 review: wire  end to end (RunOptions.decisions served) with a test replaying an anchored source run's operator decisions."
+    },
+    {
+      "t": "20 Nov 06:01",
+      "who": "pmo",
+      "msg": "→ todo: Correction to previous note (shell ate the command name): wire \"ks run --decisions\" end to end (RunOptions.decisions served) with a test replaying an anchored source run's operator decisions."
+    },
+    {
+      "t": "20 Nov 06:27",
+      "who": "pmo",
+      "msg": "→ todo: From maya's B3-29 review: run conflict.recheck inside the apply txn and halt at the first stale step; the bench approver releases only items re-held by a re-run, never rider items (rider items of blocked actions stay held per ADR-05 §6.1 amended; B3-48)."
+    },
+    {
+      "t": "20 Nov 06:28",
+      "who": "maya",
+      "msg": "→ in_progress: start: c-0 ks.recover.<op> handler + ks recover apply"
     }
   ]
 }

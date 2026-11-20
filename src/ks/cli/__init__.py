@@ -44,6 +44,7 @@ def _parser() -> argparse.ArgumentParser:
     r.add_argument("--rogue", metavar="FILE", help="jury Python run in place of --slot")
     r.add_argument("--slot", help="agent replaced by --rogue (default docs)")
     r.add_argument("--decisions", metavar="RUN", help="replay operator decisions of an anchored run")
+    r.add_argument("--decisions-head", metavar="ANCHOR", help="that run's RunAnchor line (needed with --decisions)")
     i = sub.add_parser("inject", help="run with a fault or rogue agent (sugar for run --fault/--rogue)")
     i.add_argument("fault", nargs="?", help="fault id, e.g. F2+")
     i.add_argument("--rogue", metavar="FILE")
@@ -62,9 +63,9 @@ def _parser() -> argparse.ArgumentParser:
     b = sub.add_parser("blame", help="alias: root candidates of a run")
     b.add_argument("run")
     b.add_argument("--alert")
-    c = sub.add_parser("contain", help="suspend|release|revoke a target on a live run")
-    c.add_argument("action", choices=("suspend", "release", "revoke"))
-    c.add_argument("target", help="agent:ID or conn:ID")
+    c = sub.add_parser("contain", help="suspend|release|revoke|hold|unhold a target on a live run")
+    c.add_argument("action", choices=("suspend", "release", "revoke", "hold", "unhold"))
+    c.add_argument("target", help="agent:ID, conn:ID, action:r-NNNNNN (unhold) or outbox:ob-NNNNNN")
     c.add_argument("run")
     c.add_argument("--alert")
     c.add_argument("--confirm", action="store_true")
@@ -167,7 +168,7 @@ def _run(args) -> int:
             return _usage("run", f"--rogue file not found: {args.rogue}")
         kw.update(rogue=args.rogue, slot=args.slot or "docs")
     opts, err = _options("run", args, fault=args.fault or None, hold=args.hold, step=args.step,
-                         decisions=args.decisions, **kw)
+                         decisions=args.decisions, decisions_head=args.decisions_head, **kw)
     return err if err is not None else _launch("run", args, opts)
 
 
@@ -253,15 +254,96 @@ def _blame(args) -> int:
 
 
 def _contain(args) -> int:
-    if not (args.target.startswith(("agent:", "conn:")) and len(args.target.split(":", 1)[1]) > 0):
-        return _usage("contain", "TARGET must be agent:ID or conn:ID")
+    if not (args.target.startswith(("agent:", "conn:", "action:", "outbox:")) and len(args.target.split(":", 1)[1]) > 0):
+        return _usage("contain", "TARGET must be agent:ID, conn:ID, action:r-NNNNNN or outbox:ob-NNNNNN")
     if args.action == "revoke" and not args.confirm:
         return _usage("contain", "revoke needs --confirm")
-    return _need_run("contain", args.run) or _not_yet("contain", "needs the operator socket, B3-13")
+    if (err := _need_run("contain", args.run)) is not None:
+        return err
+    from ks.contracts import canonical
+    from ks.runtime.operator import operator_request
+    req: dict = {"op": args.action, "target": args.target}
+    if args.alert is not None:
+        req["alert_id"] = args.alert
+    if args.confirm:
+        req["confirm"] = True
+    try:  # J1: the only way in; the gateway signs it as ks.operator and records it on c-0
+        reply = operator_request(args.run, req)
+    except (OSError, CanonicalError) as e:
+        print(f"ks contain: no live run at {args.run} (operator socket: {e})", file=sys.stderr)
+        return Exit.IO
+    print(canonical.dumps(reply).decode())
+    if reply.get("pending"):  # never report a false outcome: the request is queued and may still land
+        print("ks contain: PENDING: not yet admitted; it may still be recorded. Check record.jsonl before retrying.",
+              file=sys.stderr)
+        return Exit.IO
+    if not reply.get("ok"):
+        print(f"ks contain: refused: {reply.get('error') or reply.get('reason')}", file=sys.stderr)
+        return Exit.IO
+    return Exit.OK
 
 
 def _recover(args) -> int:
-    return _need_run("recover", args.run) or _not_yet("recover", "needs the recovery engine, B3-18+")
+    """ADR-07 / ADR-05 §7-8 (B3-30): verify first (FROZEN on a non-OK result or a tamper/stall alert, F5); then
+    ``--dry-run`` writes ``plans/<plan_id>.json`` and prints the diff and the apply line, or ``--apply PLAN_ID``
+    approves (``ks.approve`` as ks.operator) and runs the approved steps on the live gateway (J1 socket)."""
+    if (err := _need_run("recover", args.run)) is not None:
+        return err
+    from ks.contracts import canonical
+    from ks.runtime import recover as R
+    why = R.frozen(args.run)
+    if why is not None and why.startswith(("verify missing_file", "verify unreadable")):
+        print(f"ks recover: not a readable run dir: {why}", file=sys.stderr)
+        return Exit.IO
+    if why is not None:
+        print(f"ks recover: FROZEN: {why} (M12: no recovery for the rest of this run)", file=sys.stderr)
+        return Exit.FROZEN
+    if args.dry_run:
+        if args.approve:
+            return _usage("recover", "--approve goes with --apply")
+        try:
+            res = R.cli_dry_run(args.run)
+        except (ValueError, OSError) as e:
+            print(f"ks recover: {e}", file=sys.stderr)
+            return Exit.IO
+        sys.stdout.write(res.text)
+        print(f"plan written: {res.path}")
+        if res.stale:
+            print("ks recover: hold/stale_plan in the dry-run: not applicable as is", file=sys.stderr)
+            return Exit.IO
+        extra = " ".join(str(n) for n in res.plan.needs_approval)
+        print(f"apply: ks recover {args.run} --apply {res.plan.plan_id}"
+              + (f"  [--approve {extra}]  (steps needing a person: {extra})" if extra else ""))
+        return Exit.OK
+    try:
+        approve = [int(x) for x in args.approve]
+    except ValueError:
+        return _usage("recover", "--approve takes step numbers")
+    try:
+        plan, a, r = R.cli_apply(args.run, args.apply, approve)
+    except ValueError as e:
+        return _usage("recover", str(e))
+    except (OSError, CanonicalError) as e:
+        print(f"ks recover: no live run at {args.run} (operator socket: {e}); a finished run is dry-run only",
+              file=sys.stderr)
+        return Exit.IO
+    print(canonical.dumps({"approve": a, "recover": r}).decode())
+    if a.get("pending") or r.get("pending"):
+        print("ks recover: PENDING: not yet admitted; check record.jsonl before retrying", file=sys.stderr)
+        return Exit.IO
+    if not a.get("ok"):
+        print(f"ks recover: approval refused: {a.get('error') or a.get('reason')}", file=sys.stderr)
+        return Exit.IO
+    if not r.get("ok"):
+        bad = next((s for s in r.get("steps", []) if s.get("ok") is not True), r)
+        if bad.get("reason") == "recovery_frozen":
+            print("ks recover: FROZEN (deny/recovery_frozen)", file=sys.stderr)
+            return Exit.FROZEN
+        print(f"ks recover: apply halted: {bad.get('decision', '')}/{bad.get('reason') or bad.get('error')}"
+              f" at seq {bad.get('seq', '-')}; build a new plan (ks recover {args.run} --dry-run)", file=sys.stderr)
+        return Exit.IO
+    print(f"ks recover: plan {plan.plan_id} applied: {len(r.get('steps', []))} steps recorded")
+    return Exit.OK
 
 
 def _score(args) -> int:

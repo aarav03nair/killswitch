@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "In-gateway system principals sign on c-0; operator requests arrive only via the J1 peercred socket",
   "acceptance": [
     "ks.monitor/ks.gateway/ks.recovery/ks.operator envelopes go through the pipeline on c-0 and are signature-verified; a system agent_id on c-1.. is bad_sig, a c-0 frame with an agent id is rejected (both ways)",
@@ -18,8 +18,8 @@
     "B3-11"
   ],
   "deliverable": "src/ks/runtime/",
-  "summary": "",
-  "review": "",
+  "summary": "Done. c-0 system path (src/ks/gateway/system.py, committed in 46f4674): ks.gateway/monitor/operator/recovery envelopes are built and signed at the control phase (ADR-00 step 1, cap 32, surplus carried in order), verified against the keyring, recorded on c-0 (denials too); scope inverted via system_tool_signers; Controls checked/applied by FoldedControl after the record. System id on c-1 = bad_sig; any frame on c-0 or an agent envelope handed to the system path raises SystemEnvelopeError, nothing recorded. hold/unhold and ks.recover.<op> raise NotImplementedError before a record (B3-19/B3-23/B3-30). Operator socket src/ks/runtime/operator.py: <run>/operator/operator.sock in a fresh 0700 dir owned by the gateway uid (refuses a pre-existing dir), socket 0600, SO_PEERCRED (LOCAL_PEERCRED on macOS) uid must equal 0 as root (own uid in degraded mode); refused peers get no reply and queue nothing. Ops suspend/release/revoke(confirm)/approve -> ks.operator-signed, auto=false, recorded with seq/record_id in the reply. Note: path is <run>/operator/operator.sock (ADR-00 writes /run/ks/<run_id>/operator.sock; the extra 0700 dir is what makes the uid-0 dir rule hold inside a 0711 run dir). RunOptions served: pause_at, step (ADR-07 L1): gateway pauses between ticks, socket open, resumes on Enter (tty), on any accepted operator request, or on {op: resume} (pacing only, writes nothing). ks contain wired (OK; IO on refusal or no live run). Verify: every EXEC ks.* tool must be signed by one of system_tool_signers(tool), sig_ok, on c-0 (unknown ks.* tool fails); the Record validator already refuses it at parse. kabir's B3-10 follow-ups: proc_uid needs real=effective=saved=fs; run_id '.'/'..' rejected. Gateway edits: none this session (system.py, control.py, stub.py hooks were in 46f4674); I did not touch outbox.py or recovery. Tests: tests/runtime/test_operator.py (32 incl. test_operator_sock_rejects_agent with a real uid-60002 child as root: 0700 dir blocks it, and with the dir opened the peercred check refuses it; test_pause_identical_record (repro, --step, byte-identical); paused world run takes ks contain suspend/release at ticks 5/9, crm denied suspended between, verify OK; ks.console grep test). Updated tests/cli (contain no longer a placeholder) and tests/runtime/test_run_options.py (step served). Native 852 passed/8 skipped/1 xfailed; container full suite run; make smoke OK (anchored).",
+  "review": "[kabir · done] Done. Attacks tried: agent uid on socket (0700 uid-0 dir under a 0711 root run dir, pre-made dir refused, mkdir is no-follow, peercred is checked at connect so a handed fd still carries the agent uid; the container root test uses a real uid-60002 child), fd inheritance (listener non-inheritable, close_fds, agent stdin DEVNULL), c-0 forgery (Record validator: system id <=> c-0 both ways, system EXEC needs system_tool_signers so no agent tools; verify K13 recheck), ks contain (socket only). All hold. Native 854 passed; container 861 passed, 1 failed (B3-28 console banner, known), make smoke OK anchored. Non-blocking: (1) the run clears wake at a pause even when a request is already queued (arrived mid-tick): the request sits until a keypress, and the single serving thread blocks in done.wait(60) so a ks resume cannot get in; the CLI then returns IO but the request still lands later. Fix: skip the pause or keep wake set when len(queue)>0, and drop or mark timed-out requests. (2) Refused peers live only in srv.refused in memory: print a count in the run summary as RT3c evidence. Not recording them on c-0 matches ADR-00/J1.",
   "log": [
     {
       "t": "19 Nov 11:34",
@@ -30,6 +30,21 @@
       "t": "19 Nov 16:33",
       "who": "pmo",
       "msg": "→ todo: Non-blocking from kabir's B3-10 review: isolation readback should check all four uid fields (real/effective/saved/fs), not only the real uid; reject '.' and '..' as run_id."
+    },
+    {
+      "t": "20 Nov 05:42",
+      "who": "maya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 05:42",
+      "who": "maya",
+      "msg": "→ in_review: c-0 system envelopes, J1 operator socket, pacing (pause_at/step), ks contain, verify K13 rule; ready for kabir"
+    },
+    {
+      "t": "20 Nov 05:49",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

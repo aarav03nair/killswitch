@@ -12,8 +12,9 @@ action) · 10 scope inverted (the principal must be a signer of the tool, ``syst
 (handler ``check``) · record · handler ``apply``. Steps 4 (frame tick), 7-9 (agent control state), 11 (class) and
 12 (policy) are agent-frame steps and do not apply. Served tools: ``ks.alert``, ``ks.approve`` and agent/conn
 ``ks.control`` (suspend, release, revoke). ``ks.seed`` and ``ks.dispatch`` keep their gateway-internal paths;
-``ks.recover.<op>`` (B3-30) and Control hold/unhold (B3-19) raise ``NotImplementedError`` before anything is
-recorded.
+Control hold/unhold is served by ``ks.gateway.holds`` (B3-19); ``ks.recover.<op>`` is served by the gateway's
+``recovery`` service (``ks.runtime.recover.RecoveryService``, B3-30) after steps 3/5/6/10; a gateway without one
+raises ``NotImplementedError`` before anything is recorded.
 
 :class:`SystemQueue` is the control phase (ADR-00 step 1): queued requests are admitted at the next
 ``Gateway.open`` in (principal, queue) order, at most :data:`CONTROL_PHASE_CAP` per tick, surplus carried over in
@@ -85,10 +86,9 @@ def admit_system(gw: Gateway, env: Envelope) -> Admission:
         raise SystemEnvelopeError("ks.witness never submits envelopes")
     if env.tool in (SEED_TOOL, "ks.dispatch"):
         raise SystemEnvelopeError(f"{env.tool} is gateway-internal (seed record / release phase)")
-    if env.tool.startswith(RECOVER_TOOL_PREFIX):
-        raise NotImplementedError("ks.recover.<op> is served by recovery apply (B3-30)")
-    if env.tool == CONTROL_TOOL and isinstance(env.args, dict) and env.args.get("op") in ("hold", "unhold"):
-        raise NotImplementedError("Control hold/unhold is served by containment/outbox (B3-19, B3-23)")
+    recovery = getattr(gw, "recovery", None)  # B3-30: ks.runtime.recover.RecoveryService, installed by ks.runtime
+    if env.tool.startswith(RECOVER_TOOL_PREFIX) and recovery is None:
+        raise NotImplementedError("ks.recover.<op> needs a RecoveryService on this gateway (B3-30)")
 
     header = env.header()
     ehash = env.content_hash()
@@ -107,8 +107,15 @@ def admit_system(gw: Gateway, env: Envelope) -> Admission:
         return deny(Reason.NONCE_REUSED)
     gw._nonces[nk] = gw._tick
     gw._actions.add(ak)
-    if env.agent_id not in system_tool_signers(env.tool) or env.tool not in SERVED_TOOLS:  # 10
+    if env.agent_id not in system_tool_signers(env.tool):  # 10
         return deny(Reason.OUT_OF_SCOPE)
+    if env.tool.startswith(RECOVER_TOOL_PREFIX):  # B3-30: approval binding, freeze, M8 re-check, execute, record
+        return recovery.serve(gw, env, header, ehash, deny)
+    if env.tool not in SERVED_TOOLS:
+        return deny(Reason.OUT_OF_SCOPE)
+    if env.tool == CONTROL_TOOL and isinstance(env.args, dict) and env.args.get("op") in ("hold", "unhold"):
+        from .holds import serve_hold_control  # B3-19: outbox hold/unhold and action re-execution (F9)
+        return serve_hold_control(gw, env, header, ehash, deny)
     rtxn = gw.recorder.begin()
     try:
         try:
@@ -149,6 +156,9 @@ class SystemRequest:
     build: Builder | None = None
     envelope: Envelope | None = None
     done: Callable[[Any], None] | None = None
+    action_id: str | None = None
+    """Envelope action id for a ``build`` request (default ``<principal tail>-<seq>``). Recovery steps use
+    ``<plan_id>.<n>`` so a second apply of the same step is ``nonce_reused`` (B3-30: one apply per step)."""
     _n: int = field(default=0, repr=False)
 
 
@@ -198,7 +208,8 @@ class SystemQueue:
                 if env is None:
                     seq = gw.recorder.seq + 1
                     args = req.build(gw, tick, seq)
-                    env = system_envelope(req.principal, req.tool, args, action_id=f"{req.principal[3:]}-{seq:06d}",
+                    aid = req.action_id or f"{req.principal[3:]}-{seq:06d}"
+                    env = system_envelope(req.principal, req.tool, args, action_id=aid,
                                           tick=tick, sign=self._signers[req.principal])
                 adm = admit_system(gw, env)
             except Exception as e:  # refused before a record (bad request / not served): tell the requester

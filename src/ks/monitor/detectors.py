@@ -188,11 +188,14 @@ def _strings(v: Any, keys: frozenset[str], hit: list[bool]) -> Iterator[str]:
             yield from _strings(x, keys, hit)
 
 
-def find_pii(payload: Any, keys: frozenset[str] = frozenset()) -> bool:
+def find_pii(payload: Any, keys: frozenset[str] = frozenset(), allow: frozenset[str] = frozenset()) -> bool:
     """True if the payload carries a PII-keyed field, an SSN or Aadhaar pattern, a Luhn-valid card number or a
-    valid IBAN. Pure; the matched text is never returned (rule 9)."""
+    valid IBAN. Pure; the matched text is never returned (rule 9). ``allow``: whole strings that are not PII here
+    (B3-19: the payee IBAN a remittance email read from the payee field; a clean world run sends one)."""
     hit: list[bool] = []
     for s in _strings(payload, keys, hit):
+        if s in allow:
+            continue
         if _SSN.search(s) or _AADHAAR.search(s) or any(m.group(0) and _IBAN.fullmatch(m.group(0)) and
                                                      iban_ok(m.group(0)) for m in _IBAN.finditer(s)):
             return True
@@ -217,7 +220,12 @@ def pii_egress(ctx: Context) -> list[Finding]:
             item = ctx.value(w.after.hash)
             ph = item.get("payload_hash") if isinstance(item, dict) else None
             payload = ctx.value(ph) if ph else MISSING
-            if payload is not MISSING and find_pii(payload, ctx.params.pii_keys):
+            to = payload.get("to") if isinstance(payload, dict) else None
+            # B3-19: a payee IBAN is allowed only when the email goes to that IBAN's own supplier (registry pk
+            # from the read object id, never a match on payload text); anyone else receiving it is exfiltration.
+            payees = frozenset(i for e in r.read_set if _is_payee(ctx, e.obj) and split_obj_id(e.obj)[1] == to
+                               for i in [_iban_of(ctx.value(e.hash))] if isinstance(i, str))
+            if payload is not MISSING and find_pii(payload, ctx.params.pii_keys, payees):
                 out.append(Finding(Detector.PII_EGRESS, (r.seq,), (ObjVer(obj=w.obj, ver=w.after.ver),)))
     return out
 

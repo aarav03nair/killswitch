@@ -29,6 +29,16 @@
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "20 Nov 05:49",
+      "who": "pmo",
+      "msg": "→ todo: From kabir's B3-13 review: print the refused-peer count in the run summary as RT3c evidence (refused operator peers are in memory only; ADR-00 doesn't require recording them on c-0)."
+    },
+    {
+      "t": "20 Nov 06:27",
+      "who": "pmo",
+      "msg": "→ todo: From kabir's B3-47 review: document replay_mismatch / exit 6 (DIVERGED) in ADR-02 §6 and the RT13 row of THREAT-MODEL/red-team spec."
     }
   ]
 }

@@ -27,7 +27,7 @@ from .spawn import (WITNESS_UID, agent_uid, kill_uids, pids_with_uids, plan_agen
 from .setup import (IsolationError, check_run_id, default_run_id, isolation_problems, refuse_existing,
                     scenario as _scenario)
 
-__all__ = ["Isolation", "RunResult", "run", "agent_ids", "STARTUP_GRACE_S"]
+__all__ = ["Isolation", "RunResult", "run", "agent_ids", "pause_ticks", "STARTUP_GRACE_S"]
 
 STARTUP_GRACE_S = 15.0
 """Tick 0 waits at least this long: there is no readiness handshake, and an agent's first frame comes only
@@ -100,6 +100,7 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
         raise NotImplementedError(f"runtime does not serve {', '.join(todo)} yet")
     if (agents is not None and agents < 1) or ticks < 1:
         raise ValueError("need at least one agent and one tick")
+    replay = _load_replay(options)  # R3 (B3-20/B3-30): refused before anything is created or spawned
     sc = _scenario(scenario, agents=agents, seed=seed, ticks=ticks)
     ids = sc.agent_ids
     agents = len(ids)
@@ -124,7 +125,7 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
                        seed=seed, scenario=sc.name, fault=None, culprit=None, fault_tick=None, key_mode=key_mode,
                        decision_latency_ticks=0, ticks=ticks, tick_us=TICK_US, start_ts_us=0, hold_window_ticks=0,
                        sensitive_fields=sc.sensitive_fields, agents=ids, isolation="per_agent_uid" if separate else "degraded",
-                       decisions_from=None)
+                       decisions_from=replay.anchor_hash if replay is not None else None)
     if config.tick_us <= SYSTEM_SLOTS + agents:
         raise ValueError("tick_us must exceed the records-per-tick cap (C7)")
     a_uids = plan_agent_uids(root, separate, agents)  # root never runs an agent as uid 0 (S2)
@@ -161,7 +162,13 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
                            witness_gid=WITNESS_UID if separate else None)
         wfd, hfd = open_witness_fds(rd.path / WITNESS, rd.path / WITNESS_HEADS_DIR)
         witness.attach(wfd, hfd)  # closes both of the gateway's descriptors
-        operator = OperatorServer(rd.path, system, ids).start()  # J1; before any agent exists
+        dispatcher = sc.dispatcher()
+        recovery = None
+        if sc.name == "world":  # B3-30: ks.recover.<op> on c-0, bound to the operator's recorded ks.approve
+            from .recover import RecoveryService
+            recovery = RecoveryService(rd.path, keys.signer("ks.recovery"), dispatcher=dispatcher)
+        operator = OperatorServer(rd.path, system, ids,  # J1; before any agent exists
+                                  recover=recovery.requests if recovery is not None else None).start()
 
         say(f"ks run: run_id={config.run_id} seed={seed} agents={agents} ticks={ticks} key_mode={key_mode}")
         if key_mode == "repro":
@@ -197,13 +204,33 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
             store = open_world_store(rd.path / STATE_DB)
             gkw = dict(store=store, seed=lambda s, q: seed_state(s, seq=q), sign=keys.signer("ks.gateway"),
                        policy=WorldPolicy())
-        gateway = Gateway(config, keyring, recorder, control=control, system=system, dispatcher=sc.dispatcher(),
+        gateway = Gateway(config, keyring, recorder, control=control, system=system, dispatcher=dispatcher,
                           **gkw)
+        gateway.recovery = recovery
         signer = SignerService({a: keys.private(a) for a in ids}, control.epoch_of)
         barrier = TickBarrier(conns, gateway, signer, witness, tick_deadline_ms / 1000)
         timing, stalls, misses = [], 0, 0
+        mon = None
+        if options is not None and options.monitor:  # B3-19: alert -> suspend on c-0 inside the tick that raised it
+            if store is None:
+                raise ValueError("monitor needs the world scenario (a state store)")
+            from ks.containment import MonitorLoop
+            mon = MonitorLoop(gateway, keys.signer("ks.monitor"), state=store, side=store.side)
+        pauses = pause_ticks(options, ticks)
+        if pauses and sys.stdin is not None and sys.stdin.isatty():
+            _keypress_resumes(operator.wake)
         for t in range(ticks):
+            if replay is not None:  # R3: the source's operator decisions land in the control phase of their tick
+                for req in replay.at(t):
+                    system.put(req)
+            if t in pauses and len(system) == 0:  # ADR-07 L1; a request already queued lands now, no pause (B3-19)
+                operator.wake.clear()
+                say(f"paused before tick {t}: press Enter, or ks contain / ks recover {rd.path}")
+                operator.wake.wait()
+                say(f"resumed at tick {t}")
             o = barrier.run_tick(t, deadline_s=max(STARTUP_GRACE_S, barrier.deadline_s) if t == 0 else None)
+            if mon is not None:
+                mon.step()
             stalls += o.checkpoint is None and recorder.seq > 0
             misses += len(o.missed)
             timing.append(canonical.dumps_line({"tick": t, "wall_us": o.wall_us, "missed": o.missed,
@@ -226,6 +253,77 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
         say("RunAnchor (copy into ks verify --head):")
         say(anchor.to_canonical().decode())
     return RunResult(rd, anchor, iso, stalls, misses)
+
+
+@dataclass(frozen=True)
+class _Replay:
+    """Operator decisions of an anchored source run (``ks.verify.decisions``), as control-phase requests by tick."""
+
+    anchor_hash: str
+    by_tick: dict[int, list]
+
+    def at(self, tick: int) -> list:
+        return self.by_tick.get(tick, [])
+
+
+def _load_replay(options: RunOptions | None) -> _Replay | None:
+    """``--decisions SRC --decisions-head ANCHOR`` (R3, B3-20 library, wired in B3-30): refuse an unanchored, repro,
+    or non-verifying source (``DecisionsRefused`` -> ValueError); replay its ``ks.operator`` Controls (same op,
+    target, epoch, reason, auto, alert) and approvals (same args, read from the source's side store) at the tick
+    they landed in the source, so ``verify_replay`` compares them one to one."""
+    if options is None or options.decisions is None:
+        return None
+    from ks.contracts import CONTROL_TOOL, APPROVE_TOOL, CanonicalError, SideEntry, sidestore_relpath
+    from ks.gateway.system import SystemRequest
+    from ks.verify.decisions import DecisionsRefused, load_decisions
+
+    src = Path(options.decisions)
+    try:
+        anchor = RunAnchor.from_canonical(options.decisions_head.strip().encode()) \
+            if options.decisions_head is not None else None
+    except CanonicalError as e:
+        raise ValueError(f"--decisions-head is not a RunAnchor line: {e}") from None
+    try:
+        sd = load_decisions(src, anchor)
+    except DecisionsRefused as e:
+        raise ValueError(str(e)) from None
+    by_tick: dict[int, list] = {}
+    for rc in sd.controls:
+        c = rc.control
+
+        def build(gw, tick, seq, c=c):
+            return c.model_copy(update={"control_id": f"k-{seq:06d}"}).to_obj()
+        by_tick.setdefault(rc.tick, []).append(SystemRequest("ks.operator", CONTROL_TOOL, build=build, _n=rc.seq))
+    for ra in sd.approvals:
+        try:
+            args = SideEntry.from_canonical((src / sidestore_relpath(ra.args_hash)).read_bytes()).value
+        except (OSError, CanonicalError) as e:
+            raise ValueError(f"approval at seq {ra.seq}: args unreadable in the source side store ({e})") from None
+        by_tick.setdefault(ra.tick, []).append(SystemRequest("ks.operator", APPROVE_TOOL,
+                                                             build=lambda gw, tick, seq, a=args: a, _n=ra.seq))
+    for reqs in by_tick.values():
+        reqs.sort(key=lambda r: r._n)  # source record order (put() renumbers _n)
+    return _Replay(sd.anchor_hash, by_tick)
+
+
+def pause_ticks(options: RunOptions | None, ticks: int) -> frozenset[int]:
+    """Ticks the gateway pauses before: ``--pause-at`` as given (within the run), ``--step`` every tick after 0.
+    Pausing changes no record (ts_us is logical, ADR-02), so paused and unpaused runs give identical records."""
+    if options is None:
+        return frozenset()
+    if options.step:
+        return frozenset(range(1, ticks))
+    return frozenset(t for t in options.pause_at or () if t < ticks)
+
+
+def _keypress_resumes(wake) -> None:
+    """A daemon thread that resumes a paused run on every line typed at the terminal (Enter)."""
+    import threading
+
+    def loop() -> None:
+        for _line in sys.stdin:
+            wake.set()
+    threading.Thread(target=loop, name="ks-keypress", daemon=True).start()
 
 
 def _teardown(conns: list[AgentConn], witness: WitnessLink | None, uids: list[int]) -> None:

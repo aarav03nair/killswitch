@@ -1,0 +1,33 @@
+{
+  "id": "B3-48",
+  "title": "ks.recovery: rider/replan/flagged outbox items stay held, not cancelled (ADR-05 §6.1 amended)",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "vikram",
+  "reviewer": "maya",
+  "model": "opus",
+  "created_by": "maya",
+  "status": "todo",
+  "outcome": "cancel_outbox only for the suspect's own seed-action items and released items of non-re-run actions; other tainted items stay held and are listed",
+  "acceptance": [
+    "F2+x plan has 0 cancel_outbox for rider/replan/flagged items; Planned.held lists each (outbox_id, blocking flag or replan) and render prints one held line each",
+    "test_outbox_dispatched_is_flag_and_queued_is_cancelled updated: replanned comms item stays held; a culprit-created queued item is still cancelled; a released rider item is still cancelled",
+    "Hero F2+ golden unchanged; test_triage_conflict still exactly one write_write_conflict flag"
+  ],
+  "depends": [],
+  "deliverable": "src/ks/recovery/planner.py",
+  "summary": "ADR-05 §6.1 amended: cancel_outbox only for suspect's own window items (queued/held/released) and released items of non-re-run actions. Other tainted queued/held items (rider, replan, no_compensator, tainted_i2, compensate, no creating record) get no step and stay held. New Planned.held: tuple[Held(outbox_id, status, action, blocked_by)] (default ()). DryRun.held = planned.held + held_extra (items of re-runs the dry-run drops: rider/redacted_args; a released one there gets cancel_outbox via _refine). render prints one 'held outbox:<id> <status> <agent> seq N  no step, waits for <blocker>' line each. Plan shape unchanged (same step types/order; F2+x simply has 10 fewer cancel_outbox steps, now 5 steps: restore, 2 rerun, 2 flag). F2+x: 0 cancels, 10 held each blocked by flag(write_write_conflict suppliers:S-22), exactly 1 conflict flag; hero: 0 cancels, held=(), 0 flags, golden unchanged. Tests: test_planner::test_outbox_dispatched_is_flag_and_queued_is_cancelled rewritten (culprit queued item and released rider item cancelled; replanned comms item and held rider item held); test_conflict::test_f2plus_x_rider_items_stay_held_not_cancelled; test_rerun redacted-args test checks rider items held. Env 919 passed, 8 skipped.",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 06:22",
+      "who": "maya",
+      "msg": "opened"
+    },
+    {
+      "t": "20 Nov 06:39",
+      "who": "vikram",
+      "msg": "posted result summary"
+    }
+  ]
+}

@@ -265,3 +265,51 @@ def test_raw_sql_flip_of_a_held_item_is_held_again(tmp_path):
     g.open(2, AGENT_IDS)
     assert not _disp(g) and item(store).status == OutboxStatus.HELD and len(_holds(g)) == 1
 
+
+
+def _held_at_release(tmp_path):
+    tn = Taint()
+    g, keys, store = build(tmp_path, 0, tn)
+    g.open(1, AGENT_IDS)
+    g.admit("c-1", frame(keys, action="p1"))
+    tn.bad.add((IBAN, 1))
+    g.open(2, AGENT_IDS)  # release-phase hold: v2 by ks.control
+    assert item(store).status == OutboxStatus.HELD
+    tn.bad.clear()
+    return g, store
+
+
+def _roll_head_back(store, drop_row):
+    import json
+    v1 = store.history("outbox:ob-000001")[0]
+    val = store.value_at("outbox:ob-000001", 1)
+    if drop_row:
+        store.conn.execute("DROP TRIGGER versions_no_delete")
+        store.conn.execute("DELETE FROM versions WHERE obj='outbox:ob-000001' AND ver=2")
+    store.conn.execute("UPDATE objects SET head_ver=1, head_hash=?, head_value=? WHERE obj='outbox:ob-000001'",
+                       (v1.hash, json.dumps(val, sort_keys=True, separators=(",", ":"))))
+    store.conn.commit()
+
+
+def test_head_rolled_back_to_creation_dropping_the_hold_row_is_held_again(tmp_path):
+    g, store = _held_at_release(tmp_path)
+    _roll_head_back(store, drop_row=True)
+    n = len(_holds(g))
+    g.open(3, AGENT_IDS)
+    assert not _disp(g) and item(store).status == OutboxStatus.HELD and len(_holds(g)) == n + 1
+
+
+def test_head_rolled_back_keeping_the_hold_row_records_a_hold_not_a_crash(tmp_path):
+    g, store = _held_at_release(tmp_path)
+    _roll_head_back(store, drop_row=False)
+    n = len(_holds(g))
+    g.open(3, AGENT_IDS)
+    assert not _disp(g) and item(store).status == OutboxStatus.HELD and len(_holds(g)) == n + 1
+    assert store.conn.execute("SELECT MAX(ver) FROM versions WHERE obj='outbox:ob-000001'").fetchone()[0] == \
+        item_ver(store)
+    g.open(4, AGENT_IDS)
+    assert not _disp(g)
+
+
+def item_ver(store):
+    return store.get("outbox:ob-000001").ver

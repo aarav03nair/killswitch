@@ -9,7 +9,7 @@ import pytest
 
 from ks.contracts import ActionClass, ObjVer, OutboxItem, OutboxStatus, idempotency_key, value_hash
 from ks.gateway.dispatch import Execution, OutboxRequest
-from ks.recovery import (ArgsUnavailable, StaleRerun, ToolRerunner, args_from_mapping, args_from_sidestore, dry_run,
+from ks.recovery import (C_IDENTICAL, ArgsUnavailable, StaleRerun, ToolRerunner, args_from_mapping, args_from_sidestore, dry_run,
                          plan_recovery, render)
 from ks.state import StaleExpect
 from ks.taint import taint_from_alerts
@@ -96,15 +96,80 @@ def test_hero_rerun_set_and_plan_shape(hero):
     assert {x.obj for x in ops(p, "restore")} == {W.IBAN, W.S22}
     assert dr.reemitted == 0 and dr.stale is None
     assert all(o.error is None for o in dr.outcomes.values())
-    # the one flag (open, see test_hero_zero_flags): billing.issue_credit at h+4 is class C (the gateway's classify),
-    # tainted through its view reads, and has no compensator registered
-    assert [(f.reason, f.action.action_id) for f in ops(p, "flag")] == [("no_compensator", f"billing-t{W.H + 4}")]
+    # billing.issue_credit at h+4 is class C (the gateway's classify), view-tainted, no compensator: the planner
+    # flags it, the dry-run clears it (maya's ruling, narrowed A) -> rerun(c_rerun_identical), see test_hero_zero_flags
+    assert [(f.reason, f.action.action_id) for f in ops(dr.planned.plan, "flag")] == \
+        [("no_compensator", f"billing-t{W.H + 4}")]
 
 
-@pytest.mark.xfail(strict=True, reason="B3-24 open: class-C billing.issue_credit at h+4 is view-tainted with no "
-                                       "compensator -> flag(no_compensator); needs a decision (compensator or world)")
 def test_hero_zero_flags(hero):
-    assert ops(hero[3].plan, "flag") == []
+    """ADR-05 golden: 0 flags. The class-C credit's flag is dropped only because (1) its landed record has no outbox
+    item and (2) the simulated re-run's writes equal the landed ones by (obj, after.hash). It stays visible: a
+    rerun(c_rerun_identical) step in the plan, a ClassC verdict and a 'class C' line in the dry-run."""
+    w, s, digest, dr, _ = hero
+    p = dr.plan
+    assert ops(p, "flag") == []
+    c = w.log[(W.H + 4, "billing")]
+    assert c.action_class == ActionClass.C and c.outbox_ids == ()
+    (step,) = [x for x in ops(p, "rerun") if x.reason == C_IDENTICAL]
+    assert step.action.seq == c.seq and step.action.action_id == f"billing-t{W.H + 4}"
+    v = dr.class_c[c.seq]
+    assert v.cleared and v.outcome.changed == () and v.outcome.effects == () and v.outcome.error is None
+    text = render(dr)
+    assert f"class C      billing-t{W.H + 4} seq {c.seq} billing.issue_credit: re-run identical, no compensation " \
+           f"needed" in text
+    assert "flags 0" in text
+    # the credit the taint touched is the credit the honest world issues
+    for wr in c.write_set:
+        assert _final(w, dr)[wr.obj] == s.store.get(wr.obj).hash
+    # rerun steps stay in seq order (the cleared step sits at its seq position)
+    seqs = [x.action.seq for x in ops(p, "rerun")]
+    assert seqs == sorted(seqs)
+
+
+class _CreditDiffers:
+    """Dispatcher that changes what billing.issue_credit writes (or adds an outbox request): negative tests."""
+
+    def __init__(self, mode):
+        self.inner, self.mode = WorldDispatcher(), mode
+
+    def classify(self, env):
+        return self.inner.classify(env)
+
+    def execute(self, call, txn):
+        if call.tool == "billing.issue_credit":
+            if self.mode == "amount":
+                call = type(call)(**{**vars(call), "args": {**call.args, "amount": call.args["amount"] + 1}})
+            elif self.mode == "outbox":
+                ex = self.inner.execute(call, txn)
+                return Execution(ex.result, ex.read_set, ex.write_set,
+                                 (OutboxRequest("email", ActionClass.I1, {"credit": call.args["id"]}),))
+        return self.inner.execute(call, txn)
+
+
+@pytest.mark.parametrize("mode,why", [("amount", "re-run writes differ: credits:"),
+                                      ("outbox", "re-run makes an outbox request")])
+def test_class_c_rerun_that_differs_keeps_no_compensator_flag(hero, mode, why):
+    """Narrowed A, negative: a class-C re-run whose writes differ (or that asks for an external effect) keeps
+    flag(no_compensator); its simulated writes are rolled back (no diff entry, no rerun step) and the dry-run says why."""
+    w, s, digest, _, _ = hero
+    c = w.log[(W.H + 4, "billing")]
+    rr = ToolRerunner(_CreditDiffers(mode), args_from_sidestore(w.rundir.path))
+    d = dry_run(w.store, _plan(w), rerunner=rr)
+    assert [(f.reason, f.action.seq) for f in ops(d.plan, "flag")] == [("no_compensator", c.seq)]
+    assert not [x for x in ops(d.plan, "rerun") if x.reason == C_IDENTICAL or x.action.seq == c.seq]
+    v = d.class_c[c.seq]
+    assert not v.cleared and why in v.why
+    assert c.seq not in d.outcomes and not {wr.obj for wr in c.write_set} & {e.obj for e in d.plan.diff}
+    assert f"flag(no_compensator) kept: {why}" in render(d) and "flags 1" in render(d)
+    assert w.store.state_digest() == digest
+
+
+def test_class_c_without_rerunner_keeps_flag(hero):
+    """No simulation, no proof: the planner's flag stands."""
+    w = hero[0]
+    d = dry_run(w.store, _plan(w))
+    assert [f.reason for f in ops(d.plan, "flag")] == ["no_compensator"] and d.class_c == {}
 
 
 def test_hero_payment_same_outbox_id_v_plus_1_back_on_hold(hero):
@@ -176,7 +241,7 @@ def test_hero_triage_kept_and_lanes(hero):
     w, s, digest, dr, _ = hero
     assert [(k.obj, k.author) for k in dr.planned.kept] == [("suppliers:S-17", "triage")]
     text = render(dr)
-    assert "kept         suppliers:S-17" in text and "reemitted 0" in text and "flags 1" in text
+    assert "kept         suppliers:S-17" in text and "reemitted 0" in text and "flags 0" in text
     assert "pending simulation" not in text
 
 
@@ -265,6 +330,13 @@ def test_redacted_args_become_flag_and_readers_ride(hero):
     assert w.log[(W.H + 2, "payments")].seq in rode and w.log[(W.H + 2, "comms")].seq in rode
     assert not rode & {x.action.seq for x in ops(d.plan, "rerun")}
     assert [x.n for x in d.plan.steps] == list(range(len(d.plan.steps)))
+    # B3-48 (ADR-05 §6.1 amended): the riders' held items get no cancel_outbox; they stay held and are listed
+    assert ops(d.plan, "cancel_outbox") == []
+    pay = w.log[(W.H + 2, "payments")]
+    want = {oid for q in rode for oid in d.planned.rerun_records[q].outbox_ids}
+    assert set(pay.outbox_ids) <= want and {h.outbox_id for h in d.held} == want
+    assert all(h.blocked_by[0].startswith("rides: blocked by ") for h in d.held if h.action.seq != inv.seq)
+    assert sum(1 for x in render(d).splitlines() if x.startswith("held ")) == len(want)
 
 
 def test_args_from_sidestore_rehashes(tmp_path, hero):

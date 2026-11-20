@@ -237,7 +237,8 @@ class Gateway:
             return Reason.REVOKED_ANCESTOR
         return None
 
-    def _execute(self, conn_id: str, env: Envelope, header: EnvelopeHeader, ehash: str, cls: ActionClass) -> Admission:
+    def _execute(self, conn_id: str, env: Envelope, header: EnvelopeHeader, ehash: str, cls: ActionClass, *,
+                 reexec_of: int | None = None) -> Admission:
         """Steps 13-14. ``seq`` is taken first (``recorder.begin``), then ``BEGIN IMMEDIATE``, then the control
         re-read (D5), then the tool runs, then COMMIT, then the record is appended under that seq. Any failure
         before COMMIT rolls the state txn back and releases the seq, so no seq is lost and no write is orphaned."""
@@ -252,7 +253,8 @@ class Gateway:
             if why is not None:  # the suspend committed before this txn: nothing executes (RT5)
                 if store is not None:
                     store.conn.execute("ROLLBACK")
-                return self._done(conn_id, header, ehash, True, Decision.DENY, why, cls, rtxn=rtxn)
+                return self._done(conn_id, header, ehash, True, Decision.DENY, why, cls, rtxn=rtxn,
+                                  reexec_of=reexec_of)
             try:
                 ex = self._run_tool(env, txn)
                 read_set, write_set = self._sets(ex, txn, env.agent_id)
@@ -268,7 +270,8 @@ class Gateway:
                 # effect the gateway refuses is a recorded deny; the seq is consumed by that record (no gap)
                 if store is not None and store.conn.in_transaction:
                     store.conn.execute("ROLLBACK")
-                return self._done(conn_id, header, ehash, True, Decision.DENY, Reason.TOOL_ERROR, cls, rtxn=rtxn)
+                return self._done(conn_id, header, ehash, True, Decision.DENY, Reason.TOOL_ERROR, cls, rtxn=rtxn,
+                                  reexec_of=reexec_of)
             self.recorder.put_side(SideDomain.RESULT, rh, ex.result)
             if store is not None:
                 store.conn.execute("COMMIT")
@@ -278,7 +281,8 @@ class Gateway:
             rtxn.rollback()
             raise
         adm = self._done(conn_id, header, ehash, True, Decision.EXEC, Reason.OK, cls, result=ex.result,
-                         result_hash=rh, read_set=read_set, write_set=write_set, outbox_ids=oids, rtxn=rtxn)
+                         result_hash=rh, read_set=read_set, write_set=write_set, outbox_ids=oids, rtxn=rtxn,
+                         reexec_of=reexec_of)
         for oid in oids:  # ADR-03 p.lineage_hold / ADR-04 s5: a tainted lineage at creation is a hold record
             d = self.outbox.get(oid)
             why = self.outbox.hold_reason(d) if d.item.status == OutboxStatus.QUEUED else None
@@ -426,7 +430,7 @@ class Gateway:
               decision: Decision, reason: Reason, cls: ActionClass, *, result: Any = None,
               result_hash: str | None = None, read_set: tuple = (), write_set: tuple = (), rtxn=None,
               tick: int | None = None, policy_rule: str | None = None, outbox_ids: tuple = (),
-              control: Any = None) -> Admission:
+              control: Any = None, reexec_of: int | None = None) -> Admission:
         c = self.config
         if conn_id == SYSTEM_CONN and (header is None or header.agent_id not in SYSTEM_PRINCIPALS
                                        or (sig_ok and not self._sig_ok(SYSTEM_CONN, header))):
@@ -436,7 +440,7 @@ class Gateway:
             tick=tick, ts_us=c.start_ts_us + tick * c.tick_us + self._slot, conn_id=conn_id,
             envelope=header, envelope_hash=envelope_hash, sig_ok=sig_ok, decision=decision, reason=reason,
             policy_rule=policy_rule, action_class=cls, read_set=read_set, write_set=write_set, outbox_ids=outbox_ids,
-            result_hash=result_hash, control=control, reexec_of=None)
+            result_hash=result_hash, control=control, reexec_of=reexec_of)
         self._seq_tick[rec.seq] = tick
         self._slot += 1
         reply = ReplyFrame(tick=tick, seq=rec.seq, record_id=rec.record_id, decision=decision, reason=reason,
