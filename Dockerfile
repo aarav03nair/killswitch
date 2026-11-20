@@ -20,5 +20,9 @@ RUN pip install ".[test]" \
 # processes, clean env, path-less socketpairs. If per-agent uids fail, per-agent attribution is void
 # for that run (THREAT-MODEL). The container is the deployment unit; run with --network none.
 USER root
+# S4-27: live run dirs go under /work/runs on the container's own filesystem (overlay), never a host bind mount:
+# virtiofs (OrbStack, Docker Desktop) ignores file permissions, which would void the per-agent uid isolation.
+# 0711 so agent uids can traverse to their own paths; the run dir itself is created 0700 by the runtime.
+RUN mkdir -p /work/runs && chmod 711 /work /work/runs
 VOLUME ["/app/runs"]
 CMD ["ks", "--help"]

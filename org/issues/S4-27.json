@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "panel",
-  "status": "todo",
+  "status": "done",
   "outcome": "Per-agent uid isolation of the run dir holds on the README demo path",
   "acceptance": [
     "Live runs write the run dir on container-internal fs (e.g. /run/ks) and copy it to ./runs after the run, or an equivalent that a rogue uid cannot read or write",
@@ -16,13 +16,53 @@
   ],
   "depends": [],
   "deliverable": "scripts/demo.sh",
-  "summary": "",
-  "review": "",
+  "summary": "Review fixes: RT16 now runs under /work/runs, adds witness-heads append and another run's sidestore read, plus a host static check that demo.sh/make smoke use --out /work/runs with no -v; RT1a walk includes /work; Dockerfile comment fixed. Passes in container.",
+  "review": "[panel · changes] Panel gates this (listed reviewer kabir busy). FIX HOLDS: fresh copy, killswitch:panel. Repeated M2 rogue (docs uid 60005) on /work/runs/r1 with a second run /work/runs/other in the same container: state.db sqlite rw + append, record.jsonl read/append, witness-heads append, keys.json, sidestore, listing /work, /work/runs, run dirs, creating files in /work/runs and /app/runs: all PermissionError/OperationalError; run anchored. Only mount in the demo container is Docker's anonymous /app/runs volume (empty, not writable by the rogue); host ./runs is not mounted during the run. scripts/demo.sh end to end: verify OK seq 223 anchored, per_agent_uid, score R 0/9 C 0/265. Host-native ks verify --head on the docker-cp'd copy: exit 0 anchored; witness files present; controls: edited line -> TAMPER seq 100, witness removed -> WITNESS. RT16+RT1 pass in the image. CHANGES (small, test-only): (1) RT16 runs under /tmp (base fixture), not /work/runs, so reverting demo.sh/Makefile to the bind mount keeps it green; run it under /work/runs and add a static check that demo.sh and Makefile smoke use --out /work/runs and no -v on the ks run line. (2) Acceptance 2 names witness-heads and other runs' side store; RT16 tests neither; add both (my rogue at scratch atk/rogue.py shows the two lines). (3) RT1a walk list still omits /work. Nit: Dockerfile comment says run dir is root 0700; it is 0711 (children are 0600/0700, so no leak).\n\n[panel · done] Re-review after fixes, image killswitch:panel, tree has nisha/vikram WIP. RT16 now runs under /work/runs (asserts non-virtiofs fstype); rogue denied state.db, record, side store, keys, witness-heads append, other run's side store; files exist; anchored per_agent_uid. RT16+RT1 pass in container (3 passed, static check skips in image). make smoke: smoke OK anchored per_agent_uid. scripts/demo.sh (seed 2, resolver on): demo OK anchored, isolation=per_agent_uid (acceptance 3). Scratch-copy mutations of the static check: revert demo.sh to RUN=/app/runs + -v bind -> FAIL; -v runs:/work/runs on run line -> FAIL; Makefile smoke reverted to -v + /app/runs -> FAIL; smoke -v /work/runs -> FAIL. NIT (not blocking, open follow-up if wanted): a '--mount type=bind,...' on the demo run line passes the static check; also reject '--mount'. Full suites: host 1135 passed 14 skipped; container 1146 passed 1 FAILED tests/bench/test_bench.py::test_baselines_scored_by_same_scorer (baseline cells differ up to recovery). Not in S4-27 files: attribute to bench/runner + resolver WIP (nisha/vikram); passes on host. Also noted: demo score now C 3/144 vs demo-sim 0/265, same WIP, not S4-27.",
   "log": [
     {
       "t": "21 Nov 00:52",
       "who": "panel",
       "msg": "opened"
+    },
+    {
+      "t": "21 Nov 01:01",
+      "who": "ishaan",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "21 Nov 01:17",
+      "who": "ishaan",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 01:17",
+      "who": "ishaan",
+      "msg": "→ in_review: done"
+    },
+    {
+      "t": "21 Nov 01:21",
+      "who": "panel",
+      "msg": "review: changes"
+    },
+    {
+      "t": "21 Nov 01:24",
+      "who": "ishaan",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 01:24",
+      "who": "ishaan",
+      "msg": "→ in_review: fixes"
+    },
+    {
+      "t": "21 Nov 05:01",
+      "who": "panel",
+      "msg": "review: done"
+    },
+    {
+      "t": "21 Nov 05:01",
+      "who": "panel",
+      "msg": "→ done: panel gate passed"
     }
   ]
 }

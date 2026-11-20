@@ -7,7 +7,7 @@
   "reviewer": "panel",
   "model": "opus",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "done",
   "outcome": "Every defence has a test that fails when it is disabled",
   "acceptance": [
     "Script disables each defence (epoch fence, pii_egress, dispatcher re-check, outbox provenance, witness ack sig, deny-list in txn, SO_PEERCRED); each kills >=1 tests/redteam test in the container; table in REDTEAM-S4.md"
@@ -16,8 +16,8 @@
     "S4-01"
   ],
   "deliverable": "tests/redteam/",
-  "summary": "",
-  "review": "",
+  "summary": "tests/redteam/mutation_gate.py + make mutation-gate: snapshot (never main tree), image killswitch:kabir, baseline must be green, 12 mutants (epoch fence live/audit x3, pii_egress, dispatcher re-check, outbox provenance, witness ack sig + pushed-head, deny-list in txn, conn deny-list, SO_PEERCRED, recovery-apply recheck). Container: 12/12 killed, baseline 97/97, 0 skipped. Gaps found and closed: SO_PEERCRED survived (new RT3d test_rt03d_peercred.py), recheck only unit-tested (new RT15 test_rt15_stale_apply.py). Table: org/reports/REDTEAM-S4.md. Finding: HEAD 752e971 red: score.py reads RunConfig.resolver (uncommitted S4-13) -> 11 RT tests fail from a clone. Native suite 1131 passed, 13 skipped.",
+  "review": "[panel · done] Panel reran the gate independently: IMAGE=killswitch:panel-mg tests/redteam/mutation_gate.py --jobs 4 on a working-tree snapshot (nisha/vikram WIP in tree). Baseline rc 0, 98 tests, 0 failed, 1 skipped (RT16 host-only static check, added by S4-27 after kabir's 97/97 run; expected). 12/12 killed, exit 0; per-mutant fail counts match REDTEAM-S4 exactly (M01 3, M02 9, M03 2, M04 7, M05 6, M06 1, M07 4, M08 2, M09 4, M10 2, M11 1, M12 2). Read the mutants: each removes the actual guard (not a decoy); the old text must occur the stated number of times and the file must compile, so a stale mutant fails loudly; the kill rule counts only baseline-passing tests. RT3d really removes layer 1 (dir 0711, sock 0666, connect asserted) and is the only killer of M11. RT15 (in process) kills M12 through the rerun path; the report says honestly that a live ks run never reaches this race. Agent-side code not mutated is stated as a scope limit. NITS (non-blocking): (1) REDTEAM-S4 Finding 1 'HEAD is red' is stale: fixed in 5449aae (S4-26); add a one-line 'resolved' note. (2) Update the '0 skipped' line to mention the RT16 host-only skip. Separately, a full container suite run today has 1 failure, tests/bench/test_bench.py::test_baselines_scored_by_same_scorer, which is outside the red team and this gate (bench/resolver WIP).",
   "log": [
     {
       "t": "20 Nov 17:06",
@@ -28,6 +28,31 @@
       "t": "21 Nov 00:36",
       "who": "pmo",
       "msg": "→ todo: From panel's S4-01 review: include the recovery-apply staleness recheck (src/ks/runtime/recover.py) in the mutation gate: today only a unit test catches disabling it, no red-team test."
+    },
+    {
+      "t": "21 Nov 00:36",
+      "who": "kabir",
+      "msg": "→ in_progress: building mutation gate on scratch copy"
+    },
+    {
+      "t": "21 Nov 01:32",
+      "who": "kabir",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 01:32",
+      "who": "kabir",
+      "msg": "→ in_review: 12/12 mutants killed in container; RT3d + RT15 added; REDTEAM-S4.md; HEAD-red finding for panel/vikram"
+    },
+    {
+      "t": "21 Nov 05:17",
+      "who": "panel",
+      "msg": "review: done"
+    },
+    {
+      "t": "21 Nov 05:17",
+      "who": "panel",
+      "msg": "→ done: panel gate passed"
     }
   ]
 }

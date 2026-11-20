@@ -112,10 +112,14 @@ Env knobs for the demo: `SEED`, `TICKS`, `RUN_ID`, `KS_IMAGE` (default `killswit
 
 - **`docker daemon not running`** (exit 69): start OrbStack (or Docker Desktop) and retry; check
   with `docker info`. `docker not found`: add `~/.orbstack/bin` to PATH or reopen the terminal.
-- **Bind mount / virtiofs errors** (chown or witness write fails on `./runs`): `src/ks/contracts/rundir.py`
-  chowns `witness.jsonl` and `witness-heads/` to uid 60000. Tested on OrbStack (arm64, 19-20 Nov 2026).
-  Docker Desktop (virtiofs) is not yet tested; if `make smoke` fails there, use a named volume in
-  place of `./runs`.
+- **Why the run is not on `./runs` while it runs** (S4-27): OrbStack and Docker Desktop bind mounts (virtiofs)
+  ignore file permissions, which would let a rogue agent uid write `state.db`/`record.jsonl` and read the side
+  store. So `make demo` and `make smoke` keep the live run dir at `/work/runs/<id>` on the container's own
+  filesystem (permissions enforced), and `docker cp` it to `./runs/<id>` only after the run ends. `ks verify`,
+  `score` and `console` then read that copy. The copy is evidence for audit, not a live run: `ks recover`/`contain`
+  need the container while it is alive (the demo script drives them). Check: `tests/redteam/test_rt16_demo_path_isolation.py`.
+  If you run `ks run` by hand in a container, use `--out /work/runs/<id>`, not a bind-mounted path.
+
 - **`processes already run under uids 60000..` (K2) refusal**: another `ks run` or test container is
   still running. `docker ps`, stop it (`docker rm -f <name>`), and run one at a time. Do not run
   `make test` while `make demo` runs.
