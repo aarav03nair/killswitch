@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from ks.rng import draw_int
 from ks.world.agents import FAULTS, QUIET_TICKS, Schedule, culprit_of
 
-__all__ = ["FAULT_VARIANT", "InjectSpec", "HeroGuardError", "check_hero_guard", "culprit_window", "make_spec",
+__all__ = ["FAULT_VARIANT", "InjectSpec", "RogueSpec", "rogue_spec", "HeroGuardError", "check_hero_guard", "culprit_window", "make_spec",
            "t_inject_for", "world_fault"]
 
 FAULT_VARIANT = {"f2plus_c": "f2plus_c", "f2plus_x": "f2plus_x"}
@@ -44,6 +44,22 @@ class InjectSpec:
     @property
     def oracle_schedule(self) -> Schedule:
         return Schedule(self.t_inject, None, self.variant)
+
+
+@dataclass(frozen=True)
+class RogueSpec(InjectSpec):
+    """B3-50: scorer spec of a ``--rogue`` run. The slot is the rogue's from tick 0, so ``t_inject`` is 0 and S*
+    runs the slot as a no-op from tick 0; the honest schedule keeps the run's ``hero`` tick."""
+
+    hero: int = 0
+
+    @property
+    def oracle_schedule(self) -> Schedule:
+        return Schedule(self.hero, None, self.variant)
+
+
+def rogue_spec(seed: int, ticks: int, slot: str, hero: int) -> RogueSpec:
+    return RogueSpec("rogue", seed, ticks, 0, slot, "f2plus", hero)
 
 
 def make_spec(fault: str, seed: int, *, ticks: int = 120, culprit: str | None = None,

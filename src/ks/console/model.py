@@ -9,6 +9,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from ks.contracts.rundir import NO_LINEAGE_HOLD_BANNER
+
 __all__ = ["BEATS", "BEAT_SECONDS", "HERO_FIXTURE", "LABELS", "build_model", "label"]
 
 # (id, title, TERMS-wording subtitle). Order is the finale script (zoya §4, ADR-07 §4).
@@ -43,21 +45,111 @@ def label(obj: str) -> str:
     return obj
 
 
+def fmt_metric(v) -> str:
+    """One score.json value as text. ``{"unavailable": why}`` is shown as unavailable, never 0 (ADR-06 §3);
+    ``None`` means it never happened; ``{"n","d"}`` is a ratio."""
+    if isinstance(v, dict):
+        if "unavailable" in v:
+            return f"unavailable ({v['unavailable']})"
+        if set(v) == {"n", "d"}:
+            return f"{v['n']}/{v['d']}"
+        return ", ".join(f"{k} {fmt_metric(x)}" for k, x in v.items())
+    if v is None:
+        return "never happened"
+    if isinstance(v, bool):
+        return "yes" if v else "no"
+    return str(v)
+
+
+SCORE_ROWS = (("tti_detect", "time to identify: detect (ticks)"), ("tti_attribute", "time to identify: attribute (ticks)"),
+              ("ttc", "time to contain (ticks)"), ("R", "residual damage R"), ("C", "collateral loss C"),
+              ("irreversible_tainted_released", "irreversible tainted effects released"), ("clean", "clean recovery"))
+BASELINE_COLUMNS = ("snapshot", "revert_culprit_only")
+
+
+def _scorecard(score, base: dict):
+    """TTI/TTC/R/C of this run next to each baseline, straight from score.json files (nothing computed here).
+    A missing file is "not run"; a metric key a file lacks is "unavailable (not in score.json)"."""
+    if not isinstance(score, dict):
+        return None
+    cols = [("system", score)] + [(n, base.get(n)) for n in BASELINE_COLUMNS] + \
+           [(n, b) for n, b in base.items() if n not in BASELINE_COLUMNS]
+    rows = []
+    for k, name in SCORE_ROWS:
+        rows.append({"key": k, "label": name, "cells": [
+            "not run" if c is None else (fmt_metric(c[k]) if k in c else "unavailable (not in score.json)") for _, c in cols]})
+    hold = score.get("hold")
+    irr, r = score.get("irreversible_tainted_released"), score.get("R")
+    note = None
+    if hold == 0:
+        if isinstance(irr, int) and not isinstance(irr, bool) and irr > 0:
+            note = (f"H=0 (no lineage hold): {irr} tainted irreversible effect(s) escaped, counted as residual damage "
+                    f"R = {fmt_metric(r)}")
+        else:
+            note = f"H=0 (no lineage hold): residual damage R = {fmt_metric(r)}; irreversible tainted effects released = {fmt_metric(irr)}"
+    return {"columns": [n for n, _ in cols], "rows": rows, "hold": hold, "hold_note": note,
+            "oracle_assisted": [n for n, c in cols if isinstance(c, dict) and c.get("baseline_oracle_assisted")]}
+
+
+def _plan_view(plan: dict, recs: list[dict]) -> dict:
+    """Plan file as the dry-run wrote it: one line per step (restore/rerun/cancel/flag/replan), the hash-only diff,
+    t0 and its delta, and how many ks.recover.<op> records the run holds for it (0 = nothing applied)."""
+    steps = []
+    for s in plan.get("steps") or []:
+        op, a = s["op"], s.get("action") or {}
+        if op == "restore":
+            txt = f"restore {label(s['obj'])} ({s['obj']}) to " + ("deleted (tombstone)" if s.get("to") is None else f"v{s['to']['ver']}")
+        elif op in ("rerun", "replan"):
+            txt = f"{op} {a.get('agent_id')} action {a.get('action_id')} (seq {a.get('seq')})"
+        elif op == "cancel_outbox":
+            txt = f"cancel outbox {s['outbox_id']}"
+        elif op == "flag":
+            txt = "flag for a person: " + (s.get("obj") or (f"action {a.get('action_id')}" if a else "?"))
+        else:
+            txt = f"{op} {a.get('action_id', '')}".strip()
+        steps.append({"n": s["n"], "op": op, "reason": s.get("reason"), "text": txt})
+    diff = [{"obj": d["obj"], "label": label(d["obj"]), "current": (d.get("current") or {}).get("ver"),
+             "planned_hash": str(d.get("planned_hash"))[:16]} for d in plan.get("diff") or []]
+    lit, t0 = plan.get("t0_seq_est_literal"), plan.get("t0_seq_est")
+    applied = sum(1 for r in recs if (r["tool"] or "").startswith("ks.recover.") and r["decision"] == "exec")
+    return {"plan_id": plan.get("plan_id"), "steps": steps, "diff": diff, "t0": t0, "t0_literal": lit,
+            "t0_delta": None if lit is None or t0 is None else t0 - lit, "applied_records": applied}
+
+
 def _jl(p: Path) -> list[dict]:
     if not p.is_file():
         return []
-    return [json.loads(x) for x in p.read_text().splitlines() if x.strip()]
+    out = []
+    try:
+        lines = p.read_text(errors="replace").splitlines()
+    except OSError:
+        return []
+    for x in lines:  # malformed lines are skipped: verify names the first bad one, the page shows the rest
+        try:
+            o = json.loads(x) if x.strip() else None
+        except ValueError:
+            continue
+        if isinstance(o, dict):
+            out.append(o)
+    return out
 
 
 def _jf(p: Path):
-    return json.loads(p.read_text()) if p.is_file() else None
+    """Parsed JSON file, or None if absent or malformed (rendered as not run / pending, never a crash)."""
+    try:
+        return json.loads(p.read_text()) if p.is_file() else None
+    except (ValueError, OSError):
+        return None
 
 
 def _verify(run: Path) -> dict:
     from ks.verify import verify
-    rep = verify(run, None, log=lambda s: None)
-    d = json.loads(rep.to_canonical())
-    return d
+    try:
+        rep = verify(run, None, log=lambda s: None)
+        return json.loads(rep.to_canonical())
+    except Exception as e:  # noqa: BLE001 - verify must never take the page down
+        return {"ok": False, "reason": "parse_error", "first_bad": None, "last_witnessed_seq": None,
+                "anchored": False, "unanchored_reason": "verify_crashed", "detail": str(e)[:200]}
 
 
 def _side(run: Path, env: dict):
@@ -185,10 +277,17 @@ def build_model(run) -> dict:
     cfg = _jf(run / "config.json") or {}
     verify = _verify(run)
     raw = _jl(run / "record.jsonl")
-    recs = [_rec(r) for r in raw]
+    recs = []
+    for r in raw:
+        try:
+            recs.append(_rec(r))
+        except Exception:  # noqa: BLE001 - record missing required fields: skipped, verify reports it
+            continue
+    raw = [r for r in raw if isinstance(r.get("seq"), int)]
     lw = verify.get("last_witnessed_seq")
     for r in recs:
-        r["unwitnessed"] = lw is None or r["seq"] > lw
+        # a failed verify stops at first_bad: last_witnessed_seq is then where verify stopped, not what the witness signed
+        r["unwitnessed"] = bool(verify.get("ok")) and (lw is None or r["seq"] > lw)
     alerts = _chained_alerts(run, raw)
     appr = _approvals(run, raw)
     plans = [_jf(p) for p in sorted((run / "plans").glob("*.json"))] if (run / "plans").is_dir() else []
@@ -217,15 +316,18 @@ def build_model(run) -> dict:
         banners.append({"kind": "isolation", "text": "DEGRADED ISOLATION: per-agent attribution is VOID for this run"})
     if cfg.get("key_mode") == "repro":
         banners.append({"kind": "repro", "text": "NOT A SECURITY RUN: repro keys are never anchored; determinism check only"})
+    if cfg.get("lineage_hold", True) is False or verify.get("lineage_hold", True) is False:  # contracts 1.6, B3-51
+        banners.append({"kind": "contrast", "text": NO_LINEAGE_HOLD_BANNER})
     if not verify["ok"]:
         banners.append({"kind": "verify", "text": f"VERIFY FAILED: {verify['reason']}"
-                        + (f" at seq {verify['first_bad']}" if verify.get("first_bad") else "")})
-    m = {"run_id": cfg.get("run_id"), "config": {k: cfg.get(k) for k in (
+                        + (f" at seq {verify['first_bad']}" if verify.get("first_bad") is not None else "")})
+    m = {"run_id": cfg.get("run_id"), "config": {**{k: cfg.get(k) for k in (
             "run_id", "scenario", "seed", "ticks", "fault", "culprit", "fault_tick", "hold_window_ticks",
-            "isolation", "key_mode", "agents", "contracts_version")},
+            "isolation", "key_mode", "agents", "contracts_version")}, "lineage_hold": cfg.get("lineage_hold", True)},
          "verify": verify, "banners": banners, "records": recs, "alerts": alerts, "plans": plans,
          "approvals": [a["seq"] for a in appr], "score": score, "baselines": base,
          "ticks": [ticks[k] for k in sorted(ticks)], "held": held, "controls": controls,
+         "scorecard": _scorecard(score, base),
          "beat_seconds": list(BEAT_SECONDS), "hero_line": HERO_LINE, "fixture": HERO_FIXTURE}
     m["beats"] = _beats(m, suspends, held)
     return m
@@ -294,7 +396,12 @@ def _beats(m: dict, suspends: list[dict], held: list[dict]) -> list[dict]:
                  "kept: " + ("; ".join(ln["kept"]) or "none"), "independent: " + ", ".join(ln["independent"]),
                  f"flag items: {ln['flags']}",
                  ("replan queue: approved" if appr else "replan queue: awaiting approval") if ln["replan"] else "replan queue: empty"]
-        out.append({"id": "recover", "status": live, "tick": None, "seq": p["as_of_seq"], "lines": lines, "lanes": ln})
+        pv = _plan_view(p, recs)
+        lines.append(f"t0 estimate: seq {pv['t0']}; literal walk: " + ("not set" if pv["t0_literal"] is None else f"seq {pv['t0_literal']}")
+                     + ("" if not pv["t0_delta"] else f"; delta {pv['t0_delta']}: suspect writes reached only through view self-reads are not in the seed, widen it"))
+        lines.append(f"applied: {pv['applied_records']} ks.recover record(s) in the record" if pv["applied_records"] else "applied: nothing yet")
+        out.append({"id": "recover", "status": live, "tick": None, "seq": p["as_of_seq"], "lines": lines, "lanes": ln,
+                    "plan": pv, "approved": bool(appr)})
     else:
         f = HERO_FIXTURE["lanes"]
         out.append({"id": "recover", "status": "pending", "tick": None, "seq": None,
@@ -308,12 +415,18 @@ def _beats(m: dict, suspends: list[dict], held: list[dict]) -> list[dict]:
                 b["lines"].insert(0, "UNTRUSTED: verify failed, this beat is read from a record that did not verify")
     # 5 audit
     lw = v["last_witnessed_seq"]
-    lines = [("verify OK" if v["ok"] else f"verify FAILED: {v['reason']}" + (f" at first bad seq {v['first_bad']}" if v.get("first_bad") else ""))
-             + f"; tamper-evident up to the last witnessed head (seq {lw})",
+    if v["ok"]:
+        head = f"verify OK; tamper-evident up to the last witnessed head (seq {lw})"
+    else:
+        fb = v.get("first_bad")
+        head = (f"verify FAILED: {v['reason']}" + (f" at first bad seq {fb}" if fb is not None else "")
+                + "; verify stopped there, later records were not checked (no witnessed-head claim is made)")
+    lines = [head,
              "anchored: yes" if v["anchored"] else f"not anchored ({v['unanchored_reason']}); live proof: ks verify RUN --head ANCHOR",
              "build-time result: stale until the page is rebuilt"]
     n_unw = sum(1 for r in recs if r.get("unwitnessed"))
-    if n_unw:
-        lines.append(f"{n_unw} record(s) after the last witnessed head are unwitnessed")
-    out.append({"id": "audit", "status": "live" if v["ok"] else "fail", "tick": None, "seq": lw, "lines": lines})
+    if v["ok"] and n_unw:
+        lines.append(f"{n_unw} record(s) after the last witnessed head (seq {lw}) are unwitnessed")
+    out.append({"id": "audit", "status": "live" if v["ok"] else "fail", "tick": None, "seq": lw, "lines": lines,
+                "first_bad": v.get("first_bad"), "reason": v.get("reason")})
     return out

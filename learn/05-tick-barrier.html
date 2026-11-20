@@ -1,0 +1,43 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>5. Tick barrier</title><link rel="stylesheet" href="assets/style.css"></head>
+<body><nav id="side"></nav><main>
+<h1>5. The tick barrier (runtime)</h1>
+<p class="lead"><code>runtime/</code> is the engine room. It starts everything, moves time forward in lockstep, and never decides anything about the content of a request.</p>
+
+<h2>Why ticks?</h2>
+<p>Real agents run at different speeds, so the order of actions would depend on timing. That would make runs impossible to replay and the evidence hard to reason about. Instead, the gateway acts as a <b>scheduler</b>: nothing happens between ticks, and within a tick the gateway sorts frames by agent id. Same seed, same behaviour, same bytes.</p>
+
+<h2>The loop (<code>runtime/barrier.py</code>)</h2>
+<div class="diagram">open       Gateway.open(tick, agents) -> TickFrame per agent -> send
+collect    one frame per connection: FIFO reads, deadline, and signer requests handled meanwhile
+decide     Gateway.tick(tick, [InFrame]) -> [(conn_id, ReplyFrame)]
+reply      send replies
+cleanup    K-miss / oversize close
+witness    push (seq, head, tick) to the witness, wait for the signed checkpoint</div>
+<div class="box key"><b class="t">The boundary</b>The barrier only looks at frame <b>length and terminator</b>, never inside a frame. Everything that decides (control, view, admission, dispatch, monitor) lives behind <code>Gateway.open</code> and <code>Gateway.tick</code>. This keeps I/O bugs out of the decision logic.</div>
+
+<h2>Misbehaving connections</h2>
+<table>
+<tr><th>Situation</th><th>What happens</th></tr>
+<tr><td>Agent misses the deadline</td><td>After <code>MAX_MISSES = 3</code> in a row the connection gets EOF. This is an anomaly, <b>never a suspend</b>.</td></tr>
+<tr><td>Oversize frame</td><td>The connection is closed (max frame size is a contract constant).</td></tr>
+<tr><td>Outbound queue over 64 KB</td><td>EOF (<code>OUT_QUEUE_CAP</code>).</td></tr>
+<tr><td>8 recorded denials in one tick</td><td>The gateway flood-suspends the <b>connection</b> (<code>FLOOD_K = 8</code>), recording one control. Extra frames are dropped and counted.</td></tr>
+<tr><td>Witness doesn't acknowledge</td><td>A stall. The monitor has a <code>witness_stall</code> detector.</td></tr>
+</table>
+
+<h2>The other runtime files</h2>
+<table>
+<tr><th>File</th><th>Job</th></tr>
+<tr><td><code>run.py</code></td><td>The wiring point for <code>ks run</code>: builds config and keys, spawns the witness and agents, builds the Gateway with its store, policy, control and outbox, drives the barrier, tears down, prints the <b>RunAnchor</b>. It is the only place <code>world</code> is connected to <code>gateway</code>.</td></tr>
+<tr><td><code>setup.py</code></td><td>Resolves the scenario (skeleton or the 10-agent world), picks the dispatcher, checks isolation, refuses an existing run dir.</td></tr>
+<tr><td><code>options.py</code></td><td>The run options (agents, ticks, seed, key mode, deadline, pause points, fault, rogue).</td></tr>
+<tr><td><code>operator.py</code></td><td>A local socket for the human operator, authenticated by peer credentials. Turns requests (suspend, release, unhold, resume) into <code>ks.operator</code>-signed envelopes on <code>c-0</code>.</td></tr>
+<tr><td><code>recover.py</code></td><td>The gateway-side <code>RecoveryService</code> that applies recovery plans (page 10).</td></tr>
+<tr><td><code>rogue.py</code></td><td>Support for the jury's "run arbitrary code inside a rogue agent" test.</td></tr>
+</table>
+
+<h2>The RunAnchor</h2>
+<p>At the end, <code>ks run</code> prints a <b>RunAnchor</b>: the final chain head plus hashes of config and keyring. You keep it outside the run directory. <code>ks verify --head ANCHOR</code> uses it to prove nothing was truncated or swapped. Without an anchor, the record is only tamper-evident up to the last witnessed checkpoint.</p>
+
+<div class="pager" id="pager"></div>
+</main><script src="assets/nav.js"></script></body></html>

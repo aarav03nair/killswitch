@@ -30,10 +30,14 @@ from .control import CallableControl, ControlView
 from .dispatch import Execution, GatewayTxn, StateSnapshot, StateTxn, ToolDispatcher, ViewProvider
 from .outbox import OUTBOX_PREFIX, Outbox, TaintView
 from .policy import AllowAll, Policy
-from .system import SystemEnvelopeError, SystemQueue, admit_system
+from .system import SystemEnvelopeError, SystemQueue, admit_system, system_envelope
 from .txn import writes_at
 
-__all__ = ["Admission", "Gateway", "InFrame"]
+__all__ = ["Admission", "Gateway", "InFrame", "FLOOD_K"]
+
+FLOOD_K = 8
+"""F8: recorded denials per connection per tick before the connection is flood-suspended (one more record: the
+Control). Surplus frames of that connection this tick are dropped unrecorded and counted in ``Gateway.flood_dropped``."""
 
 
 class _Refused(Exception):
@@ -100,6 +104,9 @@ class Gateway:
         self._tick = 0
         self._slot = 0
         self._rec_cache: dict[int, Any] = {}
+        self._denials: dict[str, int] = {}  # F8: recorded denials per conn this tick
+        self.flooded: set[str] = set()  # F8: conns flood-suspended this tick; the barrier closes them
+        self.flood_dropped = 0  # F8: frames dropped unrecorded (over budget), whole run
 
     def _tick_of_seq(self, seq: int) -> int:
         """Tick a record landed in, from the durable record (cache is only a speedup; a restart rebuilds it)."""
@@ -119,6 +126,8 @@ class Gateway:
 
     def begin_tick(self, tick: int) -> None:
         self._tick, self._slot = tick, 0
+        self._denials.clear()
+        self.flooded.clear()
         horizon = tick - MAX_EXPIRY_TICKS  # a nonce consumed at t had expiry <= t + 8, so it is expired after that
         for k in [k for k, t in self._nonces.items() if t < horizon]:
             del self._nonces[k]
@@ -146,10 +155,31 @@ class Gateway:
         for f in frames:
             self.bind(f.conn_id, f.agent_id)  # the barrier's 1:1 connection <-> agent binding (S3)
         for f in sorted(frames, key=lambda f: f.agent_id):
+            if self._denials.get(f.conn_id, 0) >= FLOOD_K:  # F8: budget spent: drop, count, suspend the conn once
+                self.flood_dropped += 1
+                self._flood_suspend(f.conn_id)
+                continue
             adm = self.admit(f.conn_id, f.line)
+            if adm.record is not None and adm.record.decision == Decision.DENY:
+                self._denials[f.conn_id] = self._denials.get(f.conn_id, 0) + 1
             if adm.reply is not None:
                 replies.append((f.conn_id, adm.reply))
         return replies
+
+    def _flood_suspend(self, conn_id: str) -> None:
+        """F8: Control{suspend, conn:<id>, reason=flood} by ks.gateway on c-0 (once per conn per tick); the agent
+        keeps its epoch and status. Without a folding ControlView the conn is still closed, but nothing is recorded."""
+        if conn_id in self.flooded:
+            return
+        self.flooded.add(conn_id)
+        if self._sign is None or not hasattr(self.control, "check") or self.control.conn_denial(conn_id) is not None:
+            return
+        seq = self.recorder.seq + 1
+        ctl = Control(control_id=f"k-{seq:06d}", op=ControlOp.SUSPEND, target=f"conn:{conn_id}", epoch=None,
+                      alert_id=None, issued_by="ks.gateway", auto=True, reason="flood")
+        env = system_envelope("ks.gateway", "ks.control", ctl.to_obj(), action_id=f"flood-{conn_id}-{self._tick}",
+                              tick=self._tick, sign=self._sign)
+        admit_system(self, env)
 
     def bind(self, conn_id: str, agent_id: str) -> None:
         """Bind a connection to its agent (D7: 1:1). A frame on a connection with no binding is bad_sig (B3-42)."""
@@ -374,6 +404,11 @@ class Gateway:
         if self.outbox is None:
             return
         for d in self.outbox.due(tick):
+            if self.control.agent_denial(d.item.author) is not None:
+                # B3-35 (RT5, rule 5): the dispatcher re-checks the author; a suspended/revoked author's due item
+                # stays queued (no record) and leaves only after a release (ADR-04 D4: release lifts suspension
+                # holds; verify F4 accepts a dispatch only once the suspension is lifted)
+                continue
             why = self.outbox.hold_reason(d)
             oid = d.item.outbox_id
             if why is None:

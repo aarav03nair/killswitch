@@ -1,0 +1,52 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Glossary and quiz</title><link rel="stylesheet" href="assets/style.css"></head>
+<body><nav id="side"></nav><main>
+<h1>Glossary and quiz</h1>
+<p class="lead">Terms in plain language, then questions to check you can explain the system. Click a question to reveal the answer.</p>
+
+<h2>Glossary</h2>
+<table>
+<tr><th>Term</th><th>Meaning</th></tr>
+<tr><td>Agent</td><td>An autonomous worker process. It can only send signed requests.</td></tr>
+<tr><td>Gateway</td><td>The one component that checks requests and touches state. The reference monitor.</td></tr>
+<tr><td>TCB</td><td>Trusted computing base: the small set of code you must trust (gateway, recorder, signer, witness, verify).</td></tr>
+<tr><td>Tick</td><td>One step of logical time. Everything happens in lockstep.</td></tr>
+<tr><td>Envelope</td><td>A signed request: who, which tool, which args, nonce, expiry, epoch.</td></tr>
+<tr><td>Record</td><td>One entry in the hash-chained audit log. One per envelope, including denials.</td></tr>
+<tr><td>seq</td><td>The gateway-assigned record number. Seq 1 is the seed.</td></tr>
+<tr><td>Read set / write set</td><td>The versions an action read, and the before and after versions it wrote. Built by the gateway.</td></tr>
+<tr><td>View</td><td>What the gateway shows an agent at the start of a tick. It joins the read set.</td></tr>
+<tr><td>Object, version</td><td>A named piece of data and one of its historical values. Versions are never overwritten.</td></tr>
+<tr><td>Field object</td><td>A sensitive field stored as its own object, so it can be reverted alone.</td></tr>
+<tr><td>Action class</td><td>R reversible, C compensable, I1 irreversible-containable, I2 irreversible-uncontainable, U unknown (denied).</td></tr>
+<tr><td>Outbox</td><td>The holding area for irreversible effects. Nothing leaves until the gateway dispatches it.</td></tr>
+<tr><td>Lineage</td><td>The read set copied onto an outbox item, so you can tell what it depended on.</td></tr>
+<tr><td>H (hold window)</td><td>Ticks an outbox item waits before release.</td></tr>
+<tr><td>Epoch</td><td>An agent's generation number. Suspend, release and revoke bump it, killing old signed requests.</td></tr>
+<tr><td>c-0</td><td>The system connection. Only system principals (<code>ks.*</code>) use it.</td></tr>
+<tr><td>Witness</td><td>A separate process that signs per-tick checkpoints of the record head.</td></tr>
+<tr><td>RunAnchor</td><td>The final head and hashes printed at the end of a run. Keep it outside the run directory.</td></tr>
+<tr><td>Taint</td><td>Marked as depending on a bad write. Spread by read sets.</td></tr>
+<tr><td>Seed window</td><td>The suspect's writes between the estimated fault start and its suspension.</td></tr>
+<tr><td>Plan, dry-run</td><td>The ordered recovery steps, and a rolled-back simulation that shows their diff.</td></tr>
+<tr><td>S* (oracle)</td><td>The same run with the fault off. The reference for scoring.</td></tr>
+<tr><td>R, C</td><td>Residual damage left, and collateral loss of honest work. Both targeted at 0.</td></tr>
+<tr><td>Hero path / F2+</td><td>The main demo fault: a bad IBAN and price from crm, with downstream effects.</td></tr>
+<tr><td>Fail closed</td><td>When unsure, deny.</td></tr>
+</table>
+
+<h2>Quiz</h2>
+<details class="q"><summary>1. Why does the gateway, not the tool, build the read and write sets?</summary><p>Because a tool's own report is testimony. The gateway takes the write set from what the store actually holds for that seq and checks every read against real versions. A tool that lies is refused (<code>tool_error</code>), and the refusal is recorded.</p></details>
+<details class="q"><summary>2. An agent was suspended, but it had pre-signed envelopes. Why don't they work?</summary><p>Suspend bumps the agent's epoch to a strictly higher number. Pre-signed envelopes carry the old epoch, so step 8 denies them with <code>stale_epoch</code>. The signer also refuses new signatures for a non-current epoch.</p></details>
+<details class="q"><summary>3. Why are steps 7–9 checked again inside the transaction?</summary><p>To close the check-to-use window. If a suspend commits after the first check but before the tool runs, the re-read inside <code>BEGIN IMMEDIATE</code> catches it and nothing executes.</p></details>
+<details class="q"><summary>4. What is the point of record seq 1?</summary><p>It is the gateway-signed seed record whose write set is exactly the initial data. It gives every state version an evidence record, and the taint and recovery walks stop at seed versions.</p></details>
+<details class="q"><summary>5. Why keep the IBAN as its own object instead of a column in the supplier row?</summary><p>So it can be restored on its own. Reverting the row would also revert unrelated honest edits, like triage's risk note.</p></details>
+<details class="q"><summary>6. How can the record be trusted if the gateway writes it?</summary><p>Three layers: a hash chain, a gateway signature, and a separate witness process that signs checkpoints with its own key and never reads the record. Verify re-checks all of them offline, and an anchor kept outside the run directory detects truncation.</p></details>
+<details class="q"><summary>7. Why does the monitor never name an agent?</summary><p>Naming is a separate step done by lookup in the record (who wrote the evidence version). That keeps attribution evidence-based and independent of detector logic or agent claims.</p></details>
+<details class="q"><summary>8. A payment was already dispatched with tainted data. What does recovery do?</summary><p>It flags it (<code>dispatched_tainted</code>). Irreversible effects that left are compensated or reported, never claimed undone. If a re-run's simulated payload equals the dispatched one, the flag can be dropped.</p></details>
+<details class="q"><summary>9. Why score against an oracle run?</summary><p>You need an independent definition of "correct". S* re-runs the same seed with the fault off, and R and C are computed from effect differences, never from the system's own taint graph.</p></details>
+<details class="q"><summary>10. Name two things that would break in a real asynchronous deployment.</summary><p>Examples: the tick-based visibility rule (writes visible next tick), reads that bypass the gateway (invisible to taint), the SQLite store assumption, and uid isolation inside one container.</p></details>
+<details class="q"><summary>11. What does a flood of bad requests from one connection cause?</summary><p>After 8 recorded denials in a tick (<code>FLOOD_K</code>), the connection (not the agent) is suspended by a gateway control record. Extra frames are dropped and counted.</p></details>
+<details class="q"><summary>12. Why must verify never import the recorder?</summary><p>So it can't share a bug with the writer. It re-derives chain, signatures and witness checks from the files alone.</p></details>
+
+<div class="pager" id="pager"></div>
+</main><script src="assets/nav.js"></script></body></html>

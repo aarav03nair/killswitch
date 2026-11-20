@@ -91,9 +91,9 @@ Note: "kill switch" is the **project name only**. Never use it for an operation;
 | **residual damage (R)** | Share of bad effects still wrong at run end, held or flagged included. Target 0. | `ks.score` key `R` = {n,d}: \|{k ∈ keys(B): final(k) ≠ S\*(k)}\| / \|keys(B)\|, scored at T; compares values only (X4) | leftover damage, error rate, miss rate |
 | **collateral loss (C)** | Share of good effects lost by recovery, including the culprit's own reverted work. Target 0. | `ks.score` key `C` = {n,d}; split-out key `c_culprit_window` (X3d) | collateral damage, false positives, overkill |
 | **culprit-window loss** | The part of collateral loss that is the culprit's own reverted honest work. | `ks.score` key `c_culprit_window` (X3d), from the ledger | acceptable loss, expected loss |
-| **collateral stall** | Delay that holds and recovery impose on honest work, reported apart from collateral loss. | `ks.score`, measured against the unmirrored S\* (A1′); score.json key `collateral_stall` `{n,d}`, apart from `fp_cost.stall_ticks` (§7 item 10) | slowdown, overhead, latency cost |
-| **clean recovery** | Residual damage R = 0 and collateral loss C = 0 together, all invariants holding. | `ks.score`; also requires `invariants_ok` at T; no composite score | perfect recovery, full undo, 100% |
-| **TTI-detect** | Time from t0 to the first alert. | `ks.score` key `tti_detect`, from chained `ks.alert` records (X8) | detection time, MTTD, time to alert |
+| **collateral stall** | Delay that holds and recovery impose on honest work, reported apart from collateral loss. | `ks.score`, measured against the unmirrored S\* (A1′); score.json key `collateral_stall` `{n,d}`, apart from `fp_cost.stall_ticks` (§7 item 10). **Real runs:** `{n,d,basis: s_star}` is a proxy (divergence from S\*, not S0; ADR-06 A3): always say "proxy" | slowdown, overhead, latency cost |
+| **clean recovery** | Residual damage R = 0 and collateral loss C = 0 together, all invariants holding. Any R = 0 claim also states the operator releases: N held items released, of which M honest (D-17, CALL-02 B2-b). | `ks.score`; also requires `invariants_ok` at T; no composite score | perfect recovery, full undo, 100% |
+| **TTI-detect** | Time from t0 to the first alert (for a bad action that was denied or held and never landed: from that action to the first alert naming the culprit, ADR-06-metrics A5). | `ks.score` key `tti_detect`, from chained `ks.alert` records (X8) | detection time, MTTD, time to alert |
 | **TTI-attribute** | Time from alert to naming the right agent and its first bad action. | `ks.score` key `tti_attribute` (`root_candidates[0]` == culprit) | blame time, attribution latency, MTTI |
 | **TTC** | Time from alert to the first denied culprit envelope. | `ks.score` key `ttc` | time to kill, time to stop, MTTC, containment time |
 | **post-alert tainted effects** | Bad effects by any agent after the alert, counted from the ledger. Target 0. | `ks.score` key `post_alert_tainted_effects` (A6); from the ledger, never from our taint or read sets (A5) | leakage, spread, blast radius |
@@ -130,7 +130,7 @@ All ⚠ from v1 are closed.
 7. **Idempotency key**: resolved, it exists as C3 `OutboxItem.idempotency_key`.
 8. **Connection suspend**: resolved, Control target `conn:<id>` (row added).
 9. **Reconciliation**: confirmed, detector `reconcile`, class U.
-10. **Collateral stall** (ABS-08): resolved, score.json key `collateral_stall` `{n,d}` like R and C (ADR-06-metrics §3): the system run's `final_T` against the unmirrored fault-off run S0 over non-culprit keys; separate from `fp_cost.stall_ticks`.
+10. **Collateral stall** (ABS-08): resolved, score.json key `collateral_stall` `{n,d}` like R and C (ADR-06-metrics §3): the system run's `final_T` against the unmirrored fault-off run S0 over non-culprit keys; separate from `fp_cost.stall_ticks`. B3-27 (20 Nov): real runs have no S0, so they report the proxy `{n,d,basis: s_star}` (ADR-06 A3); never call it the S0 measure.
 11. **`ks.console`**: removed from ids.py with no alias (E2, X7; grep test). Nowhere in the kit except as a banned synonym.
 
 ## Changes v2 (ABS-04 review fixes + CALL-02 freeze, ABS-08, 19 Nov)

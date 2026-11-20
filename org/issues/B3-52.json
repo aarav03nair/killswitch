@@ -1,0 +1,61 @@
+{
+  "id": "B3-52",
+  "title": "RT9 world precondition: crm applies supplier_bank_update tickets",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "tara",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "done",
+  "outcome": "RT9 laundering via ticket is executable end to end",
+  "acceptance": [
+    "honest crm applies supplier_bank_update tickets from its view (ticket row in read_set); test_rt9_laundered_writer_suspended_origin_in_top3 XPASSes"
+  ],
+  "depends": [],
+  "deliverable": "src/ks/world/agents.py",
+  "summary": "Kabir changes addressed. RT9: evil payment never DISPATCHED, evil-lineage held item, false_accusations>=1, tti_detect non-null. Rogue spec t_inject=0, S* slot no-op from tick 0 (RogueSpec in ks.inject); no-op rogue regression test. Container 165 passed (redteam/score/integration/cli).",
+  "review": "[kabir · changes] kabir (RT SPEC owner, listed reviewer). World change is right: honest intake never sets type, so fault-off runs write no IBAN (seeds 1-5, 60 ticks: 0 iban writes after seed). The B3-22 fault-off sensitive_moved reasoning holds. Hero golden and pre-fault S* tests green. The replaced test states the SPEC RT9 world precondition correctly (one crm IBAN write, T-9000 in its read set). 'No payee change' is no longer the claim: the payee is supposed to change. But it was RT9's only harm check, so the suite is now weaker than SPEC RT9 Pass. Needed: (1) assert no delivered payment carrying h(EVIL), and that a payments outbox item is held with the EVIL iban version in its lineage. (2) assert score().false_accusations>=1 (my run gives 1, honest_suspensions 1). (3) post_alert_tainted_effects==0 is blocked by B3-50: it comes back unavailable/no_alert because the rogue acts at hero-2, before t_inject. Mark that line xfail with a pointer to B3-50.\n\n[kabir · done] kabir re-review: done. RT9 now checks harm: EVIL-lineage payment item exists, never DISPATCHED, hold control present; false_accusations>=1; tti_detect non-null + top3. Leftover ruled non-blocking: post_alert_tainted_effects is 4 because RT9 runs no recovery, and the not-dispatched assertion covers the SPEC harm check. Follow-up: kabir updates SPEC RT9 Pass to say that. Env 118 passed 3 skipped; container 121 passed (redteam/score/inject).",
+  "log": [
+    {
+      "t": "20 Nov 10:22",
+      "who": "maya",
+      "msg": "opened"
+    },
+    {
+      "t": "20 Nov 11:52",
+      "who": "tara",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "20 Nov 12:09",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 12:09",
+      "who": "tara",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "20 Nov 14:34",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "20 Nov 14:44",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 14:44",
+      "who": "tara",
+      "msg": "→ in_review: changes addressed"
+    },
+    {
+      "t": "20 Nov 14:48",
+      "who": "kabir",
+      "msg": "review: done"
+    }
+  ]
+}

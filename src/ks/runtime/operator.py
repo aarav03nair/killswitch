@@ -13,7 +13,8 @@ carries the record (seq, record_id, tick, decision, reason, result). A refused r
 
 Served ops: ``suspend`` / ``release`` / ``revoke`` (target ``agent:<id>`` or ``conn:<id>``; revoke needs
 ``"confirm": true``), ``hold`` / ``unhold`` (target ``action:<record id>`` or ``outbox:<id>``, B3-19), ``approve``
-(``plan_id``, ``plan_hash``, ``steps``; the G6 args) and ``recover`` (same three keys, B3-30): served only when the
+(``plan_id``, ``plan_hash``, ``steps``; the G6 args), ``recover`` (same three keys, B3-30) and ``apply`` (same
+keys: the approve and the recover requests queued together, B3-27): served only when the
 run has a recovery service (``ks.runtime.recover.RecoveryService``, world scenario); it queues one ``ks.recovery``
 request per approved envelope step and replies once every step landed or was refused (``steps``: one reply each;
 ``ok`` only if every step executed). The steps are bound to the operator's earlier recorded ``ks.approve`` by the
@@ -46,7 +47,8 @@ from ks.contracts import (APPROVE_TOOL, CONTROL_TOOL, Approval, CanonicalError, 
 from ks.gateway.system import SystemQueue, SystemRequest
 
 __all__ = ["OPERATOR_DIR", "OPERATOR_SOCK", "OperatorError", "OperatorServer", "allowed_operator_uid", "peer_uid",
-           "operator_request", "PENDING_REPLY", "parse_request", "socket_path", "SERVED_OPS", "NOT_SERVED", "RESUME_OP"]
+           "operator_request", "PENDING_REPLY", "parse_request", "socket_path", "SERVED_OPS", "NOT_SERVED", "RESUME_OP",
+           "APPLY_OP"]
 
 OPERATOR_DIR = "operator"
 OPERATOR_SOCK = "operator.sock"
@@ -56,6 +58,8 @@ PENDING_REPLY = {"ok": None, "pending": True,
                           "The record is authoritative: check record.jsonl before retrying"}
 SERVED_OPS = ("suspend", "release", "revoke", "approve", "hold", "unhold")
 RESUME_OP = "resume"
+APPLY_OP = "apply"
+"""B3-27: ``{"op": "apply", plan_id, plan_hash, steps}`` = ``approve`` then ``recover`` queued together (one reply)."""
 NOT_SERVED = {"recover": "B3-30: served by the run's recovery service, not parse_request"}
 _TOKEN_OK = set("abcdefghijklmnopqrstuvwxyz0123456789_.-")
 
@@ -286,6 +290,18 @@ class OperatorServer:
                 except ValueError as e:
                     raise OperatorError(f"recover refused: {str(e).splitlines()[0][:200]}") from None
                 return self._handle_many(conn, reqs)
+            if isinstance(obj, dict) and obj.get("op") == APPLY_OP:
+                # B3-27: approve + recover queued together, so a paused run admits the ks.approve and then every
+                # step in one control phase, before any agent acts on the tainted state again
+                if self.recover is None:
+                    raise OperatorError("apply is not served by this run (no recovery service: world scenario only)")
+                body = {k: v for k, v in obj.items() if k != "op"}
+                approve = parse_request({"op": "approve", **body}, self.agents)
+                try:
+                    reqs = self.recover({"op": "recover", **body})
+                except ValueError as e:
+                    raise OperatorError(f"apply refused: {str(e).splitlines()[0][:200]}") from None
+                return self._handle_many(conn, [approve, *reqs], approve_first=True)
             req = parse_request(obj, self.agents)
         except (OperatorError, CanonicalError) as e:
             self.refused.append((uid, str(e)[:200]))
@@ -308,8 +324,9 @@ class OperatorServer:
             return
         self._send(conn, _reply_of(box[0]))
 
-    def _handle_many(self, conn: socket.socket, reqs: list[SystemRequest]) -> None:
-        """B3-30 ``recover``: queue every step, wait for each, reply once (``pending`` if any is not admitted yet)."""
+    def _handle_many(self, conn: socket.socket, reqs: list[SystemRequest], *, approve_first: bool = False) -> None:
+        """B3-30 ``recover``: queue every step, wait for each, reply once (``pending`` if any is not admitted yet).
+        ``approve_first`` (B3-27 ``apply``): ``reqs[0]`` is the ks.approve; its reply goes under ``approve``."""
         events = [threading.Event() for _ in reqs]
         boxes: list[list[Any]] = [[] for _ in reqs]
         for req, ev, box in zip(reqs, events, boxes):
@@ -324,6 +341,11 @@ class OperatorServer:
                 self._send(conn, PENDING_REPLY)
                 return
         steps = [_reply_of(b[0]) for b in boxes]
+        if approve_first:
+            a, steps = steps[0], steps[1:]
+            self._send(conn, {"ok": a.get("ok") is True and all(s.get("ok") is True for s in steps), "approve": a,
+                              "steps": steps})
+            return
         self._send(conn, {"ok": all(s.get("ok") is True for s in steps), "steps": steps})
 
 

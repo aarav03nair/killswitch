@@ -70,7 +70,7 @@ if TYPE_CHECKING:
     from ks.gateway.stub import Admission, Gateway
 
 __all__ = ["RecoveryService", "RecoveryHalted", "Halt", "ENVELOPE_OPS", "REHELD_REASON", "bench_releasable",
-           "approved_steps", "load_plan", "cli_dry_run", "cli_apply", "DryRunResult"]
+           "approved_steps", "load_plan", "cli_dry_run", "cli_apply", "DryRunResult", "restored_releasable"]
 
 ENVELOPE_OPS = ("restore", "rerun", "cancel_outbox", "compensate")
 """Step ops that run as a ``ks.recover.<op>`` envelope (ADR-05 §8); ``flag`` and ``replan`` create none."""
@@ -415,6 +415,57 @@ def bench_releasable(records: Iterable[Any], status_of: Callable[[str], OutboxSt
                         and status_of(oid) == OutboxStatus.HELD))
 
 
+def restored_releasable(run: str | Path) -> tuple[str, ...]:
+    """B3-27, for the operator after an apply: outbox ids the gateway held with reason ``sensitive_field`` (ADR-03 G3:
+    a payee field the item read changed after creation) that are still held, whose lineage holds no tainted version
+    (forward closure of the chained alerts) and whose every sensitive field now has the value the item read again
+    (the restore put it back). Releasing them is the operator's call (``ks contain unhold``); the release phase
+    re-checks taint and the sensitive field before it dispatches. Honest items that read the original bank details
+    would otherwise stay held for good."""
+    from ks.contracts import OutboxItem, RunDir, split_obj_id
+    from ks.contracts.rundir import STATE_DB
+    from ks.taint import taint_from_alerts
+    from ks.world.scenario import open_world_store
+
+    run = Path(run)
+    rd = RunDir(run)
+    records = list(rd.records())
+    sens = set(rd.config().sensitive_fields)
+    taint = taint_from_alerts(records, _alerts(run, records))
+    last: dict[str, Any] = {}
+    for r in records:
+        c = r.control
+        if c is not None and r.decision == Decision.EXEC and c.target.startswith("outbox:") \
+                and c.op in (ControlOp.HOLD, ControlOp.UNHOLD):
+            last[c.target[len("outbox:"):]] = c
+    want = sorted(o for o, c in last.items()
+                  if c.op == ControlOp.HOLD and c.issued_by == "ks.gateway" and c.reason == "sensitive_field")
+    out = []
+    store = open_world_store(run / STATE_DB)
+    try:
+        for oid in want:
+            head = store.get(f"outbox:{oid}")
+            item = OutboxItem.from_obj(head.value) if head is not None and head.value is not None else None
+            if item is None or item.status != OutboxStatus.HELD:
+                continue
+            if taint is not None and any(taint.is_tainted(e.obj, e.ver) for e in item.lineage):
+                continue
+            ok = True
+            for e in item.lineage:
+                t, _, f = split_obj_id(e.obj)
+                if f is None or f"{t}.{f}" not in sens:
+                    continue
+                cur = store.get(e.obj)
+                if cur is None or (cur.ver != e.ver and cur.hash != e.hash):
+                    ok = False
+                    break
+            if ok:
+                out.append(oid)
+    finally:
+        store.close()
+    return tuple(out)
+
+
 # --- CLI side --------------------------------------------------------------------------------------------------
 @dataclass(frozen=True)
 class DryRunResult:
@@ -477,12 +528,15 @@ def cli_apply(run: str | Path, plan_id: str, approve: Iterable[int] = (), *,
     plan = load_plan(run, plan_id)
     steps = approved_steps(plan, approve)
     h = plan.content_hash()
-    a = send({"op": "approve", "plan_id": plan.plan_id, "plan_hash": h, "steps": list(steps)})
+    # B3-27: one ``apply`` request (approve + recover queued together): on a paused run the approval and every step
+    # land in one control phase, before agents act again. The gateway still binds each step to the recorded approve.
+    rep = send({"op": "apply", "plan_id": plan.plan_id, "plan_hash": h, "steps": list(steps)})
+    if rep.get("pending") or "approve" not in rep:
+        return plan, rep, ({} if not rep.get("pending") else rep)
+    a = rep["approve"]
     if not a.get("ok"):
         return plan, a, {}
-    r = send({"op": "recover", "plan_id": plan.plan_id, "plan_hash": h,
-              "steps": [n for n in steps if plan.steps[n].op in ENVELOPE_OPS]})
-    return plan, a, r
+    return plan, a, {"ok": rep.get("ok"), "steps": rep.get("steps", [])}
 
 
 def frozen(run: str | Path) -> str | None:

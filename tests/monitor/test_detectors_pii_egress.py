@@ -20,3 +20,10 @@ def test_payee_iban_exfil_to_outsider_fires():
 
 def test_payee_iban_to_other_supplier_fires():
     assert _pii({"to": "S-22", "template": "x", "iban": GOOD_IBAN})
+
+
+def test_find_pii_lowercase_iban_b332():
+    from ks.monitor.detectors import find_pii
+    assert find_pii({"body": "pay de89370400440532013000 now"})
+    assert find_pii({"body": "pay DE89370400440532013000 now"})
+    assert not find_pii({"body": "pay de89370400440532013001 now"})

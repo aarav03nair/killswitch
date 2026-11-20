@@ -3,15 +3,15 @@
 Running in **Claude Code in IntelliJ** on Aarav's Mac. All work committed; agents were stopped mid-task on Aarav's request. Tests at this commit: `.venv/bin/python -m pytest -q` gives 820 passed, 8 skipped, 1 xfailed (container suite not re-run at this commit; last container run 815 passed). Venv: `uv venv -p 3.13 .venv && uv pip install -p .venv -e . pytest jsonschema`. Native macOS = degraded isolation (attribution VOID); per-agent uids need Docker (OrbStack, `~/.orbstack/bin/docker`; one image tag per agent).
 
 ## Status
-- **Done (Sprint 3):** B3-01..29, B3-31, B3-36..47 except as below. This session also closed B3-13 c-0 + operator socket, B3-19 containment, B3-20 decisions replay, B3-23 outbox/holds, B3-24 re-run simulation (critical path, green before the 24 Nov slip date), B3-28 console, B3-29 conflict rule, B3-31 verify F4/F6, B3-47 contracts 1.5 (replay_mismatch → exit 6 DIVERGED).
-- **In progress (uncommitted WIP may be in the tree):** B3-30 recovery apply via c-0 (maya; long note list on the issue) · B3-48 rider items stay held on F2+x (vikram).
-- **Next unblocked:** B3-25 F9 reexec_of verify (arjun) · B3-32 F8 flood budget (nisha) · B3-27 hero end-to-end (maya, after B3-30) · B3-33 bench, B3-34 console beats, B3-35 red-team wiring.
-- Decisions by Aarav: D-15 (`ks.seed`), B3-45 option C. Board: `python3 board/render.py`.
+- **Sprint 3: complete (54/54 done).** Hero path B3-27 runs end to end (`make demo`, anchored, per-agent uids): all CALL-02 B2 targets met (as amended B2-a/B2-b). Red team RT1–RT13 wired (B3-35, 0 xfail). 20-seed bench B3-33: table in `org/reports/BENCH-S3.md` (raw in `runs/bench-b3-33/`, gitignored).
+- **Headline numbers (T=40, H=6, 20 seeds, F2+):** R=0 after the operator released a median 5 held items (3 honest, 2 tainted; max 9 on seed 2) · C=0 · reemitted 0 · TTI detect 2 ticks [0..2] · TTC 1. Baselines: snapshot/revert-culprit-only R median 3/5. D10 contrast (pause, no recovery): hold off releases median 12 tainted payments (6–18, 20/20 seeds), hold on 0. F2+x leaves R 1/5 and 29 held honest items (conflict flagged, approver never resolves flags).
+- **Decisions by Aarav:** D-15 `ks.seed` · B3-45 option C (read tags) · D-16 reporter independent (B2-a) · D-17 R=0 claims state operator releases (B2-b).
+- Contracts now 1.6.0 (additive; 1.3–1.5 runs still verify).
+- Board: `python3 board/render.py`.
 
 ## Next, in order
-1. Finish B3-30 and B3-48; then B3-27 hero end-to-end.
-2. → B3-19 containment, B3-30 apply (notes logged) → **B3-27 hero end-to-end (target 24 Nov)** → bench/console/red-team → **code freeze 26 Nov 18:00 IST**.
-3. Sprint 4: 20-seed bench, red team RT1–RT13, Panel jury dry run, finale rehearsal (`board/demo-sim.html`).
+1. **Call #4: Sprint 4 kickoff.** Plan from: S4-01 (red-team gaps: forged witness ack, outbox provenance RT, ttc unavailable), Panel jury dry run, finale rehearsal (`board/demo-sim.html`: update D10 to the before-recovery contrast), README/demo polish.
+2. Code freeze 26 Nov 18:00 IST.
 
 ## Waiting on Aarav
 - ⚑ D-02 headline · ⚑ D-10 hero field objects · ⚑ D-11 D13 target wording.

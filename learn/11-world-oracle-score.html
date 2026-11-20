@@ -1,0 +1,67 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>11. World, oracle, scoring</title><link rel="stylesheet" href="assets/style.css"></head>
+<body><nav id="side"></nav><main>
+<h1>11. World, oracle, scoring</h1>
+<p class="lead">The pretend company the agents work in, how faults are injected, and how the system grades itself against "what would have happened with no fault". Files: <code>world/</code>, <code>inject/</code>, <code>oracle/</code>, <code>score/</code>, <code>bench/</code>.</p>
+
+<h2>The world (<code>world/</code>)</h2>
+<p>This is the <i>application</i> that sits on top of the gateway. It is the part that is specific to the demo.</p>
+<table>
+<tr><th>File</th><th>Job</th></tr>
+<tr><td><code>agents.py</code></td><td>Ten agents as <b>pure functions</b>: <code>step(agent_id, seed, tick, view, sched) → Action | None</code>. No I/O, no clock, no store. Randomness comes from <code>ks.rng</code>.</td></tr>
+<tr><td><code>tools.py</code></td><td>The gateway-side tool catalogue (<code>WorldDispatcher</code>). Adapters touch state only through <code>read</code>, <code>put_row</code>, <code>put_plain</code> so the exact touched versions are known.</td></tr>
+<tr><td><code>scenario.py</code></td><td>Seed data (<code>seed_state</code>), per-role view scopes (<code>SCOPES</code>), and <code>build_view</code>.</td></tr>
+<tr><td><code>registry.py</code></td><td>Supplier master data, customers, SKUs, the attacker IBAN, and the sensitive-field list.</td></tr>
+<tr><td><code>skeleton.py</code></td><td>The trivial 2-agent scenario (<code>skel.noop</code>, <code>skel.echo</code>) used to test the platform alone.</td></tr>
+</table>
+<p>The ten agents: <code>billing</code>, <code>comms</code>, <code>compliance</code>, <code>crm</code>, <code>docs</code>, <code>intake</code>, <code>inventory</code>, <code>payments</code>, <code>reporter</code>, <code>triage</code>. Example tools: <code>crm.update_supplier</code>, <code>supplier.set_risk_note</code>, <code>payments.send</code>, <code>comms.send_email</code>, <code>docs.write</code>, <code>docs.purge</code>, <code>inventory.adjust</code>.</p>
+<div class="box key"><b class="t">Separation</b>Agent processes import <code>world.agents</code> (pure behaviour). The gateway imports <code>world.tools</code> (effects). They never share code paths, so an agent can't call a tool directly.</div>
+
+<h2>Faults and the hero scenario</h2>
+<p>An agent never decides to be faulty on its own. A <b>schedule</b> names the fault, and only the culprit's slot deviates. Fault names in the code: <code>f1</code>, <code>f2</code>, <code>f2plus</code>, <code>f2plus_c</code>, <code>f2plus_x</code>, <code>f3</code>, <code>f4</code>, <code>f7</code>. Culprits: crm for f1, f2, f2plus (and its variants) and f7, comms for f3, payments for f4.</p>
+<p><b>F2+ (the hero)</b>, from the docstring in <code>agents.py</code>, with hero tick <code>h</code>:</p>
+<div class="diagram">h     crm writes a wrong IBAN
+h+1   crm writes price x10 on S-22; billing drafts invoice S-17
+h+2   payments and comms act on the invoice (outbox items); triage edits an unrelated risk_note
+h+3   billing drafts an invoice from the bad price (S-22); then the reporter reads the results</div>
+<table>
+<tr><th>Variant</th><th>What it adds</th></tr>
+<tr><td><code>f2plus_x</code></td><td>An honest write-write conflict on the same data. The plan must flag it. A person decides, so R &gt; 0.</td></tr>
+<tr><td><code>f2plus_c</code></td><td>The culprit does honest work between fault and suspension, which gets reverted. C &gt; 0, reported.</td></tr>
+</table>
+<p><code>inject/spec.py</code> builds an <code>InjectSpec(fault, seed, ticks, t_inject, culprit, variant)</code>. <code>t_inject</code> is drawn uniformly in [T/4, T/2] from the seed. A <b>hero guard</b> asserts the precondition that crm stays silent for 10 ticks after the fault, unless the variant says otherwise. <code>RogueSpec</code> is for <code>--rogue</code> runs, where the slot is hostile from tick 0.</p>
+<div class="box warn"><b class="t">The TCB is blind</b>The gateway gets <code>config.tcb_view()</code>, which strips <code>fault</code>, <code>culprit</code> and <code>fault_tick</code>. The system under test can't cheat by knowing the answer. Only the culprit's process receives <code>KS_FAULT</code>.</div>
+
+<h2>The oracle S* (<code>oracle/</code>)</h2>
+<p>To score recovery you need to know what <i>should</i> have happened. <code>oracle/run.py</code> re-runs the <b>same seed and config with the fault switched off</b> as a "pure world": monitor, containment and recovery are off, and the outbox dispatches at its release tick. It writes an effect ledger (<code>effects.jsonl</code>, with <code>ORACLE_MARKER</code> so it's never confused with a real run).</p>
+<p>Then <code>oracle/ledger.py</code> compares real and oracle effects (per table, key and field, plus sink deliveries, <b>values only</b>):</p>
+<ul>
+<li><b>B</b> (bad): effects absent or different in S*</li>
+<li><b>G</b> (good): effects matching S*, including the culprit's honest writes before suspension</li>
+</ul>
+<p>B and G are frozen at the tick recovery starts, the same for the system and every baseline.</p>
+
+<h2>Scoring (<code>score/score.py</code>)</h2>
+<table>
+<tr><th>Metric</th><th>Meaning</th></tr>
+<tr><td><b>R</b> (residual damage)</td><td>Share of B still left at the end. Target 0.</td></tr>
+<tr><td><b>C</b> (collateral loss)</td><td>Share of G lost. Target 0.</td></tr>
+<tr><td><b>tti_detect</b>, <b>tti_attribute</b></td><td>Fault → first alert; alert → correct agent and first bad action. Counted in ticks from chained records, never the unsigned alerts file.</td></tr>
+<tr><td><b>ttc</b></td><td>Alert → first denied culprit envelope.</td></tr>
+<tr><td><b>post_alert_tainted_effects</b></td><td>Tainted effects after the alert. Target 0.</td></tr>
+<tr><td><b>irreversible_tainted_released</b></td><td>Irreversible tainted effects that left. Target 0.</td></tr>
+<tr><td><b>c_culprit_window</b></td><td>The culprit's honest work reverted by design.</td></tr>
+<tr><td><b>collateral_stall</b>, <b>fp_cost</b>, <b>false_accusations</b></td><td>Costs of holds, false alarms and wrong blame.</td></tr>
+<tr><td><b>revert_precision / recall</b>, <b>replan_cost</b>, <b>kept_without_redo</b></td><td>How exact the repair was, and how much honest work had to be redone.</td></tr>
+</table>
+<p>A rule worth knowing: an item still <b>held</b> at the end counts as <i>left</i>, so doing nothing scores R = 1. The bench approver releases re-run items in time, so a correctly re-held payment isn't scored as residual damage. Every claim of R = 0 must state how many items the operator released (decision D-17).</p>
+
+<h2>The benchmark (<code>bench/</code>, <code>ks bench</code>)</h2>
+<ul>
+<li>Seeds (default 1–20) × faults (default F2+, F2+c, F2+x, F3) × hold windows (0 and 6) × strategies.</li>
+<li><b>Strategies:</b> the system, plus the baselines <code>snapshot</code>, <code>revert_culprit_only</code> and <code>no_op</code>. The snapshot and revert-only baselines are labelled <b>oracle-assisted</b>, meaning they're given the fault time, which the real system isn't.</li>
+<li>Output: median, p95 and max across runs, so a result is a distribution, not a lucky run.</li>
+<li>An optional <b>contrast</b> run turns the lineage hold off, to show what it buys.</li>
+</ul>
+
+<div class="pager" id="pager"></div>
+</main><script src="assets/nav.js"></script></body></html>

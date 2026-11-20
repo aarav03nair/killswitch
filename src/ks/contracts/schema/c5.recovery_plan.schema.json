@@ -428,7 +428,7 @@
       "type": "object"
     }
   },
-  "$id": "https://killswitch.local/schema/1.5.0/c5.recovery_plan.schema.json",
+  "$id": "https://killswitch.local/schema/1.6.0/c5.recovery_plan.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "C5 plan, written to ``plans/<plan_id>.json``; approved by content hash.",

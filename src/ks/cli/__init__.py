@@ -10,7 +10,7 @@ import argparse
 import os
 import sys
 
-from ks.contracts import CanonicalError, Exit, RunAnchor
+from ks.contracts import NO_LINEAGE_HOLD_BANNER, CanonicalError, Exit, RunAnchor
 
 __all__ = ["main"]
 
@@ -41,6 +41,8 @@ def _parser() -> argparse.ArgumentParser:
     _pacing(r)
     r.add_argument("--fault", help="inject fault id, e.g. F2+ (ADR-06)")
     r.add_argument("--hold", type=int, help="lineage hold window in ticks")
+    r.add_argument("--no-lineage-hold", action="store_true",
+                   help="D10 contrast, needs --hold 0: also drop the taint hold so a tainted payment dispatches")
     r.add_argument("--rogue", metavar="FILE", help="jury Python run in place of --slot")
     r.add_argument("--slot", help="agent replaced by --rogue (default docs)")
     r.add_argument("--decisions", metavar="RUN", help="replay operator decisions of an anchored run")
@@ -82,9 +84,14 @@ def _parser() -> argparse.ArgumentParser:
     rp.add_argument("run_a")
     rp.add_argument("run_b")
     bn = sub.add_parser("bench", help="seeds x faults x hold benchmark")
-    bn.add_argument("--seeds", default="0,1,2")
-    bn.add_argument("--faults", default="F2+")
-    bn.add_argument("--hold", default=None)
+    bn.add_argument("--seeds", default="1-20", help="csv and/or ranges: 1-20 or 1,2,5 (ADR-06-metrics: 1..20)")
+    bn.add_argument("--faults", default="F2+,F2+c,F2+x,F3", help="csv of F1,F2,F2+,F2+c,F2+x,F3,F4,F7 or 'all'")
+    bn.add_argument("--hold", default="6", help="csv of hold windows H (ADR-06-metrics: 0,6)")
+    bn.add_argument("--baselines", default="system,snapshot,revert_culprit_only,no_op")
+    bn.add_argument("--ticks", type=int, default=120)
+    bn.add_argument("--out", default="runs/bench")
+    bn.add_argument("--keep-runs", action="store_true")
+    bn.add_argument("--contrast", default="", help="csv of faults: add a system H=0 --no-lineage-hold row (D10 contrast)")
     co = sub.add_parser("console", help="incident console: static HTML or live terminal view")
     co.add_argument("run")
     cg = co.add_mutually_exclusive_group(required=True)
@@ -98,6 +105,8 @@ def _parser() -> argparse.ArgumentParser:
 def _pacing(p) -> None:
     p.add_argument("--pause-at", metavar="TICK,...", help="pause the live gateway before these ticks")
     p.add_argument("--step", action="store_true", help="pause between every tick")
+    p.add_argument("--pause-on-alert", action="store_true",
+                   help="with a fault: pause before the tick after the monitor's first suspend (operator beat)")
 
 
 def _csv_ints(text: str, flag: str) -> list[int]:
@@ -168,6 +177,9 @@ def _run(args) -> int:
             return _usage("run", f"--rogue file not found: {args.rogue}")
         kw.update(rogue=args.rogue, slot=args.slot or "docs")
     opts, err = _options("run", args, fault=args.fault or None, hold=args.hold, step=args.step,
+                         no_lineage_hold=args.no_lineage_hold,
+                         monitor=bool(args.fault or args.rogue),  # B3-27/B3-35: fault and rogue runs are monitored
+                         pause_on_alert=args.pause_on_alert,
                          decisions=args.decisions, decisions_head=args.decisions_head, **kw)
     return err if err is not None else _launch("run", args, opts)
 
@@ -208,6 +220,8 @@ def _verify(args) -> int:
         scope = "anchored" if rep.anchored else f"consistent, not anchored ({rep.unanchored_reason})"
         verdict = "OK" if rep.ok else f"{Exit(rep.exit).name} {rep.reason}{where}"
         print(f"verify: {verdict}; last witnessed seq {rep.last_witnessed_seq}; {scope}")
+        if not rep.lineage_hold:
+            print(f"!! {NO_LINEAGE_HOLD_BANNER}")
     print(rep.to_canonical().decode())
     return rep.exit
 
@@ -226,15 +240,17 @@ def _inject(args) -> int:
         if (err := _check_fault("inject", args.fault, args.seed, args.ticks, args.culprit)) is not None:
             return err
         from ks.inject import world_fault
-        kw.update(fault=args.fault, culprit=args.culprit)
+        kw.update(fault=args.fault, culprit=args.culprit, monitor=True)
         run_id = f"world-{world_fault(args.fault)}-s{args.seed}"
     else:
         if args.culprit:
             return _usage("inject", "--culprit applies to a fault, not --rogue")
         if not os.path.isfile(args.rogue):
             return _usage("inject", f"--rogue file not found: {args.rogue}")
-        kw.update(rogue=args.rogue, slot=args.slot or "docs")
-    opts, err = _options("inject", args, hold=args.hold, step=args.step, with_baselines=args.with_baselines, **kw)
+        kw.update(rogue=args.rogue, slot=args.slot or "docs", monitor=True)
+        run_id = f"world-rogue-{args.slot or 'docs'}-s{args.seed}"
+    opts, err = _options("inject", args, hold=args.hold, step=args.step, with_baselines=args.with_baselines,
+                         pause_on_alert=args.pause_on_alert, **kw)
     if err is not None:
         return err
     ns = argparse.Namespace(scenario="world", agents=None, ticks=args.ticks, seed=args.seed, key_mode="fresh",
@@ -343,21 +359,104 @@ def _recover(args) -> int:
               f" at seq {bad.get('seq', '-')}; build a new plan (ks recover {args.run} --dry-run)", file=sys.stderr)
         return Exit.IO
     print(f"ks recover: plan {plan.plan_id} applied: {len(r.get('steps', []))} steps recorded")
+    for st in r.get("steps", []):  # B3-27: re-held items leave only by an unhold (X4); say how
+        for eff in (st.get("result") or {}).get("effects") or []:
+            if len(eff) == 2 and eff[1] == "reheld":
+                print(f"re-held, review then release: ks contain unhold outbox:{eff[0]} {args.run}")
+    try:
+        for oid in R.restored_releasable(args.run):
+            print(f"held for a changed bank field, now restored: ks contain unhold outbox:{oid} {args.run}")
+    except (OSError, ValueError) as e:  # advisory only: the apply itself is recorded
+        print(f"ks recover: could not list restored holds: {e}", file=sys.stderr)
     return Exit.OK
 
 
 def _score(args) -> int:
-    return _need_run("score", args.run) or _not_yet("score", "needs ks.score")
+    """B3-27: score.json for a fault run (ADR-06-metrics §3): S* (fault off, the culprit's suspension mirrored, same
+    hold) in ``RUN/oracle/s-star`` (reused if already there), then ``ks.score.score_run`` and ``write_score``."""
+    if (err := _need_run("score", args.run)) is not None:
+        return err
+    from pathlib import Path
+    from ks.contracts import RunDir, canonical
+    from ks.inject import make_spec, world_fault
+    from ks.oracle import run_s_star
+    from ks.oracle.ledger import read_ledger
+    from ks.oracle.run import EFFECTS
+    from ks.score import score_run, suspend_tick_of, write_score
+    run = Path(args.run)
+    try:
+        cfg = RunDir(run).config()
+    except Exception as e:  # noqa: BLE001 - unreadable or malformed run dir
+        print(f"ks score: {e}", file=sys.stderr)
+        return Exit.IO
+    if cfg.fault is None:
+        return _usage("score", "score needs a fault or rogue run (ks run --scenario world --fault F | --rogue FILE)")
+    hold = cfg.hold_window_ticks
+    rogue_run = cfg.fault == "rogue"
+    if rogue_run:  # B3-50: S* = the honest world (hero schedule as the run used it), slot no-op from tick 0
+        from ks.inject import rogue_spec
+        from ks.runtime.setup import hero_tick
+        spec = rogue_spec(cfg.seed, cfg.ticks, cfg.culprit, hero_tick(cfg.seed, cfg.ticks))
+    else:
+        spec = make_spec(world_fault(cfg.fault), cfg.seed, ticks=cfg.ticks, culprit=cfg.culprit,
+                         t_inject=cfg.fault_tick)
+    star_dir = run / "oracle" / "s-star"
+    try:
+        if (star_dir / EFFECTS).is_file():
+            star = read_ledger(star_dir / EFFECTS)
+        else:
+            st = 0 if rogue_run else suspend_tick_of(run, spec.culprit)
+            star = run_s_star(spec, star_dir, suspend_tick=st, hold=hold).effects
+        s = score_run(run, spec, star, hold=hold)
+        path = write_score(run, s)
+    except (OSError, ValueError) as e:
+        print(f"ks score: {e}", file=sys.stderr)
+        return Exit.IO
+    if args.json:
+        print(canonical.dumps(s).decode())
+        return Exit.OK
+    if not cfg.lineage_hold:  # contracts 1.6 (B3-51): score.json keeps its schema; config.json carries the switch
+        print(f"!! {NO_LINEAGE_HOLD_BANNER}")
+    for k in ("tti_detect", "tti_attribute", "ttc", "R", "C", "post_alert_tainted_effects",
+              "irreversible_tainted_released", "reemitted", "kept_without_redo", "false_accusations"):
+        print(f"{k:32} {canonical.dumps(s[k]).decode()}")
+    print(f"score written: {path}")
+    return Exit.OK
+
+
+def _ranges(text: str, flag: str) -> list[int]:
+    out: list[int] = []
+    for part in text.split(","):
+        lo, sep, hi = part.partition("-")
+        try:
+            out += list(range(int(lo), int(hi) + 1)) if sep else [int(lo)]
+        except ValueError:
+            raise ValueError(f"{flag}: not an integer list or range: {text!r}") from None
+    return out
 
 
 def _bench(args) -> int:
+    """B3-33: seeds x faults x hold x baselines over the real command path; per-seed score.json, bench.json, bench.md."""
+    from pathlib import Path
+    from ks.bench import BASELINES, bench
+    from ks.bench.runner import DEFAULT_FAULTS
     try:
-        _csv_ints(args.seeds, "--seeds")
-        if args.hold is not None:
-            _csv_ints(args.hold, "--hold")
+        seeds = _ranges(args.seeds, "--seeds")
+        holds = _ranges(args.hold, "--hold")
     except ValueError as e:
         return _usage("bench", str(e))
-    return _not_yet("bench", "needs ADR-06 metrics runner")
+    faults = list(DEFAULT_FAULTS) if args.faults == "all" else args.faults.split(",")
+    bases = args.baselines.split(",")
+    if not seeds or any(f not in DEFAULT_FAULTS for f in faults) or any(b not in BASELINES for b in bases):
+        return _usage("bench", f"faults must be in {DEFAULT_FAULTS}, baselines in {BASELINES} (F5/F6: ks verify)")
+    out = Path(args.out)
+    if out.exists() and any(out.iterdir()):
+        return _usage("bench", f"--out {out} exists and is not empty")
+    s = bench(seeds, faults, holds, bases, args.ticks, out, keep_runs=args.keep_runs,
+              contrast_faults=[x for x in args.contrast.split(",") if x], log=lambda m: print(m, flush=True))
+    print((out / "bench.md").read_text())
+    print(f"bench written: {out}/bench.json, bench.md, timings.json")
+    return Exit.IO if s["failures"] else Exit.OK
 
 
 def _console(args) -> int:

@@ -52,7 +52,7 @@ def iban_checksum(ctx: Context) -> list[Finding]:
 
 def beneficiary_changed_then_paid(ctx: Context) -> list[Finding]:
     """Hard: a payment read a payee field version that was written (version > 1) within the window before it.
-    H4: evidence_versions is the payee field object only; the payment is in evidence_seqs."""
+    H4: evidence_versions is the payee field object only; evidence_seqs are the payee write and the payment."""
     out = []
     for pay in _exec(ctx):
         if pay.envelope is None or pay.envelope.tool not in ctx.params.payment_tools:
@@ -61,12 +61,30 @@ def beneficiary_changed_then_paid(ctx: Context) -> list[Finding]:
             if e.ver < 2 or not _is_payee(ctx, e.obj):
                 continue
             wr = ctx.index.writer(e.obj, e.ver)
-            if wr is None or wr.seq >= pay.seq:
+            if wr is None or wr.seq >= pay.seq or _approved_restore(ctx, wr, e.obj, e.ver):
                 continue
             if 0 <= pay.tick - wr.tick <= ctx.params.beneficiary_window_ticks:
-                out.append(Finding(Detector.BENEFICIARY_CHANGED_THEN_PAID, (pay.seq,),
+                # B3-27: the payee write is evidence too (ADR-06-metrics t_alert: evidence_seqs name the record
+                # that produced the bad effect); ascending seqs, the payment last
+                out.append(Finding(Detector.BENEFICIARY_CHANGED_THEN_PAID, (wr.seq, pay.seq),
                                    (ObjVer(obj=e.obj, ver=e.ver),)))
     return out
+
+
+def _approved_restore(ctx: Context, wr: Any, obj: str, ver: int) -> bool:
+    """B3-27: a payee version written by an executed, chained ``ks.recover.restore`` (signed ``ks.recovery``, bound
+    to a recorded operator approval by the gateway) whose value is one the field already held at an earlier
+    version is a return to a known beneficiary, not a change. Anything else (a new value, any other writer) is
+    still a change."""
+    if wr.attributed_agent != "ks.recovery" or wr.envelope is None or wr.envelope.tool != "ks.recover.restore":
+        return False
+    after = next((w.after.hash for w in wr.write_set if w.obj == obj and w.after.ver == ver), None)
+    for v in range(1, ver):
+        prev = ctx.index.writer(obj, v)
+        if prev is not None and any(w.obj == obj and w.after.ver == v and w.after.hash == after
+                                    for w in prev.write_set):
+            return True
+    return False
 
 
 def _price(value: Any, key: str) -> int | None:
@@ -161,7 +179,18 @@ def witness_stall(ctx: Context) -> list[Finding]:
 _SSN = re.compile(r"\b\d{3}-\d{2}-\d{4}\b")
 _AADHAAR = re.compile(r"\b\d{4} \d{4} \d{4}\b")
 _CARD = re.compile(r"\b(?:\d[ -]?){13,19}\b")
-_IBAN = re.compile(r"\b[A-Z]{2}\d{2}[A-Z0-9]{11,30}\b")
+_IBAN = re.compile(r"\b[A-Za-z]{2}\d{2}[A-Za-z0-9]{11,30}\b")  # B3-32: lowercase IBANs are IBANs too
+_EXTRA_RECIPIENTS = frozenset({"cc", "bcc", "recipients", "reply_to", "forward_to"})
+
+
+def _has_key(v: Any, names: frozenset[str]) -> bool:
+    """True if any dict key at any depth (inside lists too) is one of ``names`` (case-insensitive). B3-35: a
+    nested ``headers.cc`` must fail closed exactly like a top-level ``cc``."""
+    if isinstance(v, dict):
+        return any(str(k).lower() in names or _has_key(x, names) for k, x in v.items())
+    if isinstance(v, list):
+        return any(_has_key(x, names) for x in v)
+    return False
 
 
 def _luhn(digits: str) -> bool:
@@ -196,8 +225,7 @@ def find_pii(payload: Any, keys: frozenset[str] = frozenset(), allow: frozenset[
     for s in _strings(payload, keys, hit):
         if s in allow:
             continue
-        if _SSN.search(s) or _AADHAAR.search(s) or any(m.group(0) and _IBAN.fullmatch(m.group(0)) and
-                                                     iban_ok(m.group(0)) for m in _IBAN.finditer(s)):
+        if _SSN.search(s) or _AADHAAR.search(s) or any(iban_ok(m.group(0).upper()) for m in _IBAN.finditer(s)):
             return True
         for m in _CARD.finditer(s):
             d = re.sub(r"\D", "", m.group(0))
@@ -225,6 +253,8 @@ def pii_egress(ctx: Context) -> list[Finding]:
             # from the read object id, never a match on payload text); anyone else receiving it is exfiltration.
             payees = frozenset(i for e in r.read_set if _is_payee(ctx, e.obj) and split_obj_id(e.obj)[1] == to
                                for i in [_iban_of(ctx.value(e.hash))] if isinstance(i, str))
+            if _has_key(payload, _EXTRA_RECIPIENTS):
+                payees = frozenset()  # B3-32/B3-35: an extra recipient field at any depth -> allow-list fails closed
             if payload is not MISSING and find_pii(payload, ctx.params.pii_keys, payees):
                 out.append(Finding(Detector.PII_EGRESS, (r.seq,), (ObjVer(obj=w.obj, ver=w.after.ver),)))
     return out

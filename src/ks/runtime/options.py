@@ -12,8 +12,9 @@ from dataclasses import dataclass, fields
 __all__ = ["RunOptions", "SERVED"]
 
 # Fields ks.runtime.run implements today. Grow this as features land; the CLI placeholder test reads it.
-SERVED: frozenset[str] = frozenset({"pause_at", "step", "monitor", "decisions", "decisions_head"})
-# B3-13 pacing (ADR-07 L1); B3-19 monitor; B3-30 anchored decisions replay (R3, B3-20)
+SERVED: frozenset[str] = frozenset({"pause_at", "step", "monitor", "decisions", "decisions_head", "fault", "culprit",
+                                    "hold", "pause_on_alert", "rogue", "slot", "no_lineage_hold"})
+# B3-13 pacing (ADR-07 L1); B3-19 monitor; B3-30 anchored decisions replay (R3, B3-20); B3-27 fault/culprit/hold
 
 
 @dataclass(frozen=True, slots=True, kw_only=True)
@@ -28,13 +29,19 @@ class RunOptions:
     decisions: str | os.PathLike[str] | None = None  # anchored run whose operator decisions are replayed
     decisions_head: str | None = None         # that run's RunAnchor line (ks verify --head); needs decisions
     monitor: bool = False                     # B3-19: scan records after every tick; hard alert -> suspend (world only)
+    pause_on_alert: bool = False              # B3-27 pacing: pause after the first monitor suspend and after a recovery apply
+    no_lineage_hold: bool = False             # B3-51 D10 contrast: with hold 0, also drop the taint (lineage) hold
     with_baselines: bool = False              # also run the baseline recoveries for scoring
 
     def __post_init__(self) -> None:
+        if self.no_lineage_hold and self.hold != 0:
+            raise ValueError("no_lineage_hold is the D10 contrast and needs hold 0")
         if self.pause_at is not None:
             object.__setattr__(self, "pause_at", tuple(self.pause_at))
             if any(not isinstance(t, int) or isinstance(t, bool) or t < 0 for t in self.pause_at):
                 raise ValueError("pause_at must be non-negative tick numbers")
+        if self.pause_on_alert and not self.monitor:
+            raise ValueError("pause_on_alert needs monitor")
         if self.pause_at is not None and self.step:
             raise ValueError("pause_at and step are mutually exclusive")
         if self.rogue is not None and self.fault is not None:

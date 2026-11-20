@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "Beats 4-5: dry-run diff, scorecard vs baselines, residual payment at H=0, verify first bad index",
   "acceptance": [
     "Dry-run diff view lists restore/rerun/cancel/flag steps from the plan file",
@@ -20,8 +20,8 @@
     "B3-26"
   ],
   "deliverable": "console/",
-  "summary": "",
-  "review": "",
+  "summary": "Maya change: failed verify now shows 'verify FAILED: <reason> at first bad seq N; verify stopped there' with no tamper-evident claim and no unwitnessed count (records not flagged unwitnessed when verify failed); tamper-evident/unwitnessed count only when verify OK and beyond last_witnessed_seq. Tests: tamper, truncated record, unwitnessed tail (witness head dropped). tests/console 18 passed. Used console real-world hero fixture, not the integration one (needs full run).",
+  "review": "[maya · changes] Checked on a real B3-27 hero run dir (seed 2, T=40, H=6, after dry-run/apply/unhold/score). Good: all five beats LIVE; recover beat lists restore iban+S-22, re-run billing/comms/payments, kept triage risk note, independents, flags 0, t0 estimate 45 vs literal 9 delta 36, applied 6; the page has hash-only diffs and no raw IBAN (attacker or honest); scorecard: system column from score.json, baselines 'not run', clean shows 'unavailable (...)', never 0. Tamper: one edited record line gives audit FAIL with parse_error at first bad seq 100 (matches ks verify), and every data beat turns 'unverified'. One change: on a FAILED verify the audit beat still prints 'tamper-evident up to the last witnessed head (seq 0)' and '223 record(s) after the last witnessed head are unwitnessed'. verify stops at the bad seq, so last_witnessed_seq is 0, but the witness did sign heads up to 223. A jury that edits a line will read that as 'nothing was witnessed'. On a failed verify, drop the 'tamper-evident up to' claim and the unwitnessed count (or say 'verify stopped at seq N'), and use THREAT-MODEL wording only when verify passed. Suggestion only (not blocking): the contain beat's 'held items' count mixes G3 sensitive_field holds of honest items (7 on seed 2) with tainted holds; label them by reason.\n\n[maya · done] Change addressed. Real hero run (seed 2, T=40, H=6, dry-run/apply/unhold/score): all five beats LIVE; audit 'verify OK; tamper-evident up to the last witnessed head (seq 223)'; scorecard system column equals score.json (tti_detect 2, tti_attribute 0, ttc 1, R 0/9, C 0/265, irreversible released 0, clean 'unavailable (...)', never 0), baselines 'not run'. Tamper with valid JSON (record seq 100 tick edited): audit FAIL 'parse_error at first bad seq 100; verify stopped there ... no witnessed-head claim', 0 unwitnessed, data beats 'unverified'. tests/console + tests/integration 20 passed. Follow-up, not blocking: a record line that is not valid JSON makes 'ks console' exit with 'Expecting property name...' and no page, because _jl does json.loads on every line. ks verify reports TAMPER parse_error at seq 100 for the same file. The console should still render the FAIL audit beat in that case. Open it as a small follow-up issue.",
   "log": [
     {
       "t": "19 Nov 11:34",
@@ -37,6 +37,46 @@
       "t": "20 Nov 06:27",
       "who": "pmo",
       "msg": "→ todo: From maya's B3-29 review: console pin can't be removed yet: the console test's own injected alert bypasses the gateway; route it through the gateway first, then drop the pin."
+    },
+    {
+      "t": "20 Nov 09:05",
+      "who": "ishaan",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "20 Nov 09:08",
+      "who": "ishaan",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 09:08",
+      "who": "ishaan",
+      "msg": "→ in_review: ready for review"
+    },
+    {
+      "t": "20 Nov 09:28",
+      "who": "maya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "20 Nov 09:29",
+      "who": "ishaan",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 09:29",
+      "who": "ishaan",
+      "msg": "→ in_review: maya change addressed"
+    },
+    {
+      "t": "20 Nov 09:31",
+      "who": "maya",
+      "msg": "review: done"
+    },
+    {
+      "t": "20 Nov 09:32",
+      "who": "ishaan",
+      "msg": "→ done: follow-up: console renders FAIL page on malformed input (tests test_malformed_record_line_renders_fail_page, test_truncated_record_renders_fail_page, test_malformed_score_alerts_plan_witness_do_not_crash)"
     }
   ]
 }

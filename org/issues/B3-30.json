@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "maya",
-  "status": "in_progress",
+  "status": "done",
   "outcome": "Approved plan steps execute as ks.recover.<op> envelopes on c-0 bound to the ks.approve plan_hash (F5)",
   "acceptance": [
     "ks.approve by ks.operator with {plan_id, plan_hash, steps}; each ks.recover.<op> carries {plan_id, plan_hash, n, step}",
@@ -19,8 +19,8 @@
     "B3-13"
   ],
   "deliverable": "src/ks/runtime/recover.py",
-  "summary": "",
-  "review": "",
+  "summary": "Built src/ks/runtime/recover.py. RecoveryService serves ks.recover.<op> on c-0 through admit_system, after steps 3/5/6/10. Per step, in order: RecoverArgs {plan_id, plan_hash, n, step}; tool ks.recover.<op>; action id <plan_id>.<n>, so a double apply is nonce_reused. Then the freeze check (chained tamper/stall alert -> deny/recovery_frozen). Then binding: a prior ks.operator ks.approve listing n, and the plan file still hashes to plan_hash (else deny/out_of_scope). Then BEGIN IMMEDIATE + conflict.recheck in the same txn; stale -> hold/stale_plan, and the apply halts (later steps are refused before any record). restore uses apply_restore; the read set is the to-version. rerun uses vikram's ToolRerunner on the live txn (same code as the dry-run; dispatched items are never re-created) plus a post-run recheck of new objects. Repair versions are written when the re-run's value equals the head. Each re-held item gets a ks.control hold by ks.recovery, reason rerun_reheld. cancel_outbox is a status change. compensate is tool_error (no compensators). Outbox._unrecorded_rerun accepts the re-run record as the creating record, using the original's tick/key, so unhold -> dispatch works. bench_releasable lists only rerun_reheld items, never riders. Verify: new ks.verify.recovery, reason recovery_unbound (TAMPER, contracts 1.5.0 additive): no prior approval / edited plan file / step applied twice. Operator socket op recover; ks recover --dry-run / --apply (verify first, FROZEN). ks run --decisions SRC --decisions-head ANCHOR replays operator Controls and approvals at their source ticks (RunOptions SERVED). Hero: state after apply equals S* on every non-outbox object and equals the dry-run planned hashes. Re-held payloads equal S*; they dispatch after unhold; verify OK. Tests: tests/runtime/test_recover.py (17). Native 949 passed / 8 skipped. Edits outside runtime: gateway/system.py (route ks.recover.* to gw.recovery; SystemRequest.action_id), gateway/outbox.py (_unrecorded_rerun), verify/core.py (one call) + verify/recovery.py, contracts rundir VERIFY_REASONS + README, cli recover/--decisions-head, tests cli/run_options/contracts_12 updated, ADR-05 amendment line.",
+  "review": "[kabir · done] DONE. Versioning: recovery_unbound is already in the committed 1.5.0 (73754ed). It was added after my B3-47 re-review (06:27) and before the commit (06:39). No 1.5.0 build exists without it. VerifyReport.reason is a pattern, not an enum, and goldens/schemas did not move, so nothing changes on the wire. 1.6.0 not required. Still a process slip: next time a reason added after review gets its own bump. Attacks run (scratch tests, all held): approval for another plan_hash -> deny/out_of_scope, no writes; ks.approve from ks.monitor/ks.recovery -> not exec, step denied; plan file replaced under the same id with a direct envelope -> out_of_scope; double apply -> nonce_reused, and verify catches it too; honest write AFTER approval -> hold/stale_plan, halt, verify OK. Every restore/cancel write set equals the step's obj. No recovery_unbound false positive on the hero or the halted runs. plan_id = p-<last_seq>, so a re-dry-run cannot overwrite an approved plan. --decisions-head with a foreign anchor: load_decisions runs verify(src, anchor), so a head/keyring/config mismatch is refused. The 3 edited tests are not weakened: recover now asserts IO, contain moved to its own test, the additive set was widened by exactly the new reasons. Native 946 passed, container 958 passed, make smoke OK (anchored). The 2-3 test_run_options failures come from maya's uncommitted B3-27 options.py (fault/culprit/hold now SERVED), not B3-30. Follow-ups (not blocking): (1) pin VERIFY_REASONS['recovery_unbound'] is TAMPER in test_contracts_15 and fix the README 1.5.0 heading to say B3-47 + B3-30; (2) add a test for a foreign --decisions-head refused (USAGE); (3) the test_cli placeholder list still says 'recover (B3-18+)'; (4) B3-27 changes cli_apply to a single apply op, and the reviewer must recheck that ks.approve is recorded before the first step in the same control phase.",
   "log": [
     {
       "t": "19 Nov 11:34",
@@ -61,6 +61,21 @@
       "t": "20 Nov 06:28",
       "who": "maya",
       "msg": "→ in_progress: start: c-0 ks.recover.<op> handler + ks recover apply"
+    },
+    {
+      "t": "20 Nov 06:52",
+      "who": "maya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 06:55",
+      "who": "maya",
+      "msg": "→ in_review: ready for kabir: native 949 passed/8 skipped; container 957 passed; make smoke OK (anchored). Reviewed B3-48 (done)."
+    },
+    {
+      "t": "20 Nov 09:05",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

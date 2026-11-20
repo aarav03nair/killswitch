@@ -376,6 +376,18 @@
       "title": "Seed record (seq 1) gets its own system tool ks.seed",
       "status": "decided",
       "summary": "The frozen system-tool list (CALL-02 G1) has no seed tool, so B3-11 records the seed as ks.dispatch, which G4 reserves for outbox dispatch. Maya recommends adding ks.seed (contracts 1.3, additive, signed by ks.gateway only, valid only at seq 1, tick 0). Until then the seed stays ks.dispatch with policy_rule gateway.seed. DECIDED by Aarav 19 Nov: add ks.seed (contracts 1.3, additive; amends CALL-02 G1). Owner maya (B3-43), then nisha switches the seed write."
+    },
+    {
+      "id": "D-16",
+      "title": "B2 amended: reporter is independent in the hero (not re-run)",
+      "status": "decided",
+      "summary": "DECIDED by Aarav 20 Nov: on real runs reporter never read a tainted invoice before suspend (vikram's B3-27 finding, seeds 1/2/3/5), so conservative taint leaves it alone. CALL-02 B2-a amendment; demo diff and golden follow taint."
+    },
+    {
+      "id": "D-17",
+      "title": "R=0 claims state operator releases",
+      "status": "decided",
+      "summary": "DECIDED by Aarav 20 Nov: every R=0 claim says it holds after the operator released N held items (seed 2: 9, of which 7 honest). score.json reports fp_cost.operator_unholds and held_honest_actions."
     }
   ],
   "risks": [
@@ -409,386 +421,6 @@
     }
   ],
   "activity": [
-    {
-      "t": "19 Nov 16:20",
-      "who": "pmo",
-      "msg": "opened B3-40 — B3-37 follow-ups: view provider, Execution.outbox, sets checked against txn, indirect-import test"
-    },
-    {
-      "t": "19 Nov 16:20",
-      "who": "vikram",
-      "msg": "moved B3-04 to in_progress"
-    },
-    {
-      "t": "19 Nov 16:20",
-      "who": "ishaan",
-      "msg": "moved B3-39 to in_progress"
-    },
-    {
-      "t": "19 Nov 16:21",
-      "who": "maya",
-      "msg": "moved B3-40 to in_progress"
-    },
-    {
-      "t": "19 Nov 16:21",
-      "who": "tara",
-      "msg": "moved B3-05 to in_progress"
-    },
-    {
-      "t": "19 Nov 16:21",
-      "who": "tara",
-      "msg": "moved B3-06 to in_progress"
-    },
-    {
-      "t": "19 Nov 16:21",
-      "who": "ishaan",
-      "msg": "moved B3-39 to in_review"
-    },
-    {
-      "t": "19 Nov 16:22",
-      "who": "maya",
-      "msg": "moved B3-40 to in_review"
-    },
-    {
-      "t": "19 Nov 16:23",
-      "who": "arjun",
-      "msg": "moved B3-08 to in_progress"
-    },
-    {
-      "t": "19 Nov 16:23",
-      "who": "arjun",
-      "msg": "moved B3-08 to in_review"
-    },
-    {
-      "t": "19 Nov 16:23",
-      "who": "vikram",
-      "msg": "moved B3-04 to in_review"
-    },
-    {
-      "t": "19 Nov 16:24",
-      "who": "tara",
-      "msg": "moved B3-05 to in_review"
-    },
-    {
-      "t": "19 Nov 16:24",
-      "who": "tara",
-      "msg": "moved B3-06 to in_review"
-    },
-    {
-      "t": "19 Nov 16:24",
-      "who": "panel",
-      "msg": "reviewed B3-40: changes"
-    },
-    {
-      "t": "19 Nov 16:24",
-      "who": "pmo",
-      "msg": "opened B3-41 — Gateway is the authority on read/write sets and outbox (B3-40 TODO)"
-    },
-    {
-      "t": "19 Nov 16:25",
-      "who": "kabir",
-      "msg": "reviewed B3-04: done"
-    },
-    {
-      "t": "19 Nov 16:25",
-      "who": "maya",
-      "msg": "reviewed B3-05: done"
-    },
-    {
-      "t": "19 Nov 16:26",
-      "who": "maya",
-      "msg": "reviewed B3-06: changes"
-    },
-    {
-      "t": "19 Nov 16:26",
-      "who": "arjun",
-      "msg": "moved B3-09 to in_progress"
-    },
-    {
-      "t": "19 Nov 16:26",
-      "who": "arjun",
-      "msg": "moved B3-09 to in_review"
-    },
-    {
-      "t": "19 Nov 16:26",
-      "who": "maya",
-      "msg": "moved B3-40 to in_review"
-    },
-    {
-      "t": "19 Nov 16:28",
-      "who": "arjun",
-      "msg": "moved B3-36 to in_progress"
-    },
-    {
-      "t": "19 Nov 16:28",
-      "who": "arjun",
-      "msg": "moved B3-36 to in_review"
-    },
-    {
-      "t": "19 Nov 16:30",
-      "who": "kabir",
-      "msg": "reviewed B3-09: done"
-    },
-    {
-      "t": "19 Nov 16:30",
-      "who": "kabir",
-      "msg": "reviewed B3-08: done"
-    },
-    {
-      "t": "19 Nov 16:30",
-      "who": "kabir",
-      "msg": "reviewed B3-36: done"
-    },
-    {
-      "t": "19 Nov 16:30",
-      "who": "pmo",
-      "msg": "opened B3-42 — Kabir follow-ups on B3-08/B3-36: witness seq-head equivocation, signer drip, unbound-connection S3"
-    },
-    {
-      "t": "19 Nov 16:30",
-      "who": "pmo",
-      "msg": "moved B3-15 to todo"
-    },
-    {
-      "t": "19 Nov 16:30",
-      "who": "pmo",
-      "msg": "moved B3-41 to todo"
-    },
-    {
-      "t": "19 Nov 16:31",
-      "who": "maya",
-      "msg": "moved B3-10 to in_progress"
-    },
-    {
-      "t": "19 Nov 16:31",
-      "who": "maya",
-      "msg": "moved B3-10 to in_review"
-    },
-    {
-      "t": "19 Nov 16:31",
-      "who": "tara",
-      "msg": "moved B3-06 to in_review"
-    },
-    {
-      "t": "19 Nov 16:32",
-      "who": "panel",
-      "msg": "reviewed B3-40: done"
-    },
-    {
-      "t": "19 Nov 16:33",
-      "who": "maya",
-      "msg": "reviewed B3-06: done"
-    },
-    {
-      "t": "19 Nov 16:33",
-      "who": "pmo",
-      "msg": "moved B3-11 to todo"
-    },
-    {
-      "t": "19 Nov 16:33",
-      "who": "maya",
-      "msg": "reviewed B3-06: done"
-    },
-    {
-      "t": "19 Nov 16:33",
-      "who": "kabir",
-      "msg": "reviewed B3-10: done"
-    },
-    {
-      "t": "19 Nov 16:33",
-      "who": "pmo",
-      "msg": "moved B3-41 to todo"
-    },
-    {
-      "t": "19 Nov 16:33",
-      "who": "pmo",
-      "msg": "moved B3-41 to todo"
-    },
-    {
-      "t": "19 Nov 16:33",
-      "who": "pmo",
-      "msg": "moved B3-13 to todo"
-    },
-    {
-      "t": "19 Nov 16:41",
-      "who": "pmo",
-      "msg": "moved B3-10 to changes"
-    },
-    {
-      "t": "19 Nov 16:41",
-      "who": "pmo",
-      "msg": "moved B3-08 to changes"
-    },
-    {
-      "t": "19 Nov 16:41",
-      "who": "pmo",
-      "msg": "moved B3-39 to in_review"
-    },
-    {
-      "t": "19 Nov 17:24",
-      "who": "nisha",
-      "msg": "moved B3-11 to in_progress"
-    },
-    {
-      "t": "19 Nov 17:25",
-      "who": "arjun",
-      "msg": "moved B3-08 to in_review"
-    },
-    {
-      "t": "19 Nov 17:25",
-      "who": "kabir",
-      "msg": "reviewed B3-39: done"
-    },
-    {
-      "t": "19 Nov 17:26",
-      "who": "kabir",
-      "msg": "reviewed B3-08: done"
-    },
-    {
-      "t": "19 Nov 17:28",
-      "who": "maya",
-      "msg": "moved B3-10 to in_review"
-    },
-    {
-      "t": "19 Nov 17:29",
-      "who": "kabir",
-      "msg": "reviewed B3-10: done"
-    },
-    {
-      "t": "19 Nov 17:29",
-      "who": "nisha",
-      "msg": "moved B3-11 to in_review"
-    },
-    {
-      "t": "19 Nov 17:33",
-      "who": "kabir",
-      "msg": "reviewed B3-11: changes"
-    },
-    {
-      "t": "19 Nov 17:41",
-      "who": "pmo",
-      "msg": "opened B3-43 — Contracts 1.3: ks.seed system tool (D-15) + deny reason for a dispatcher that raises"
-    },
-    {
-      "t": "19 Nov 17:42",
-      "who": "vikram",
-      "msg": "moved B3-18 to in_progress"
-    },
-    {
-      "t": "19 Nov 17:43",
-      "who": "nisha",
-      "msg": "moved B3-11 to in_review"
-    },
-    {
-      "t": "19 Nov 17:45",
-      "who": "tara",
-      "msg": "moved B3-17 to in_progress"
-    },
-    {
-      "t": "19 Nov 17:45",
-      "who": "tara",
-      "msg": "moved B3-16 to in_progress"
-    },
-    {
-      "t": "19 Nov 17:45",
-      "who": "tara",
-      "msg": "moved B3-17 to in_review"
-    },
-    {
-      "t": "19 Nov 17:45",
-      "who": "tara",
-      "msg": "moved B3-16 to in_review"
-    },
-    {
-      "t": "19 Nov 17:46",
-      "who": "kabir",
-      "msg": "reviewed B3-16: changes"
-    },
-    {
-      "t": "19 Nov 17:46",
-      "who": "ishaan",
-      "msg": "moved B3-12 to in_progress"
-    },
-    {
-      "t": "19 Nov 17:46",
-      "who": "tara",
-      "msg": "moved B3-16 to in_review"
-    },
-    {
-      "t": "19 Nov 17:46",
-      "who": "maya",
-      "msg": "moved B3-43 to in_progress"
-    },
-    {
-      "t": "19 Nov 17:46",
-      "who": "maya",
-      "msg": "moved B3-43 to in_review"
-    },
-    {
-      "t": "19 Nov 17:47",
-      "who": "ishaan",
-      "msg": "moved B3-12 to in_review"
-    },
-    {
-      "t": "19 Nov 17:47",
-      "who": "kabir",
-      "msg": "reviewed B3-16: done"
-    },
-    {
-      "t": "19 Nov 17:48",
-      "who": "nisha",
-      "msg": "moved B3-11 to in_review"
-    },
-    {
-      "t": "19 Nov 17:50",
-      "who": "vikram",
-      "msg": "moved B3-18 to in_review"
-    },
-    {
-      "t": "19 Nov 17:50",
-      "who": "pmo",
-      "msg": "opened B3-44 — World conforms to CALL-02 B2/B3 on a real F2+ run: triage kept, docs independent"
-    },
-    {
-      "t": "19 Nov 17:50",
-      "who": "kabir",
-      "msg": "reviewed B3-43: done"
-    },
-    {
-      "t": "19 Nov 17:50",
-      "who": "maya",
-      "msg": "reviewed B3-17: changes"
-    },
-    {
-      "t": "19 Nov 17:50",
-      "who": "maya",
-      "msg": "reviewed B3-12: changes"
-    },
-    {
-      "t": "19 Nov 17:50",
-      "who": "tara",
-      "msg": "moved B3-44 to in_progress"
-    },
-    {
-      "t": "19 Nov 17:50",
-      "who": "pmo",
-      "msg": "moved B3-15 to todo"
-    },
-    {
-      "t": "19 Nov 17:51",
-      "who": "kabir",
-      "msg": "reviewed B3-11: done"
-    },
-    {
-      "t": "19 Nov 17:51",
-      "who": "kabir",
-      "msg": "moved B3-11 to done"
-    },
-    {
-      "t": "19 Nov 17:51",
-      "who": "pmo",
-      "msg": "moved B3-41 to todo"
-    },
     {
       "t": "19 Nov 17:52",
       "who": "tara",
@@ -1408,6 +1040,386 @@
       "t": "20 Nov 06:39",
       "who": "kabir",
       "msg": "moved B3-31 to done"
+    },
+    {
+      "t": "20 Nov 06:39",
+      "who": "arjun",
+      "msg": "moved B3-25 to in_progress"
+    },
+    {
+      "t": "20 Nov 06:39",
+      "who": "nisha",
+      "msg": "moved B3-32 to in_progress"
+    },
+    {
+      "t": "20 Nov 06:40",
+      "who": "vikram",
+      "msg": "moved B3-48 to in_review"
+    },
+    {
+      "t": "20 Nov 06:43",
+      "who": "nisha",
+      "msg": "moved B3-32 to in_review"
+    },
+    {
+      "t": "20 Nov 06:45",
+      "who": "maya",
+      "msg": "reviewed B3-48: done"
+    },
+    {
+      "t": "20 Nov 06:54",
+      "who": "arjun",
+      "msg": "moved B3-25 to in_review"
+    },
+    {
+      "t": "20 Nov 06:54",
+      "who": "kabir",
+      "msg": "reviewed B3-32: done"
+    },
+    {
+      "t": "20 Nov 06:54",
+      "who": "pmo",
+      "msg": "moved B3-35 to todo"
+    },
+    {
+      "t": "20 Nov 06:55",
+      "who": "maya",
+      "msg": "moved B3-30 to in_review"
+    },
+    {
+      "t": "20 Nov 08:54",
+      "who": "kabir",
+      "msg": "reviewed B3-25: done"
+    },
+    {
+      "t": "20 Nov 08:54",
+      "who": "maya",
+      "msg": "moved B3-27 to in_progress"
+    },
+    {
+      "t": "20 Nov 08:54",
+      "who": "pmo",
+      "msg": "opened B3-49 — ks.verify: epoch-fence check on every record (kabir, B3-25 review)"
+    },
+    {
+      "t": "20 Nov 08:54",
+      "who": "arjun",
+      "msg": "moved B3-49 to in_progress"
+    },
+    {
+      "t": "20 Nov 09:05",
+      "who": "kabir",
+      "msg": "reviewed B3-30: done"
+    },
+    {
+      "t": "20 Nov 09:05",
+      "who": "pmo",
+      "msg": "moved B3-27 to in_progress"
+    },
+    {
+      "t": "20 Nov 09:05",
+      "who": "ishaan",
+      "msg": "moved B3-34 to in_progress"
+    },
+    {
+      "t": "20 Nov 09:07",
+      "who": "arjun",
+      "msg": "moved B3-49 to in_review"
+    },
+    {
+      "t": "20 Nov 09:08",
+      "who": "ishaan",
+      "msg": "moved B3-34 to in_review"
+    },
+    {
+      "t": "20 Nov 09:13",
+      "who": "kabir",
+      "msg": "reviewed B3-49: done"
+    },
+    {
+      "t": "20 Nov 09:13",
+      "who": "pmo",
+      "msg": "moved B3-35 to todo"
+    },
+    {
+      "t": "20 Nov 09:27",
+      "who": "maya",
+      "msg": "moved B3-27 to in_review"
+    },
+    {
+      "t": "20 Nov 09:28",
+      "who": "maya",
+      "msg": "reviewed B3-34: changes"
+    },
+    {
+      "t": "20 Nov 09:29",
+      "who": "nisha",
+      "msg": "reviewed B3-27: done"
+    },
+    {
+      "t": "20 Nov 09:29",
+      "who": "ishaan",
+      "msg": "moved B3-34 to in_review"
+    },
+    {
+      "t": "20 Nov 09:31",
+      "who": "anaya",
+      "msg": "moved B3-27 to in_review"
+    },
+    {
+      "t": "20 Nov 09:31",
+      "who": "maya",
+      "msg": "reviewed B3-34: done"
+    },
+    {
+      "t": "20 Nov 09:32",
+      "who": "ishaan",
+      "msg": "moved B3-34 to done"
+    },
+    {
+      "t": "20 Nov 09:35",
+      "who": "vikram",
+      "msg": "moved B3-27 to in_review"
+    },
+    {
+      "t": "20 Nov 09:40",
+      "who": "tara",
+      "msg": "moved B3-27 to in_review"
+    },
+    {
+      "t": "20 Nov 09:44",
+      "who": "anaya",
+      "msg": "moved B3-27 to in_review"
+    },
+    {
+      "t": "20 Nov 09:58",
+      "who": "tara",
+      "msg": "moved B3-33 to in_progress"
+    },
+    {
+      "t": "20 Nov 10:21",
+      "who": "maya",
+      "msg": "moved B3-35 to in_progress"
+    },
+    {
+      "t": "20 Nov 10:22",
+      "who": "anaya",
+      "msg": "moved B3-33 to in_progress"
+    },
+    {
+      "t": "20 Nov 10:22",
+      "who": "maya",
+      "msg": "opened B3-50 — ks score for --rogue runs (S* with slot no-op from fault_tick)"
+    },
+    {
+      "t": "20 Nov 10:22",
+      "who": "maya",
+      "msg": "opened B3-51 — RT10 / D10 hold=0 contrast: tainted payment must dispatch at hold 0"
+    },
+    {
+      "t": "20 Nov 10:22",
+      "who": "maya",
+      "msg": "opened B3-52 — RT9 world precondition: crm applies supplier_bank_update tickets"
+    },
+    {
+      "t": "20 Nov 11:52",
+      "who": "tara",
+      "msg": "moved B3-52 to in_progress"
+    },
+    {
+      "t": "20 Nov 12:02",
+      "who": "nisha",
+      "msg": "moved B3-51 to in_review"
+    },
+    {
+      "t": "20 Nov 12:09",
+      "who": "tara",
+      "msg": "moved B3-52 to in_review"
+    },
+    {
+      "t": "20 Nov 12:09",
+      "who": "tara",
+      "msg": "moved B3-50 to in_review"
+    },
+    {
+      "t": "20 Nov 14:21",
+      "who": "kabir",
+      "msg": "reviewed B3-51: changes"
+    },
+    {
+      "t": "20 Nov 14:34",
+      "who": "kabir",
+      "msg": "reviewed B3-52: changes"
+    },
+    {
+      "t": "20 Nov 14:34",
+      "who": "kabir",
+      "msg": "reviewed B3-50: changes"
+    },
+    {
+      "t": "20 Nov 14:44",
+      "who": "tara",
+      "msg": "moved B3-52 to in_review"
+    },
+    {
+      "t": "20 Nov 14:44",
+      "who": "tara",
+      "msg": "moved B3-50 to in_review"
+    },
+    {
+      "t": "20 Nov 14:46",
+      "who": "maya",
+      "msg": "moved B3-51 to in_review"
+    },
+    {
+      "t": "20 Nov 14:48",
+      "who": "kabir",
+      "msg": "reviewed B3-52: done"
+    },
+    {
+      "t": "20 Nov 14:48",
+      "who": "kabir",
+      "msg": "reviewed B3-50: done"
+    },
+    {
+      "t": "20 Nov 14:49",
+      "who": "pmo",
+      "msg": "moved B3-35 to in_progress"
+    },
+    {
+      "t": "20 Nov 14:50",
+      "who": "maya",
+      "msg": "moved B3-35 to in_review"
+    },
+    {
+      "t": "20 Nov 14:56",
+      "who": "kabir",
+      "msg": "opened B3-53 — Contrast label travels with score.json; RT10 test for normal-run relabel to lineage_hold=false"
+    },
+    {
+      "t": "20 Nov 15:02",
+      "who": "tara",
+      "msg": "moved B3-33 to in_review"
+    },
+    {
+      "t": "20 Nov 15:10",
+      "who": "nisha",
+      "msg": "moved B3-53 to in_progress"
+    },
+    {
+      "t": "20 Nov 15:10",
+      "who": "pmo",
+      "msg": "opened B3-54 — F3 rogue comms PII egress never detected in bench (0/20)"
+    },
+    {
+      "t": "20 Nov 15:11",
+      "who": "kabir",
+      "msg": "reviewed B3-51: done"
+    },
+    {
+      "t": "20 Nov 15:11",
+      "who": "kabir",
+      "msg": "moved B3-51 to done"
+    },
+    {
+      "t": "20 Nov 15:11",
+      "who": "nisha",
+      "msg": "moved B3-53 to todo"
+    },
+    {
+      "t": "20 Nov 15:11",
+      "who": "nisha",
+      "msg": "moved B3-54 to in_progress"
+    },
+    {
+      "t": "20 Nov 15:11",
+      "who": "tara",
+      "msg": "moved B3-53 to in_progress"
+    },
+    {
+      "t": "20 Nov 15:11",
+      "who": "kabir",
+      "msg": "reviewed B3-35: done"
+    },
+    {
+      "t": "20 Nov 15:11",
+      "who": "pmo",
+      "msg": "opened S4-01 — Red-team gaps from B3-35 mutation review: forged witness ack, outbox provenance RT, ttc unavailable"
+    },
+    {
+      "t": "20 Nov 15:15",
+      "who": "tara",
+      "msg": "moved B3-53 to in_review"
+    },
+    {
+      "t": "20 Nov 15:15",
+      "who": "anaya",
+      "msg": "moved B3-53 to in_review"
+    },
+    {
+      "t": "20 Nov 15:16",
+      "who": "maya",
+      "msg": "reviewed B3-33: changes"
+    },
+    {
+      "t": "20 Nov 15:19",
+      "who": "nisha",
+      "msg": "moved B3-54 to in_review"
+    },
+    {
+      "t": "20 Nov 15:19",
+      "who": "pmo",
+      "msg": "moved B3-53 to in_review"
+    },
+    {
+      "t": "20 Nov 15:25",
+      "who": "anaya",
+      "msg": "moved B3-33 to in_progress"
+    },
+    {
+      "t": "20 Nov 15:39",
+      "who": "kabir",
+      "msg": "reviewed B3-53: done"
+    },
+    {
+      "t": "20 Nov 15:41",
+      "who": "kabir",
+      "msg": "reviewed B3-54: done"
+    },
+    {
+      "t": "20 Nov 15:41",
+      "who": "anaya",
+      "msg": "moved B3-54 to done"
+    },
+    {
+      "t": "20 Nov 15:53",
+      "who": "pmo",
+      "msg": "moved B3-27 to done"
+    },
+    {
+      "t": "20 Nov 16:09",
+      "who": "tara",
+      "msg": "moved B3-33 to in_review"
+    },
+    {
+      "t": "20 Nov 16:12",
+      "who": "maya",
+      "msg": "reviewed B3-33: changes"
+    },
+    {
+      "t": "20 Nov 16:28",
+      "who": "tara",
+      "msg": "moved B3-33 to in_review"
+    },
+    {
+      "t": "20 Nov 16:29",
+      "who": "maya",
+      "msg": "reviewed B3-33: done"
+    },
+    {
+      "t": "20 Nov 16:29",
+      "who": "maya",
+      "msg": "moved B3-33 to done"
     }
   ]
 }

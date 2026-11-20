@@ -43,10 +43,11 @@ def test_validation_usage_without_exit(tmp_path):
 
 
 def test_unbuilt_commands_say_not_yet(tmp_path, capsys):
-    for argv in (["blame", str(tmp_path)], ["score", str(tmp_path)],
-                 ["bench"]):
+    for argv in (["blame", str(tmp_path)],):
         assert main(argv) == Exit.IO
         assert "not yet implemented" in capsys.readouterr().err
+    assert main(["score", str(tmp_path)]) == Exit.IO  # B3-27: built; a dir that is not a run dir is IO
+    assert "ks score" in capsys.readouterr().err
     assert main(["recover", str(tmp_path / "missing"), "--dry-run"]) == Exit.IO
     # B3-30: recover is built; a directory that is not a run dir is IO (verify missing_file), never FROZEN
     assert main(["recover", str(tmp_path), "--dry-run"]) == Exit.IO
@@ -127,10 +128,11 @@ def test_remaining_placeholders_listed():
     """Visible punch list: every entry must be gone before the finale (CALL-02 / B3-12 review)."""
     from ks.runtime.options import SERVED, RunOptions
     unserved = sorted(f for f in RunOptions.__dataclass_fields__ if f not in SERVED)
-    commands = ["blame (B3-14)", "recover (B3-18+)", "score (ks.score)", "bench (ADR-06 metrics runner)"]
+    commands = ["blame (B3-14)"]  # recover (B3-30), score (B3-27), bench (B3-33) landed
     print("PLACEHOLDERS runtime options:", unserved, "commands:", commands)
     assert set(unserved) | set(SERVED) == set(RunOptions.__dataclass_fields__)
-    assert len(commands) == 4  # update when one lands; delete this test when both lists are empty
+    assert unserved == ["with_baselines"]  # B3-27 served fault, culprit, hold, pause_on_alert; B3-35 rogue, slot
+    assert len(commands) == 1  # update when it lands; delete this test when both lists are empty
 
 
 def test_repro_banner_ok_and_diverged(tmp_path, capsys):

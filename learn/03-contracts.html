@@ -1,0 +1,82 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>3. Contracts</title><link rel="stylesheet" href="assets/style.css"></head>
+<body><nav id="side"></nav><main>
+<h1>3. Contracts: the shared language</h1>
+<p class="lead"><code>src/ks/contracts/</code> defines every message and document in the system. Learn these shapes first and the rest of the code reads easily.</p>
+
+<h2>The six contracts</h2>
+<table>
+<tr><th></th><th>Contract</th><th>Main types</th></tr>
+<tr><td>C1</td><td>Envelope: one agent request</td><td><code>Envelope</code>, <code>EnvelopeHeader</code></td></tr>
+<tr><td>C2</td><td>Record: one line of the audit chain</td><td><code>Record</code>, <code>WitnessCheckpoint</code>, <code>Decision</code>, <code>Reason</code>, <code>ActionClass</code></td></tr>
+<tr><td>C3</td><td>State: objects, versions, reads, writes, outbox</td><td><code>ReadEntry</code>, <code>WriteEntry</code>, <code>ViewEntry</code>, <code>OutboxItem</code></td></tr>
+<tr><td>C4</td><td>Alerts and controls</td><td><code>Alert</code>, <code>Control</code>, <code>EpochFold</code></td></tr>
+<tr><td>C5</td><td>Recovery</td><td><code>RecoveryPlan</code>, steps, <code>Approval</code></td></tr>
+<tr><td>C6</td><td>Run config, keys, anchor, verify report</td><td><code>RunConfig</code>, <code>Keyring</code>, <code>RunAnchor</code>, <code>VerifyReport</code></td></tr>
+</table>
+<p>Plus transport frames (<code>TickFrame</code>, <code>SubmitFrame</code>, <code>NoopFrame</code>, <code>ReplyFrame</code>, <code>SignRequest</code>, <code>SignReply</code>, <code>SignRefusal</code>) and JSON schemas in <code>contracts/schema/</code>. Types are frozen pydantic models that reject unknown fields. The README says the contracts version was 1.6.0.</p>
+
+<h2>The envelope (C1)</h2>
+<p>An agent's request. The agent builds it, the signer signs its <b>header</b>, and the gateway verifies it.</p>
+<pre><code>Envelope(agent_id="crm", action_id="crm-7", parent_action_id=None, act_chain=(),
+         tool="crm.update_supplier", args={...},
+         nonce=&lt;random 32 hex&gt;, expiry_tick=tick+2, epoch=current_epoch,
+         claimed_ts_us=None, claimed_seq=None, sig=None)</code></pre>
+<ul>
+<li><b>agent_id, action_id</b>: who, and a unique id for this action.</li>
+<li><b>nonce, expiry_tick</b>: stop replays. A used nonce is refused, and an envelope past its expiry is refused.</li>
+<li><b>epoch</b>: the agent's "generation". Suspending an agent bumps it, so old pre-signed envelopes die (see page 9).</li>
+<li><b>act_chain</b>: if an agent acts on behalf of another, the chain of principals. If any ancestor is suspended, the action is denied.</li>
+<li><b>claimed_ts_us, claimed_seq</b>: agent claims about time and order. They are never trusted. The gateway assigns the real <code>seq</code> and time.</li>
+<li><b>header vs args</b>: the signed header holds <code>args_hash</code>, not the raw args. If the args don't hash to <code>args_hash</code>, that's <code>bad_sig</code> (a spliced-args attack).</li>
+</ul>
+
+<h2>The record (C2)</h2>
+<p>One record is written for <b>every</b> envelope the gateway receives, executed or not.</p>
+<pre><code>Record: seq, record_id, prev_hash, hash, gw_sig,        # the chain + gateway signature
+        tick, ts_us, conn_id,                           # gateway-assigned
+        envelope (header), envelope_hash, sig_ok,
+        decision (exec|deny|hold), reason, policy_rule,
+        action_class (R|C|I1|I2|U),
+        read_set, write_set, outbox_ids, result_hash,
+        control, reexec_of</code></pre>
+<ul>
+<li><code>prev_hash</code> + <code>hash</code> chain the records. Changing any old record breaks every later hash.</li>
+<li><code>read_set</code> lists versions the tool read <b>plus every view entry delivered to the agent that tick</b>. Entries are tagged <code>source=view|tool</code>.</li>
+<li><code>write_set</code> gives before and after version and hash for each object written.</li>
+<li>No raw values appear in a record. They sit in the side store, keyed by hash.</li>
+</ul>
+
+<h3>Action classes</h3>
+<table>
+<tr><th>Class</th><th>Meaning</th><th>What the system does</th></tr>
+<tr><td><b>R</b></td><td>Reversible: we hold the earlier version</td><td>Executes. Recovery can restore it.</td></tr>
+<tr><td><b>C</b></td><td>Compensable: a registered opposite action exists</td><td>Recovery can run the compensation.</td></tr>
+<tr><td><b>I1</b></td><td>Irreversible but containable</td><td>Goes through the <b>outbox</b>, held before it leaves.</td></tr>
+<tr><td><b>I2</b></td><td>Irreversible, can't be contained</td><td>Needs prior human approval (<code>hold/needs_approval</code>).</td></tr>
+<tr><td><b>U</b></td><td>Unknown</td><td>Always denied.</td></tr>
+</table>
+
+<h3>Decisions and reasons</h3>
+<table>
+<tr><th>Decision</th><th>Reasons</th></tr>
+<tr><td><b>exec</b></td><td><code>ok</code></td></tr>
+<tr><td><b>deny</b></td><td><code>bad_sig</code>, <code>schema</code>, <code>nonce_reused</code>, <code>expired</code>, <code>late_frame</code>, <code>stale_epoch</code>, <code>suspended</code>, <code>revoked</code>, <code>revoked_ancestor</code>, <code>class_u</code>, <code>out_of_scope</code>, <code>over_quota</code>, <code>recovery_frozen</code>, <code>tool_error</code></td></tr>
+<tr><td><b>hold</b></td><td><code>lineage_hold</code>, <code>sensitive_field</code>, <code>needs_approval</code>, <code>stale_plan</code></td></tr>
+</table>
+
+<h2>One serializer, so hashes agree</h2>
+<p><code>contracts/canonical.py</code> is the only encoder the signer, gateway, recorder and verify may use. Rules: sorted keys, UTF-8, no whitespace, <b>integers only</b> (no floats), no bytes, nesting depth at most 32. Every decode failure is a <code>CanonicalError</code>, which the gateway turns into <code>deny/schema</code>. A test greps the source for stray <code>json.dumps</code>.</p>
+<pre><code>signing_bytes() = DOMAIN_TAG + 0x00 + canonical(doc without sig/hash fields)
+content_hash()  = sha256(signing_bytes)</code></pre>
+<div class="box note"><b class="t">Why domain tags?</b>Each type has its own tag (<code>ks/envelope/v1</code>, <code>ks/record/v1</code>, and so on), so a signature made for one kind of document can't be replayed as another.</div>
+
+<h2>Other things defined here</h2>
+<ul>
+<li><b>Object ids</b> (<code>state.py</code>): <code>table:pk</code> for a row, and <code>table:pk.field</code> for a sensitive field that is its own object.</li>
+<li><b>System principals</b> (<code>ids.py</code>): <code>ks.gateway</code>, <code>ks.monitor</code>, <code>ks.operator</code>, <code>ks.recovery</code>. They act on the special system connection <code>c-0</code>, never on an agent socket.</li>
+<li><b>RunDir</b> (<code>rundir.py</code>): file names and how the run directory is laid out and chowned.</li>
+<li><b>Exit codes</b> (<code>Exit</code>): what <code>ks verify</code> and others return.</li>
+</ul>
+
+<div class="pager" id="pager"></div>
+</main><script src="assets/nav.js"></script></body></html>

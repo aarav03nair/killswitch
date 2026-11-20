@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 from ks.contracts import (CONTRACTS_VERSION, SYSTEM_PRINCIPALS, RunAnchor, RunConfig, RunDir, canonical)
-from ks.contracts.rundir import STATE_DB, TIMING, WITNESS, WITNESS_HEADS_DIR
+from ks.contracts.rundir import ALERTS, STATE_DB, TIMING, WITNESS, WITNESS_HEADS_DIR
 from ks.gateway import Gateway
 from ks.gateway.control import FoldedControl
 from ks.gateway.system import SystemQueue
@@ -27,7 +27,7 @@ from .spawn import (WITNESS_UID, agent_uid, kill_uids, pids_with_uids, plan_agen
 from .setup import (IsolationError, check_run_id, default_run_id, isolation_problems, refuse_existing,
                     scenario as _scenario)
 
-__all__ = ["Isolation", "RunResult", "run", "agent_ids", "pause_ticks", "STARTUP_GRACE_S"]
+__all__ = ["Isolation", "RunResult", "AlertTaint", "DEMO_HOLD", "run", "agent_ids", "pause_ticks", "STARTUP_GRACE_S"]
 
 STARTUP_GRACE_S = 15.0
 """Tick 0 waits at least this long: there is no readiness handshake, and an agent's first frame comes only
@@ -102,6 +102,11 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
         raise ValueError("need at least one agent and one tick")
     replay = _load_replay(options)  # R3 (B3-20/B3-30): refused before anything is created or spawned
     sc = _scenario(scenario, agents=agents, seed=seed, ticks=ticks)
+    spec = _fault_spec(options, sc.name, seed, ticks)  # B3-27; scorer-only ground truth (A3)
+    rogue = _rogue(options, sc, key_mode)  # B3-35: (slot, source) or None; refused before anything is created
+    hold = (options.hold if options is not None and options.hold is not None
+            else (DEMO_HOLD if spec or rogue else 0))
+    agent_argv = list(sc.agent_argv) + (["--variant", spec.variant] if spec and spec.variant != "f2plus" else [])
     ids = sc.agent_ids
     agents = len(ids)
     check_run_id(run_id)
@@ -122,8 +127,13 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
     # contracts 1.2: isolation is fixed before spawn and covered by config_hash (SKEL-01 finding 4); a /proc
     # readback that contradicts it aborts before tick 0 (B3-10, isolation_problems below).
     config = RunConfig(run_id=run_id or default_run_id(sc.name, seed), contracts_version=CONTRACTS_VERSION,
-                       seed=seed, scenario=sc.name, fault=None, culprit=None, fault_tick=None, key_mode=key_mode,
-                       decision_latency_ticks=0, ticks=ticks, tick_us=TICK_US, start_ts_us=0, hold_window_ticks=0,
+                       seed=seed, scenario=sc.name,
+                       fault=_config_fault(spec.fault) if spec else ("rogue" if rogue else None),
+                       culprit=spec.culprit if spec else (rogue[0] if rogue else None),
+                       fault_tick=spec.t_inject if spec else (ticks // 4 if rogue else None),
+                       key_mode=key_mode, decision_latency_ticks=0, ticks=ticks, tick_us=TICK_US, start_ts_us=0,
+                       hold_window_ticks=hold,
+                       lineage_hold=not (options is not None and options.no_lineage_hold),  # B3-51 D10 contrast
                        sensitive_fields=sc.sensitive_fields, agents=ids, isolation="per_agent_uid" if separate else "degraded",
                        decisions_from=replay.anchor_hash if replay is not None else None)
     if config.tick_us <= SYSTEM_SLOTS + agents:
@@ -142,6 +152,7 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
     control = FoldedControl(ids)  # B3-13: epochs and deny-lists are the fold of executed ks.control records
     system = SystemQueue({p: keys.signer(p) for p in ("ks.gateway", "ks.monitor", "ks.operator", "ks.recovery")})
     conns: list[AgentConn] = []
+    rogue_log: RogueLog | None = None
     store = None
     operator: OperatorServer | None = None
     witness: WitnessLink | None = None
@@ -179,10 +190,20 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
         for i, a in enumerate(ids):
             g_parent, g_child = socket.socketpair()
             s_parent, s_child = socket.socketpair()
-            proc = spawn_child("ks.runtime.agent_template",
-                               ["--agent", a, "--seed", str(seed), "--gw-fd", str(g_child.fileno()),
-                                "--signer-fd", str(s_child.fileno()), "--behaviour", sc.behaviour, *sc.agent_argv],
-                               uid=spawn_uids[i], pass_socks=[g_child, s_child], agent=True)
+            if rogue is not None and a == rogue[0]:  # B3-35: the jury's file in this slot, same uid, same handles
+                x_parent, x_child = socket.socketpair()
+                proc = spawn_child("ks.runtime.rogue",
+                                   ["--agent", a, "--seed", str(seed), "--gw-fd", str(g_child.fileno()),
+                                    "--signer-fd", str(s_child.fileno()), "--aux-fd", str(x_child.fileno())],
+                                   uid=spawn_uids[i], pass_socks=[g_child, s_child, x_child], agent=True)
+                x_child.close()
+                rogue_log = RogueLog(x_parent, rogue[1], rd.path / ROGUE_LOG)
+            else:
+                proc = spawn_child("ks.runtime.agent_template",
+                                   ["--agent", a, "--seed", str(seed), "--gw-fd", str(g_child.fileno()),
+                                    "--signer-fd", str(s_child.fileno()), "--behaviour", sc.behaviour, *agent_argv],
+                                   uid=spawn_uids[i], pass_socks=[g_child, s_child], agent=True,
+                                   env={"KS_FAULT": spec.fault} if spec is not None and a == spec.culprit else None)
             g_child.close()
             s_child.close()
             conns.append(AgentConn(index=i, agent_id=a, conn_id=f"c-{i + 1}", gw=g_parent, signer=s_parent,
@@ -216,8 +237,11 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
                 raise ValueError("monitor needs the world scenario (a state store)")
             from ks.containment import MonitorLoop
             mon = MonitorLoop(gateway, keys.signer("ks.monitor"), state=store, side=store.side)
-        pauses = pause_ticks(options, ticks)
-        if pauses and sys.stdin is not None and sys.stdin.isatty():
+            gateway.outbox.taint = AlertTaint(recorder, mon)  # ADR-04 §5: tainted lineage is held from the alert on
+        pauses = set(pause_ticks(options, ticks))
+        pace = options is not None and options.pause_on_alert
+        on_alert, n_applied = pace, 0
+        if (pauses or pace) and sys.stdin is not None and sys.stdin.isatty():
             _keypress_resumes(operator.wake)
         for t in range(ticks):
             if replay is not None:  # R3: the source's operator decisions land in the control phase of their tick
@@ -230,7 +254,20 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
                 say(f"resumed at tick {t}")
             o = barrier.run_tick(t, deadline_s=max(STARTUP_GRACE_S, barrier.deadline_s) if t == 0 else None)
             if mon is not None:
-                mon.step()
+                n_alerts = len(mon.alerts)
+                adms = mon.step()
+                if len(mon.alerts) > n_alerts:  # F6: alerts.jsonl is the monitor's copy of the chained ks.alert bodies
+                    with open(rd.path / ALERTS, "ab") as f:
+                        f.write(b"".join(a.to_canonical() + b"\n" for a in mon.alerts[n_alerts:]))
+                if on_alert and t + 1 < ticks and any(
+                        a.record is not None and a.record.control is not None and a.record.control.op.value == "suspend"
+                        for a in adms):  # B3-27 pacing: the operator gets the run paused right after containment
+                    on_alert = False
+                    pauses.add(t + 1)
+            if pace and recovery is not None and len(recovery.applied) > n_applied:
+                n_applied = len(recovery.applied)  # B3-27 pacing: pause again after a recovery applied (unhold beat)
+                if t + 1 < ticks:
+                    pauses.add(t + 1)
             stalls += o.checkpoint is None and recorder.seq > 0
             misses += len(o.missed)
             timing.append(canonical.dumps_line({"tick": t, "wall_us": o.wall_us, "missed": o.missed,
@@ -240,6 +277,8 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
         if operator is not None:
             operator.close()  # first: no operator request is admitted after the last tick
         _teardown(conns, witness, our_uids)
+        if rogue_log is not None:
+            rogue_log.close()
         if store is not None:
             store.close()
 
@@ -247,12 +286,110 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
     anchor = RunAnchor.of(last, keyring, config) if last is not None else None
     if stalls or misses:
         say(f"warnings: {misses} deadline misses, {stalls} witness stalls")
+    if operator is not None:  # RT3c evidence (kabir, B3-13): refused peers live in memory only, never on c-0
+        n_peer = sum(1 for _, why in operator.refused if why == "peer_uid")
+        say(f"operator socket: {n_peer} refused peers, {len(operator.refused) - n_peer} refused requests")
     if anchor is None:
         say("no witnessed head: nothing to anchor")
     else:
         say("RunAnchor (copy into ks verify --head):")
         say(anchor.to_canonical().decode())
     return RunResult(rd, anchor, iso, stalls, misses)
+
+
+ROGUE_LOG = "rogue.jsonl"
+"""Harness-side attempt log of the rogue slot (SPEC §3 ``ctx.report``/``ctx.dump``): 0600, capped, outside every
+TCB read path and every deterministic-file list. Present only in ``--rogue`` runs."""
+
+
+def _rogue(options: RunOptions | None, sc, key_mode: str) -> tuple[str, bytes] | None:
+    """``(slot, source)`` of a ``--rogue`` run (B3-35), or None. Raises ValueError before anything is created."""
+    if options is None or options.rogue is None:
+        return None
+    if sc.name != "world":
+        raise ValueError("a rogue needs the world scenario")
+    if key_mode != "fresh":
+        raise ValueError("a rogue run uses fresh keys (X7)")
+    slot = options.slot or "docs"
+    if slot not in sc.agent_ids:
+        raise ValueError(f"--slot {slot!r} is not an agent of the scenario")
+    return slot, Path(options.rogue).read_bytes()
+
+
+class RogueLog:
+    """Sends the rogue its source, then appends its report lines to ``<run>/rogue.jsonl`` (cap REPORT_CAP)."""
+
+    def __init__(self, sock: socket.socket, source: bytes, path: Path):
+        import threading
+        from .rogue import REPORT_CAP
+        self.sock, self.path, self.cap = sock, path, REPORT_CAP
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        self.f = os.fdopen(fd, "wb")
+        sock.sendall(str(len(source)).encode() + b"\n" + source)
+        self.t = threading.Thread(target=self._pump, daemon=True)
+        self.t.start()
+
+    def _pump(self) -> None:
+        n = 0
+        try:
+            for line in self.sock.makefile("rb"):
+                if n + len(line) <= self.cap and line.endswith(b"\n"):
+                    self.f.write(line)
+                    self.f.flush()
+                    n += len(line)
+        except (OSError, ValueError):
+            pass
+
+    def close(self) -> None:
+        self.t.join(2.0)  # the rogue is dead by now: drain to EOF first, then cut
+        try:
+            self.sock.shutdown(socket.SHUT_RDWR)
+        except OSError:
+            pass
+        self.t.join(1.0)
+        self.sock.close()
+        self.f.close()
+
+
+DEMO_HOLD = 6
+"""``hold_window_ticks`` of a fault run when ``--hold`` is not given (ADR-06-metrics: demo H=6)."""
+
+
+def _fault_spec(options: RunOptions | None, scenario_name: str, seed: int, ticks: int):
+    """``ks.inject`` spec of ``options.fault`` (B3-27), or None. Raises ValueError before anything is created."""
+    if options is None or options.fault is None:
+        return None
+    if scenario_name != "world":
+        raise ValueError("a fault needs the world scenario")
+    from ks.inject import make_spec, world_fault
+    return make_spec(world_fault(options.fault), seed, ticks=ticks, culprit=options.culprit)
+
+
+def _config_fault(internal: str) -> str:
+    """World fault name -> ``RunConfig.fault`` id: ``f2plus`` -> ``F2+``, ``f2plus_x`` -> ``F2+x``, ``f1`` -> ``F1``."""
+    f = internal.upper().replace("PLUS_", "+").replace("PLUS", "+")
+    return f[:-1] + f[-1].lower() if f[-1].isalpha() and "+" in f else f
+
+
+class AlertTaint:
+    """The gateway outbox's ``TaintView`` in a monitored run (ADR-04 §5): the forward closure
+    (``ks.taint.taint_from_alerts``) over the record so far, seeded by the monitor's alerts; nothing is tainted
+    before the first alert or without a suspended suspect. Recomputed when a record lands."""
+
+    def __init__(self, recorder: Recorder, mon) -> None:
+        self.recorder, self.mon = recorder, mon
+        self._at: tuple[int, int] = (-1, -1)
+        self._t = None
+
+    def is_tainted(self, obj: str, ver: int) -> bool:
+        if not self.mon.alerts:
+            return False
+        key = (self.recorder.seq, len(self.mon.alerts))
+        if key != self._at:
+            from ks.taint import taint_from_alerts
+            self._t = taint_from_alerts(list(self.recorder.rundir.records()), list(self.mon.alerts))
+            self._at = key
+        return self._t is not None and self._t.is_tainted(obj, ver)
 
 
 @dataclass(frozen=True)

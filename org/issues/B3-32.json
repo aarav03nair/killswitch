@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "Bounded reader and per-connection denial budget with auto conn suspend",
   "acceptance": [
     "Reader takes at most MAX_FRAME_BYTES+1; oversize -> deny/schema with raw_hash over the prefix, connection closed",
@@ -18,8 +18,8 @@
     "B3-11"
   ],
   "deliverable": "src/ks/gateway/",
-  "summary": "",
-  "review": "",
+  "summary": "Gateway.tick: FLOOD_K=8 recorded denials/conn/tick; surplus frames dropped+counted (flood_dropped), one Control{suspend conn:<id>, reason=flood, ks.gateway} via admit_system (agent untouched); barrier.py closes gateway.flooded conns (3-line edit). Reader bound/oversize deny-schema already existed (pop_frame/fill). Nits: pii extra recipients (cc/bcc/...) fail closed, lowercase IBANs, MANUAL_UNHOLD removed. Tests tests/gateway/test_flood.py; env 932 passed; container not run.",
+  "review": "[kabir · done] Done (reviewer kabir). Ran: env 946 passed/3 failed (all tests/runtime/test_recover.py, B3-48 in-flight, pass in isolation, not B3-32); container 957 passed; make smoke OK (anchored, per_agent_uid). Attacks: (1) Reconnect: none possible; conns are fixed socketpairs made at spawn (run.py:188), no accept path, so a closed conn stays closed and per-agent records are bounded at K+1 once. (2) Crowd-out: only of the flooder's own later frames that tick; test_honest_conn_unaffected covers other agents; garbage is schema-denied cheaply before sig work. (3) In the real runtime the budget never fires: barrier C2 passes one frame per conn per tick (CALL-02 C2), and CALL-02 deferred F8b for exactly that reason. So this is defense-in-depth for direct Gateway.tick callers, consistent with ADR-04 RT11 'floods suspend only the connection'. Not suspending the agent is correct (garbage is attributed_agent=None and could be forged). Nits landed: lowercase IBAN (tested), MANUAL_UNHOLD gone from holds.py, cc/bcc fail closed. Non-blocking: no test for cc/bcc; only top-level keys are checked (nested headers.cc is not); state in the ADR-03/04 text that F8b is a backstop, not the primary bound.",
   "log": [
     {
       "t": "19 Nov 11:34",
@@ -30,6 +30,26 @@
       "t": "20 Nov 06:37",
       "who": "pmo",
       "msg": "→ todo: From kabir's B3-19 re-review (non-blocking, nisha): pii_egress allow-list keys on 'to' only; make extra recipients (cc/bcc) fail closed if ever added to the comms payload; find_pii misses lowercase IBANs; remove dead MANUAL_UNHOLD code."
+    },
+    {
+      "t": "20 Nov 06:39",
+      "who": "nisha",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "20 Nov 06:43",
+      "who": "nisha",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 06:43",
+      "who": "nisha",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "20 Nov 06:54",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

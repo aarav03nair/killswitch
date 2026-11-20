@@ -1,0 +1,55 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>1. Big picture</title><link rel="stylesheet" href="assets/style.css"></head>
+<body><nav id="side"></nav><main>
+<h1>1. The big picture</h1>
+<p class="lead">Before any code: what happens in one run, and why each part exists.</p>
+
+<h2>The cast</h2>
+<table>
+<tr><th>Part</th><th>Think of it as</th><th>Where</th></tr>
+<tr><td>Agents</td><td>Ten employees. They can only fill in request forms.</td><td><code>world/agents.py</code>, run by <code>runtime/agent_template.py</code></td></tr>
+<tr><td>Signer</td><td>A notary. Each agent can ask it to stamp a form. The agent never holds the stamp.</td><td><code>identity/signer.py</code></td></tr>
+<tr><td>Gateway</td><td>The only clerk allowed to touch the filing cabinet.</td><td><code>gateway/</code></td></tr>
+<tr><td>State store</td><td>The filing cabinet. It keeps every old version of every file.</td><td><code>state/store.py</code></td></tr>
+<tr><td>Recorder</td><td>The ledger. Each line is chained to the previous one.</td><td><code>recorder/</code></td></tr>
+<tr><td>Witness</td><td>An outside auditor who keeps their own signed note of the ledger's latest line.</td><td><code>witness/</code></td></tr>
+<tr><td>Monitor</td><td>A watchman who checks the cabinet for impossible data.</td><td><code>monitor/</code></td></tr>
+<tr><td>Containment, recovery</td><td>The response team: lock out one employee, then repair the files.</td><td><code>containment/</code>, <code>recovery/</code></td></tr>
+<tr><td>Verify</td><td>An inspector who checks everything afterwards, offline.</td><td><code>verify/</code></td></tr>
+</table>
+
+<h2>One tick of time</h2>
+<p>Time is cut into <b>ticks</b>. The scheduler is the gateway itself (the barrier in <code>runtime/barrier.py</code> does the I/O). In every tick:</p>
+<div class="diagram">1  gateway.open(tick)    release due outbox items, run control phase, build each agent's VIEW
+2  barrier sends each agent a TickFrame {tick, epoch, view}
+3  each agent decides an action from its view, asks the signer to sign it, sends SubmitFrame
+4  gateway.tick(frames)    admit frames in agent_id order (arrival order is thrown away)
+       -> 14 checks -> run the tool in a DB transaction -> append a signed record
+5  monitor looks at the new records; containment may suspend an agent
+6  barrier pushes (seq, head hash, tick) to the witness, which signs a checkpoint</div>
+
+<div class="box key"><b class="t">Key idea</b>Agents only see data through the <b>view</b> the gateway hands them, and every entry in that view is added to the action's recorded <b>read set</b>. That is how the system knows what each action depended on, without trusting the agent to say so.</div>
+
+<h2>A worked example: the bad IBAN</h2>
+<p>This is the hero scenario "F2+" in the code. The CRM agent writes a wrong bank account for a supplier, and other agents build on it.</p>
+<ol class="steps">
+<li><b>The fault.</b> At the hero tick <code>h</code>, <code>crm</code> signs <code>crm.update_supplier</code> with an attacker IBAN. The gateway runs it and records <code>write_set: supplier:S-22.iban v1→v2</code>, author crm.</li>
+<li><b>Others read it.</b> A tick later, billing's view includes the supplier row and the IBAN object, so billing's invoice record has that version in its <code>read_set</code>. Payments and comms then act on the invoice. The payment and email go into the <b>outbox</b>, with the lineage copied from the read set.</li>
+<li><b>Detect.</b> The monitor's <code>iban_checksum</code> detector finds an invalid IBAN. It cites the object version as evidence.</li>
+<li><b>Attribute.</b> A lookup finds which record wrote that version. Attributed agent: <code>crm</code>. No guessing.</li>
+<li><b>Contain.</b> Containment records a <code>ks.alert</code>, then a <code>ks.control suspend</code> for crm with a fresh epoch. From that record on, crm's next request is <code>deny/suspended</code>. Outbox items whose lineage touches the tainted version are held.</li>
+<li><b>Recover.</b> The planner restores the IBAN and the price to their last clean versions, re-runs billing/payments/comms on clean data, and flags what already left. A human approves after a dry-run. Triage's risk note stays, because it's a different object.</li>
+<li><b>Audit.</b> <code>ks verify</code> re-checks the chain, signatures, witness checkpoints and more. <code>ks score</code> compares the final state with a "fault never happened" oracle run.</li>
+</ol>
+
+<h2>The design rules you will keep meeting</h2>
+<ul>
+<li><b>One mediated path.</b> Nothing reaches state except through the gateway.</li>
+<li><b>Evidence, not testimony.</b> The gateway builds the read and write sets. A tool that lies about them is refused.</li>
+<li><b>Rule 11:</b> every envelope is recorded, including denials.</li>
+<li><b>Rule 9:</b> records hold hashes only. Raw values go in a side store, which can be redacted without breaking the chain.</li>
+<li><b>Fail closed.</b> An unknown tool is class <code>U</code> and is denied.</li>
+<li><b>Deterministic.</b> Same seed, same bytes, so a run can be replayed and compared.</li>
+</ul>
+
+<div class="pager" id="pager"></div>
+</main><script src="assets/nav.js"></script></body></html>

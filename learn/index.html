@@ -1,0 +1,39 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Learn the Kill Switch gateway</title><link rel="stylesheet" href="assets/style.css"></head>
+<body><nav id="side"></nav><main>
+<h1>Learn the Kill Switch gateway</h1>
+<p class="lead">A guided course through the code. By the end you should be able to explain how an agent action travels through the system, why the record can be trusted, and how one agent's damage is undone.</p>
+
+<div class="box note"><b class="t">How to use this</b>Read the pages in order. Each page says what a part is, why it exists, how the code does it, and which files to open. File paths are relative to <code>src/ks/</code> unless they say otherwise. Everything here comes from reading the code and its docstrings, and I haven't run it for this course.</div>
+
+<h2>The idea in four sentences</h2>
+<ol>
+<li>Agents don't touch shared data. They send <b>signed requests</b> to one <b>gateway</b>.</li>
+<li>The gateway checks each request, runs it inside a database transaction, and writes a <b>tamper-evident record</b> of exactly what was read and written.</li>
+<li>Because every read and write is attributed, "who did it" and "what depended on it" become <b>lookups</b>.</li>
+<li>That makes containment (stop one agent) and recovery (undo only its damage and what it infected) possible.</li>
+</ol>
+
+<h2>The course</h2>
+<div class="grid">
+<div class="card"><a href="01-big-picture.html"><h3>1. Big picture</h3><p>One run, end to end, with the supplier IBAN example.</p></a></div>
+<div class="card"><a href="02-repo-map.html"><h3>2. Repo map</h3><p>What every folder and module is for.</p></a></div>
+<div class="card"><a href="03-contracts.html"><h3>3. Contracts</h3><p>Envelope, record, action classes, canonical bytes.</p></a></div>
+<div class="card"><a href="04-identity-isolation.html"><h3>4. Identity and isolation</h3><p>Keys, signer service, per-agent uids, the agent process.</p></a></div>
+<div class="card"><a href="05-tick-barrier.html"><h3>5. Tick barrier</h3><p>The scheduler that makes runs deterministic.</p></a></div>
+<div class="card"><a href="06-gateway.html"><h3>6. The gateway</h3><p>The 14-step admission pipeline. The heart of the platform.</p></a></div>
+<div class="card"><a href="07-state-outbox.html"><h3>7. State and outbox</h3><p>Versioned objects, sensitive fields, held effects.</p></a></div>
+<div class="card"><a href="08-record-witness-verify.html"><h3>8. Record, witness, verify</h3><p>How the audit trail resists tampering.</p></a></div>
+<div class="card"><a href="09-monitor-containment.html"><h3>9. Monitor and containment</h3><p>Detect, attribute, suspend with epochs.</p></a></div>
+<div class="card"><a href="10-taint-recovery.html"><h3>10. Taint and recovery</h3><p>Blast radius, plan, dry run, apply.</p></a></div>
+<div class="card"><a href="11-world-oracle-score.html"><h3>11. World, oracle, scoring</h3><p>The test company, fault injection, R and C.</p></a></div>
+<div class="card"><a href="12-cli-demo.html"><h3>12. CLI, demo, console</h3><p>Every command and what the demo script does.</p></a></div>
+<div class="card"><a href="13-platform.html"><h3>13. Gateway as a platform</h3><p>The extension points, and what is still tied to the demo.</p></a></div>
+<div class="card"><a href="14-glossary.html"><h3>Glossary and quiz</h3><p>Terms in plain language, and questions to test yourself.</p></a></div>
+</div>
+
+<h2>Where the project is</h2>
+<p>From <code>HANDOFF.md</code> (20 Nov): about 820 tests pass locally, the hero fault path (F2+) runs end to end with detection, containment, recovery, verify and score, and <code>make demo</code> is anchored. Still open at that point: a golden test update for the hero path, the 20-seed benchmark (<code>ks bench</code>), and the red-team wiring (RT1–RT13 in the container). A code freeze was planned for 26 Nov.</p>
+<div class="box warn"><b class="t">Correction</b>Earlier in our chat I said the hero demo was still to be built, and the overview page I made said the same. That was based on an older README note. The code and HANDOFF show the hero path exists.</div>
+
+<div class="pager" id="pager"></div>
+</main><script src="assets/nav.js"></script></body></html>

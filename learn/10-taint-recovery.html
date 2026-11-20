@@ -1,0 +1,74 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>10. Taint and recovery</title><link rel="stylesheet" href="assets/style.css"></head>
+<body><nav id="side"></nav><main>
+<h1>10. Taint and recovery</h1>
+<p class="lead">How the system works out which work is damaged, and how it repairs only that. Files: <code>taint/</code>, <code>recovery/</code>, <code>runtime/recover.py</code>.</p>
+
+<h2>Taint: the blast radius</h2>
+<p>A <b>version</b> is <code>(object, ver)</code>. The <b>writer</b> of a version is the executed record whose write set has it as <code>after</code>. Everything is built from the record, using hashes only (<code>taint/closure.py</code>).</p>
+<ul>
+<li><b>Seed:</b> the suspended agent's writes in its <i>seed window</i> (from the estimated start of the fault, <code>t0</code>, to its suspension). With no suspended suspect there is no seed and no plan (<code>NoPlan</code>).</li>
+<li><b>Closure:</b> follow the recorded <b>read sets</b>. An action that read a tainted version is tainted, and what it wrote is tainted in turn. Because read sets include the views delivered to agents, dependence is captured even if an agent never named its source.</li>
+<li><b>Over-taint, don't under-taint.</b> It deliberately errs towards flagging too much.</li>
+<li><b>Repairs don't propagate.</b> Records by <code>ks.recovery</code> are repairs (they re-write a clean value), so they don't spread taint.</li>
+<li><b>Seed versions stop the walk.</b> Record seq 1's versions are the clean baseline.</li>
+<li><code>root_candidates</code> runs a bounded <b>backward</b> walk (<code>MAX_HOPS = 3</code>) to rank who else could be the root.</li>
+</ul>
+
+<h2>The planner (<code>recovery/planner.py</code>)</h2>
+<p>Input: the chained records, a taint set, and optionally the live store (only to ask whether a restore source is redacted and what an outbox item's status is). It never reads <code>fault</code> or <code>culprit</code>. The suspect comes from the taint's <code>suspect</code> field.</p>
+
+<h3>Per object the suspect wrote</h3>
+<table>
+<tr><th>If the object's current head is…</th><th>Plan says</th></tr>
+<tr><td>the suspect's own latest version</td><td><b>restore</b> to the last untainted earlier version. <code>expect</code> pins the version being replaced.</td></tr>
+<tr><td>a later <b>tainted</b> version by someone else</td><td><b>flag</b> <code>write_write_conflict</code>. No restore. A human decides.</td></tr>
+<tr><td>a later <b>untainted</b> version (honest blind write)</td><td>Nothing. The object is <b>kept</b>.</td></tr>
+<tr><td>an object the suspect <i>created</i></td><td>Restore to <i>absent</i> (a tombstone).</td></tr>
+<tr><td>a redacted restore source</td><td>flag <code>redacted_restore_source</code></td></tr>
+</table>
+
+<h3>Per tainted action, in seq order</h3>
+<table>
+<tr><th>Kind</th><th>Plan says</th></tr>
+<tr><td>Suspect's own window records</td><td>Never re-run. Their writes are the seed.</td></tr>
+<tr><td>Honest, deterministic, all tainted reads now repaired</td><td><b>rerun</b></td></tr>
+<tr><td>Honest but a tainted read isn't repaired yet</td><td>It <i>rides</i>, reported with the flag that blocks it.</td></tr>
+<tr><td>LLM agent</td><td><b>replan</b>, because you can't replay a language model.</td></tr>
+<tr><td>Class C with a registered compensator</td><td><b>compensate</b></td></tr>
+<tr><td>Class C without one</td><td>flag <code>no_compensator</code></td></tr>
+<tr><td>Tainted I2</td><td>flag <code>tainted_i2</code></td></tr>
+<tr><td>Outbox item already <b>dispatched</b></td><td>Always flag <code>dispatched_tainted</code>. <b>Never claimed undone.</b></td></tr>
+<tr><td>Queued or held outbox item by the suspect's own window</td><td><b>cancel_outbox</b></td></tr>
+<tr><td>Other tainted held items</td><td>No step. They stay held and leave only by approval.</td></tr>
+</table>
+<p>Step order: <code>cancel_outbox</code>, <code>restore</code>, <code>rerun</code>, <code>compensate</code>, <code>replan</code>, <code>flag</code>.</p>
+
+<div class="box note"><b class="t">Why cancel is used sparingly</b>Cancelling an outbox item is irreversible, so the planner doesn't spend it until a person resolves the flag or approves the replan.</div>
+
+<h2>Dry run, approval, apply</h2>
+<ol class="steps">
+<li><b>Dry-run</b> (<code>recovery/dryrun.py</code>): execute the re-runs inside a <b>rolled-back savepoint</b> (<code>Store.simulate</code>), so nothing persists. Produce a <b>diff</b> showing what each step would change. Re-runs never re-emit effects because outbox idempotency keys dedupe them. If a re-run's simulated payload hash equals what was dispatched, the "dispatched_tainted" flag is dropped.</li>
+<li><b>Approval:</b> a person approves the plan. The approval carries the <code>plan_hash</code>. If the plan changed since, the verdict is <code>hold/stale_plan</code>.</li>
+<li><b>Apply</b> (<code>runtime/recover.py</code>): the gateway's <code>RecoveryService</code> executes each step as a <b><code>ks.recover.&lt;op&gt;</code> system envelope</b> by <code>ks.recovery</code>, so recovery is itself recorded and verified (<code>recovery_unbound</code> if not tied to a plan).</li>
+<li><b>Restore</b> uses <code>expect</code>: if the object's head is no longer the version the plan expected, the step is <code>stale_plan</code> instead of overwriting someone's newer write.</li>
+<li><b>Release</b>: the operator unholds re-held clean items, which then pass the release phase.</li>
+</ol>
+<p>Recovery is <b>frozen</b> (<code>recovery_frozen</code>) while verify fails or a tamper or witness-stall alert exists. You never repair on top of evidence you can't trust.</p>
+
+<h2>Other recovery files</h2>
+<table>
+<tr><th>File</th><th>Job</th></tr>
+<tr><td><code>conflict.py</code></td><td>Detects write-write conflicts (an honest write to the same object after the fault, scenario F2+x).</td></tr>
+<tr><td><code>rerun.py</code></td><td>Re-executes deterministic tainted actions against clean data.</td></tr>
+<tr><td><code>baseline.py</code></td><td>The comparison strategies: snapshot restore, revert-culprit-only, and no-op.</td></tr>
+</table>
+
+<h2>The honest limits</h2>
+<ul>
+<li>Irreversible effects that already left are <b>compensated or reported</b>, never "undone".</li>
+<li>Language-model steps are re-planned, not replayed.</li>
+<li>The culprit's honest work between the fault and its suspension is reverted, and counts as collateral loss (<code>c_culprit_window</code>), because the system never learns when the fault started.</li>
+</ul>
+
+<div class="pager" id="pager"></div>
+</main><script src="assets/nav.js"></script></body></html>

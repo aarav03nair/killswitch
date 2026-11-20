@@ -11,7 +11,7 @@ import pytest
 from ks.contracts.hashing import args_hash
 from ks.contracts.rundir import sidestore_relpath
 from ks.inject import make_spec
-from ks.oracle import b_set, run_pure, run_s_star, t0_of
+from ks.oracle import b_set, fold, run_pure, run_s_star, t0_of
 from ks.score import SCORE_KEYS, score_run, write_score
 
 T = 50
@@ -76,7 +76,7 @@ def test_score_schema_golden(spec, ledgers, tmp_path):
     nofloat(s)
     # no recovery, no alerts: B left, nothing never reported as 0
     assert s["R"]["n"] == s["R"]["d"] > 0 and s["tti_detect"] is None and s["t_rec"] is None
-    assert "unavailable" in s["invariants_ok"] and "unavailable" in s["collateral_stall"]
+    assert "unavailable" in s["invariants_ok"] and s["collateral_stall"]["basis"] == "s_star"
     assert s["post_alert_tainted_effects"] == {"unavailable": "no_alert"}
 
 
@@ -156,6 +156,74 @@ def test_c_culprit_window_and_false_accusation(spec, tmp_path):
     assert s["fp_cost"]["stall_ticks"] == 4 and s["clean"] is False
 
 
+def test_wrong_agent_alert_counts_and_revoked_honest_stalls(spec, ledgers, tmp_path):
+    """B3-26 follow-ups: a valid alert covering B but blaming triage counts in false_accusations, sets t_alert and is
+    excluded from tti_attribute; a revoked honest agent stalls to T (collateral stall)."""
+    led, star = ledgers
+    b, t0, first = _bseq(spec, led, star)
+    recs = [_alert(tmp_path, 900, t0 + 2, [first["seq"]], ["triage", spec.culprit]),
+            _rec(901, t0 + 4, "ks.operator", "ks.control", conn="c-0",
+                 control={"op": "revoke", "target": "agent:docs"})]
+    _write(tmp_path, recs)
+    s = score_run(tmp_path, spec, star, run_ledger=led)
+    assert s["false_accusations"] == 2 and s["t_alert"] == t0 + 2 and s["tti_detect"] == 2
+    assert s["tti_attribute"] is None and s["top3_hit"] is True
+    assert s["fp_cost"]["honest_suspensions"] == 1 and s["fp_cost"]["stall_ticks"] == spec.ticks - (t0 + 4)
+
+
+def test_released_tainted_item_without_recovery_is_tainted(spec, tmp_path):
+    """A3 (taint-based): the operator releases a tainted held payment and no recovery step touched it: it counts
+    tainted (payload differs from S*), never honest; dispatched -> irreversible_tainted_released > 0."""
+    from ks.score.score import item_tainted
+    t = spec.t_inject
+    star = [_eff(t, "outbox:k1", "good", "dispatched", "payment", idem="k1"),
+            _eff(t, "outbox:k2", "same", "dispatched", "payment", idem="k2")]
+    led = [_eff(t, "outbox:k1", "bad", "dispatched", "payment", idem="k1"),
+           _eff(t + 3, "outbox:k2", "same", "held", "payment", idem="k2")]
+    rf, sf = fold(led), fold(star)
+    b = {"outbox:k1", "outbox:k2"}
+    assert item_tainted("outbox:k1", set(), b, rf, sf) is True       # released tainted, no recovery step
+    assert item_tainted("outbox:k2", set(), b, rf, sf) is False      # honest, same payload as S*, merely held
+    assert item_tainted("outbox:k2", {"outbox:k2"}, b, rf, sf) is True  # recovery acted on it
+    _write(tmp_path, [])
+    s = score_run(tmp_path, spec, star, run_ledger=led)
+    assert s["irreversible_tainted_released"] > 0
+
+
+def test_operator_release_without_recovery_counts_tainted_unhold(spec, tmp_path):
+    """A3 end to end (anaya B3-33): hold + operator unhold Controls on a bad payment and on an honest one, read via the
+    run's state store, and NO ks.recover.* record: the bad one counts in operator_unholds.tainted, never honest."""
+    from ks.world.scenario import open_world_store
+    t = spec.t_inject
+    star = [_eff(t, "outbox:k1", "good", "dispatched", "payment", idem="k1"),
+            _eff(t, "outbox:k2", "same", "dispatched", "payment", idem="k2")]
+    led = [_eff(t + 5, "outbox:k1", "bad", "dispatched", "payment", idem="k1"),
+           _eff(t + 5, "outbox:k2", "same", "dispatched", "payment", idem="k2")]
+    (tmp_path / "workspace").mkdir(parents=True)
+    st = open_world_store(tmp_path / "workspace" / "state.db")
+    ws: dict[str, list] = {}
+    with st.txn():
+        for seq, op in ((10, "queued"), (11, "held"), (12, "released")):
+            for ob, idem in (("outbox:ob-000001", "k1"), ("outbox:ob-000002", "k2")):
+                w = st.put(ob, {"idempotency_key": idem, "status": op}, author="ks.gateway", seq=seq, action_id=f"a{seq}{idem}")
+                ws.setdefault(op, []).append({"obj": w.obj, "before": None, "after": {"ver": w.after.ver, "hash": w.after.hash}})
+    st.close()
+    recs = []
+    for i, (op, phase, tick) in enumerate((("hold", "held", t + 2), ("unhold", "released", t + 4))):
+        for j, w in enumerate(ws[phase]):
+            r = _rec(800 + 2 * i + j, tick, "ks.operator", "ks.control", conn="c-0",
+                     control={"op": op, "target": w["obj"]})
+            r["envelope"] = None
+            r["write_set"] = [w]
+            recs.append(r)
+    _write(tmp_path, recs)
+    s = score_run(tmp_path, spec, star, run_ledger=led)
+    assert s["t_rec"] is None
+    assert s["fp_cost"]["operator_unholds"] == {"total": 2, "honest": 1, "tainted": 1}
+    assert s["fp_cost"]["held_honest_outbox"] == 1
+    assert s["irreversible_tainted_released"] == 1
+
+
 def test_import_lint():
     code = ("import sys, ks.score\nbad=[m for m in sys.modules if m.split('.')[:2] in "
             "(['ks','taint'],['ks','monitor'],['ks','policy'],['ks','recovery'])]\nassert not bad, bad")
@@ -188,3 +256,20 @@ def test_damage_counts_tick0_seed_hero_keys(spec, tmp_path):
     _write(tmp_path, recs)
     s = score_run(tmp_path, spec, star, run_ledger=led)
     assert s["t0"] == t and s["damage_in_window"] == 2 and s["exposure"] == 2
+
+
+def test_f3_denied_action_is_a_detection(tmp_path):
+    """B3-33 / ADR-06-metrics A5: F3 raises a scope alert at t_inject on the (held) pii egress and suspends comms; the
+    bad action never lands, so the A1 path finds nothing, but it is a detection: tti_detect 0, ttc 1, not null."""
+    from ks.inject import world_fault
+    from ks.score import suspend_tick_of
+    out = tmp_path / "f3"
+    p = subprocess.run([sys.executable, "-m", "ks", "run", "--scenario", "world", "--fault", "F3", "--seed", "1",
+                        "--ticks", "40", "--hold", "6", "--out", str(out)], capture_output=True, text=True)
+    assert p.returncode == 0, p.stderr[-400:]
+    spec = make_spec(world_fault("F3"), 1, ticks=40)
+    stick = suspend_tick_of(out, spec.culprit)
+    star = run_s_star(spec, tmp_path / "star", suspend_tick=stick, hold=6).effects
+    s = score_run(out, spec, star, hold=6)
+    assert (s["t_alert"], s["tti_detect"], s["tti_attribute"], s["top3_hit"], s["ttc"]) == (spec.t_inject, 0, 0, True, 1)
+    assert s["t0"] is None  # A1 t0 unchanged: no landed B effect after t_inject

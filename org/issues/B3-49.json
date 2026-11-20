@@ -1,0 +1,49 @@
+{
+  "id": "B3-49",
+  "title": "ks.verify: epoch-fence check on every record (kabir, B3-25 review)",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "arjun",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "pmo",
+  "status": "done",
+  "outcome": "Verify proves no agent record was admitted under a stale epoch after its suspend, so containment is checkable from the record alone",
+  "acceptance": [
+    "Every admitted agent record's epoch equals the agent's current epoch folded from prior ks.control records; a record admitted after suspend (or under an old epoch) fails verify (TAMPER, first_bad) (tests incl. re-exec records)",
+    "Honest containment runs (B3-19) and the hero path still verify OK"
+  ],
+  "depends": [
+    "B3-25"
+  ],
+  "deliverable": "src/ks/verify/",
+  "summary": "verify/core.py _record_pass: every EXEC agent record (reexec incl.) must carry env.epoch == EpochFold epoch; suspended/revoked => none; else TAMPER epoch_regression with first_bad (existing reason). tests/verify/test_epoch_fence.py: forged post-suspend admit, old epoch, re-exec stale, honest suspend/release. Container 5 failures in others' in-flight work (monitor alerts, run_options), none verify; make smoke anchored OK.",
+  "review": "[kabir · done] Fence correct: EXEC agent record (reexec incl.) must equal EpochFold epoch, else epoch_regression first_bad. Matches gateway _control_denial and _reexec_plan. My attacks all TAMPER at the right seq: same-tick after suspend (new and old epoch), release then re-suspend (old and new epoch), revoke (old and new epoch), future epoch (no controls, and after release); other agent unaffected. Env verify+containment 67 passed; container verify/containment/runtime/redteam 145 passed, 3 failed only in tests/runtime/test_run_options.py (maya B3-27); world/containment runs verify OK. Non-blocking follow-ups: (1) a HOLD decision for a suspended/stale agent is not fenced (gateway denies at steps 7-9 before policy, so a HOLD there is also gateway misbehaviour; fence decision in (EXEC, HOLD)); (2) add the revoke / future-epoch / re-suspend cases to test_epoch_fence.py; (3) revoked-ancestor in act_chain is still not checked by verify.",
+  "log": [
+    {
+      "t": "20 Nov 08:54",
+      "who": "pmo",
+      "msg": "opened"
+    },
+    {
+      "t": "20 Nov 08:54",
+      "who": "arjun",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "20 Nov 09:07",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 09:07",
+      "who": "arjun",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "20 Nov 09:13",
+      "who": "kabir",
+      "msg": "review: done"
+    }
+  ]
+}

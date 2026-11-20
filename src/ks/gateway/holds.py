@@ -30,8 +30,6 @@ if TYPE_CHECKING:
 
 __all__ = ["serve_hold_control", "HoldRefused"]
 
-MANUAL_UNHOLD = {"ks.operator", "ks.recovery"}
-
 
 class HoldRefused(ValueError):
     """The hold/unhold cannot apply now (recorded as a ``tool_error`` deny of the Control; nothing else changes)."""

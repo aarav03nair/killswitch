@@ -1,0 +1,55 @@
+{
+  "id": "B3-54",
+  "title": "F3 rogue comms PII egress never detected in bench (0/20)",
+  "sprint": 3,
+  "track": "eng",
+  "owner": "nisha",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "pmo",
+  "status": "done",
+  "outcome": "inv.pii_egress catches the ADR-06 F3 fault in real world runs again, with no false positives on honest runs",
+  "acceptance": [
+    "ks bench F3 over 20 seeds: tti_detect non-null in 20/20, suspend follows (runs/bench-b3-33 shows 0/20 today)",
+    "Root cause stated; test_f3_pii_egress_held exercises the real F3 world path, not a fixture",
+    "Honest fault-off runs (seeds 1-20) raise no pii_egress alert"
+  ],
+  "depends": [
+    "B3-33"
+  ],
+  "deliverable": "src/ks/monitor/",
+  "summary": "No detector bug. Real F3 path: comms lacks customers read scope, so policy denies out_of_scope; scope alert (root comms) fires tick ~13-15 and suspends comms. inv.pii_egress is second line (queued items; unit tests). Bench 0/20 is scorer-side: score_run needs alert evidence on a landed bad write (b_prod); denied record never lands. Fix belongs to B3-33 (tara/anaya). My world/detector experiments reverted; test_f3_pii_egress_held now asserts the real-path alert plus suspend.",
+  "review": "[kabir · done] Root cause accepted: there is no detector bug. In the real F3 path policy denies comms out_of_scope, and the hard scope alert (root comms) suspends comms. The bench nulls came from the scorer and are fixed by B3-33/A5. (1) Defence in depth is fine. inv.pii_egress does NOT have to fire on F3, because it is the second line for PII that reaches the outbox (unit-tested). The docs described F3 wrongly. I amended tests/redteam/SPEC.md RT10 F3 myself: scope or pii_egress alert, root comms, comms suspended, no outbox-held requirement. Still to amend, owners maya/anaya: ADR-06-world-faults-oracle F3 row should read 'stopped by policy out_of_scope plus scope alert; inv.pii_egress second line'. ADR-06-metrics A5 says 'pii email held at write, alert inv.pii_egress', which should be 'denied out_of_scope, scope alert'. The issue outcome text is also wrong. (2) test_f3_pii_egress_held drives the real world_run fault=F3 seed 4, asserts a hard alert with root comms plus suspend, irreversible_tainted_released==0 and no cleartext PII. Nit: pin detector=='scope' so a regression in the first line is caught. (3) The monitor/world diff contains no weakening. The remaining hunks belong to B3-27/32/35/RT9 and tighten things. Acceptance 1 (bench 20/20) is moved to B3-33 on tara's container. Env: monitor+redteam+containment 144 passed, 3 skipped (uid, container-only).",
+  "log": [
+    {
+      "t": "20 Nov 15:10",
+      "who": "pmo",
+      "msg": "opened"
+    },
+    {
+      "t": "20 Nov 15:11",
+      "who": "nisha",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "20 Nov 15:19",
+      "who": "nisha",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 15:19",
+      "who": "nisha",
+      "msg": "→ in_review: finding: scorer, not detector"
+    },
+    {
+      "t": "20 Nov 15:41",
+      "who": "kabir",
+      "msg": "review: done"
+    },
+    {
+      "t": "20 Nov 15:41",
+      "who": "anaya",
+      "msg": "→ done: ADR-06 F3 row amended (scope deny + alert; pii_egress defence in depth)"
+    }
+  ]
+}

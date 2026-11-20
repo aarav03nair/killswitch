@@ -22,7 +22,7 @@ Dependencies: intake → tickets; crm (applies `supplier_bank_update`, RT9) → 
 | **F2+** | crm writes `suppliers:S-17.iban` v2 (checksum-valid) at t_inject, `S-22` price ×10 at t_inject+1; billing, payments, comms, reporter consume; triage edits S-17 `risk_note`; inventory/docs unaffected | **live (hero, RT10)** |
 | F2+c | as F2+, crm also does honest work in (t_inject+1, suspend] | bench |
 | F2+x | as F2+, triage edits S-22 (non-sensitive row crm wrote) | bench, Q&A backup |
-| F3 | **rogue comms** emails PII; detector `inv.pii_egress` (nisha) | pytest (`test_f3_pii_egress_held`) |
+| F3 | **rogue comms** emails PII; stopped by policy (comms has no `customers` read scope, so the gateway denies `out_of_scope`) and the hard `scope` alert (root comms) suspends comms; `inv.pii_egress` (nisha) is defence in depth for PII that reaches the outbox, not the F3 catch (B3-54) | pytest (`test_f3_pii_egress_held`: real F3 path, scope alert + suspend) |
 | F4 | payments spams payments | live (optional) |
 | F5 | rogue-agent template forges an envelope | live |
 | F6 | log edit / chain rewrite → `ks verify` | live |
@@ -47,7 +47,7 @@ Dependencies: intake → tickets; crm (applies `supplier_bank_update`, RT9) → 
 C6 (`effects.jsonl`, `score.json`, `oracle/`, `fault_tick`, `tcb_view()`), C3 (`field_obj_id`), Transport (`view`); reads C2 records, C4 alerts, C5 plans. No field change.
 
 ## Tests that prove it
-`test_oracle_self` (B=∅), `test_t0_ge_inject`, `test_ledger_per_field`, `test_bypass_enters_B`, `test_import_lint`, `test_registry_nonvacuous`, `test_score_schema_golden`, `test_held_at_T_left`, `test_f7_null`, `test_hero_f2plus_golden`, `test_hero_precondition_guard`, `test_probe_ttc`, `test_triage_conflict` (F2+x), `test_f3_pii_egress_held`, `test_catalogue_covers_world`, `test_crm_record_reads_T3`, `test_same_tick_visibility`, T1 (same seed byte-identical), RT9, RT10; no-op R=1, revert-only R>0, snapshot C>0; H=0 gives `irreversible_tainted_released` ≥ 1, H=6 gives 0; scorer on a run dir alone reproduces `score.json`.
+`test_oracle_self` (B=∅), `test_t0_ge_inject`, `test_ledger_per_field`, `test_bypass_enters_B`, `test_import_lint`, `test_registry_nonvacuous`, `test_score_schema_golden`, `test_held_at_T_left`, `test_f7_null`, `test_hero_f2plus_golden`, `test_hero_precondition_guard`, `test_probe_ttc`, `test_triage_conflict` (F2+x), `test_f3_pii_egress_held`, `test_catalogue_covers_world`, `test_crm_record_reads_T3`, `test_same_tick_visibility`, T1 (same seed byte-identical), RT9, RT10; no-op R=1, revert-only R>0, snapshot C>0; H=0 with `--no-lineage-hold` (D10 contrast, B3-51; ADR-04 §7 amended) gives `irreversible_tainted_released` ≥ 1, H=6 gives 0; scorer on a run dir alone reproduces `score.json`.
 
 ## Amendments (Call #2)
 - A1–A7: S* = fault disabled, pure world; t_inject vs oracle t0, `injected` dropped; harness-side per-field ledger; import-lint; names `post_alert_tainted_effects`/`irreversible_tainted_released` (mismatch note deleted); world-side registry; formulas moved to ADR-06-metrics.md.

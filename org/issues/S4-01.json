@@ -1,0 +1,30 @@
+{
+  "id": "S4-01",
+  "title": "Red-team gaps from B3-35 mutation review: forged witness ack, outbox provenance RT, ttc unavailable",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "kabir",
+  "reviewer": "panel",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "Every defence has an RT test that fails when the defence is disabled",
+  "acceptance": [
+    "Disabling the witness ack signature check (src/ks/witness/link.py) fails a new forged-ack RT test",
+    "Disabling outbox provenance (Outbox._unrecorded) fails an RT test, not only gateway unit tests",
+    "F3 run catches a pii_egress break (not only cc/bcc unit tests); score ttc is {unavailable: reason} not null when there is no containment"
+  ],
+  "depends": [
+    "B3-35"
+  ],
+  "deliverable": "tests/redteam/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 15:11",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

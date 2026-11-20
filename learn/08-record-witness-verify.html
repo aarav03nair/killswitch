@@ -1,0 +1,63 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>8. Record, witness, verify</title><link rel="stylesheet" href="assets/style.css"></head>
+<body><nav id="side"></nav><main>
+<h1>8. Record, witness, verify</h1>
+<p class="lead">How the audit trail is built, why a cheating agent (or even a bug in our own writer) can't quietly rewrite it, and how anyone can check it later. Files: <code>recorder/</code>, <code>witness/</code>, <code>verify/</code>.</p>
+
+<h2>Three layers of evidence</h2>
+<div class="diagram">layer 1  hash chain         each record contains the hash of the previous one
+layer 2  gateway signature  each record is signed by the gateway key (gw_sig)
+layer 3  witness            a separate process signs (seq, head, tick, count) every tick</div>
+<p>Each layer closes a gap the previous one leaves. A chain alone can be rebuilt by someone who edits history and recomputes every hash. A gateway signature alone can be forged if the gateway's writer is compromised. A witness in a different process, with a different key, holds an independent copy of "the head was X at tick T".</p>
+
+<h2>The recorder (<code>recorder/__init__.py</code>)</h2>
+<ul>
+<li>Only the gateway process holds a <code>Recorder</code>.</li>
+<li><code>begin()</code> <b>reserves</b> the next seq (one open reservation at a time). The state transaction writes under that seq.</li>
+<li><code>append()</code> builds <code>Record.seal(prev_hash=head, seq, record_id, ...)</code>, signs it with the in-memory gateway key, and writes it to <code>record.jsonl</code>.</li>
+<li><code>rollback()</code> releases a reservation if state was rolled back, so the record has no gaps.</li>
+<li>If an append fails after state was committed, the recorder <b>aborts for good</b> (<code>RecorderAborted</code>). It never retries or reuses the seq. Verify then reports <code>RECONCILE</code>.</li>
+<li><code>put_side(domain, hash, value)</code> files raw args, results and raw frames in the side store (idempotent).</li>
+</ul>
+<div class="box key"><b class="t">Rule 9</b>Records hold hashes, not values. A person's data can be redacted from the side store without breaking the chain, because the chain only ever contained the hash.</div>
+
+<h2>The witness (<code>witness/</code>)</h2>
+<ul>
+<li>A <b>separate process</b>, uid 60000, with its own key and its own files. It starts from a non-dumpable bootstrap and receives pre-opened file descriptors, so it doesn't need paths.</li>
+<li>Each tick the barrier pushes <code>(seq, head, tick)</code> through <code>WitnessLink.push</code>. The witness signs a <code>WitnessCheckpoint(seq, head, tick, count)</code> and appends it to <code>witness.jsonl</code>.</li>
+<li>It <b>never reads <code>record.jsonl</code></b>. It only signs what it is pushed, and it won't sign a head that regresses or conflicts with an earlier one. At most one checkpoint per tick; <code>count</code> rises by exactly 1 per line.</li>
+<li>If the witness doesn't acknowledge, the gateway sees a stall.</li>
+</ul>
+
+<h2>Verify (<code>verify/core.py</code>)</h2>
+<p><code>ks verify RUN [--head ANCHOR]</code> runs offline and stops at the first failure, in this order:</p>
+<ol class="steps">
+<li><b>IO</b>: config, keys and record files parse.</li>
+<li><b>Anchor hashes</b>: keyring and config match the anchor, before any signature is trusted.</li>
+<li><b>Keyring complete</b>.</li>
+<li><b>Record pass</b>: parse, seq continuity, <code>prev_hash</code>, <code>hash</code>, <code>gw_sig</code>, each agent signature against <code>sig_ok</code>, and the seed rule (<code>ks.seed</code> at seq 1).</li>
+<li><b>Witness pass</b>: witness signature, count chain, truncation, heads match record hashes.</li>
+<li><b>Anchor vs last checkpoint</b>: if you passed <code>--head</code>, it must match.</li>
+</ol>
+<p>Then more passes:</p>
+<table>
+<tr><th>Pass</th><th>Catches</th></tr>
+<tr><td>Dispatch window (F4, <code>window_violation</code>)</td><td>An effect dispatched early, or despite a hold, taint or suspension.</td></tr>
+<tr><td>Alerts cross-check (F6, <code>alert_mismatch</code>)</td><td><code>alerts.jsonl</code> differing from the chained <code>ks.alert</code> records.</td></tr>
+<tr><td>Side store (<code>side_entry_mismatch</code>)</td><td>A side file whose content doesn't hash to its name.</td></tr>
+<tr><td>Recovery binding (<code>recovery_unbound</code>)</td><td>A recovery action not tied to an approved plan.</td></tr>
+<tr><td><code>reexec_pass</code></td><td>Re-executions that don't match their hold.</td></tr>
+</table>
+<p>The report ends with a <code>VerifyReport</code> JSON line (<code>exit</code>, <code>anchored</code>, <code>isolation</code>, <code>first_bad</code> if any). The demo script asserts <code>exit == 0</code>, <code>anchored == true</code> and the isolation mode.</p>
+
+<h3>Decision replay (<code>verify/decisions.py</code>)</h3>
+<p><code>ks run --decisions SRC</code> replays the human operator's controls from an earlier run. It refuses a source with no anchor, with repro keys, or that fails <code>verify --head</code>. Only <code>ks.operator</code>-signed, executed controls are replayed. Any difference between the replay and the source is a <code>replay_mismatch</code>. This lets you re-run an incident with the same human decisions and check the machine did the same thing.</p>
+
+<h2>What it does and doesn't promise</h2>
+<ul>
+<li><b>Tamper-evident</b>, up to the last witnessed checkpoint. An edit or truncation is detected. With an anchor kept outside the run directory, truncation after the last checkpoint is detected too.</li>
+<li>It is <b>not</b> "tamper-proof". It doesn't stop someone changing files, it makes the change visible.</li>
+<li>Per-agent attribution relies on uid isolation. If that failed, the report says so.</li>
+</ul>
+
+<div class="pager" id="pager"></div>
+</main><script src="assets/nav.js"></script></body></html>

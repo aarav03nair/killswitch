@@ -96,15 +96,14 @@ def _hero(tmp_path, *, alert=True, plan=True):
         al = Alert(alert_id="a-000001", tick=bad.tick, seq=bad.seq, detector="inv.iban_checksum", kind=AlertKind.INVARIANT,
                    hard=True, evidence_seqs=(bad.seq,), evidence_versions=(ev,), root_candidates=("crm",), conn_id=None)
         body = al.to_obj()
-        g.recorder.put_side(SideDomain.ARGS, args_hash(body), body)
-        env = Envelope(agent_id="ks.monitor", action_id="alert-1", parent_action_id=None, act_chain=(), tool="ks.alert",
-                       args=body, nonce="2" * 32, expiry_tick=w.records[-1].tick, epoch=0, claimed_ts_us=None, claimed_seq=None, sig=None)
-        env = env.with_sig(sign_hex(keys.private("ks.monitor"), env.signing_bytes()))
-        cfg = g.config
-        g.recorder.append(tick=w.records[-1].tick, ts_us=cfg.start_ts_us + w.records[-1].tick * cfg.tick_us, conn_id=SYSTEM_CONN,
-                          envelope=env.header(), envelope_hash=env.content_hash(), sig_ok=True, decision=Decision.EXEC,
-                          reason=Reason.OK, policy_rule=None, action_class=ActionClass.R, read_set=(), write_set=(),
-                          outbox_ids=(), result_hash=None, control=None, reexec_of=None)
+        from ks.gateway.system import admit_system, system_envelope
+        from ks.contracts import WitnessHead
+        t = w.last_tick
+        env = system_envelope("ks.monitor", "ks.alert", body, action_id="alert-1", tick=t, sign=keys.signer("ks.monitor"))
+        adm = admit_system(g, env)  # through the gateway: signature, expiry, nonce, scope, then recorded
+        assert adm.record.decision == Decision.EXEC and adm.record.sig_ok
+        (w.rundir.path / "alerts.jsonl").write_bytes(al.to_canonical() + b"\n")  # the copy ks verify compares (F6)
+        w.witness.push(WitnessHead(seq=g.recorder.seq, head=g.recorder.head, tick=t))
     if plan:
         pl = plan_recovery(w.records, w.taint, alert_id="a-000001", state=w.store)
         write_plan(dry_run(w.store, pl).plan, w.rundir)
@@ -131,11 +130,9 @@ def test_alerts_from_chained_records_only(hero, tmp_path):
     assert build_model(n)["alerts"] == [] and build_model(n)["beats"][1]["status"] == "pending"
 
 
-def test_hero_beats_derived_from_record_and_plan(hero, monkeypatch):
-    # the in-process world fixture has no witness (verify cannot pass); pin an OK verify to read the live lines
+def test_hero_beats_derived_from_record_and_plan(hero):
     from ks.console import model as M
-    real = M._verify(hero)
-    monkeypatch.setattr(M, "_verify", lambda run: real | {"ok": True, "reason": "ok", "first_bad": None})
+    assert M._verify(hero)["ok"]  # the fixture now verifies (witnessed, alert through the gateway)
     m = build_model(hero)
     b = {x["id"]: x for x in m["beats"]}
     # held count comes from ks.control hold records on outbox:* objects (B3-23), not decision == hold
@@ -197,3 +194,194 @@ def test_cli_console_modes(run, capsys):
     assert main(["console", str(run), "--once", "--html", "x"]) == Exit.USAGE
     assert main(["console", str(run), "--html", "x", "--pace"]) == Exit.USAGE
     assert main(["console", str(run) + "-missing", "--html", "x"]) == Exit.IO
+
+
+def _score(**kw):
+    s = {"hold": 3, "tti_detect": 2, "tti_attribute": 0, "ttc": 1, "R": {"n": 0, "d": 5}, "C": {"n": 0, "d": 9},
+         "irreversible_tainted_released": 0, "clean": {"unavailable": "invariants_ok not computed"},
+         "baseline_oracle_assisted": False}
+    return s | kw
+
+
+def test_dry_run_diff_lists_plan_steps_and_t0(hero):
+    from ks.console.live import beat_frame
+    m = build_model(hero)
+    rec = m["beats"][3]
+    ops = [s["op"] for s in rec["plan"]["steps"]]
+    assert {"restore", "rerun", "flag"} <= set(ops)  # the hero plan holds restore, re-run and one flag
+    assert all(s["text"] and s["n"] == i for i, s in enumerate(rec["plan"]["steps"]))
+    assert rec["plan"]["diff"] and all(len(d["planned_hash"]) == 16 for d in rec["plan"]["diff"])
+    assert rec["plan"]["applied_records"] == 0 and any(x == "applied: nothing yet" for x in rec["lines"])
+    assert any(x.startswith("t0 estimate: seq ") for x in rec["lines"])
+    f = beat_frame(m, 3)
+    assert "plan steps:" in f and "dry-run diff (hashes only):" in f and "restore bank account (IBAN) of S-17" in f
+    assert "dry-run file, not in the record" in rec["lines"][0] and not rec["approved"]
+    h = render_html(hero)
+    assert "Dry-run diff (hashes only)" in h and "Scorecard" in h
+
+
+def test_scorecard_unavailable_never_zero_and_not_run(hero, tmp_path):
+    d = tmp_path / "s"
+    shutil.copytree(hero, d)
+    assert build_model(d)["scorecard"] is None and "not run (no score.json" in beat_frame(build_model(d), 3)
+    (d / "score.json").write_text(json.dumps(_score(ttc={"unavailable": "no_alert"})))
+    (d / "baselines" / "snapshot").mkdir(parents=True)
+    (d / "baselines" / "snapshot" / "score.json").write_text(json.dumps(_score(R={"n": 3, "d": 5}, baseline="snapshot",
+                                                                                baseline_oracle_assisted=True)))
+    sc = build_model(d)["scorecard"]
+    assert sc["columns"] == ["system", "snapshot", "revert_culprit_only"]
+    row = {r["key"]: r["cells"] for r in sc["rows"]}
+    assert row["ttc"][0] == "unavailable (no_alert)" and row["clean"][0].startswith("unavailable")
+    assert row["R"] == ["0/5", "3/5", "not run"] and row["tti_attribute"][0] == "0"  # a real 0 stays 0
+    assert row["ttc"][1] == "1" and row["ttc"][2] == "not run" and sc["oracle_assisted"] == ["snapshot"]
+    assert sc["hold_note"] is None
+    assert "unavailable (no_alert)" in beat_frame(build_model(d), 3) and "unavailable (no_alert)" in render_html(d)
+
+
+def test_hold_zero_shows_escaped_payment_as_residual(hero, tmp_path):
+    d = tmp_path / "h0"
+    shutil.copytree(hero, d)
+    (d / "score.json").write_text(json.dumps(_score(hold=0, R={"n": 1, "d": 5}, irreversible_tainted_released=1)))
+    note = build_model(d)["scorecard"]["hold_note"]
+    assert "H=0" in note and "1 tainted irreversible effect(s) escaped" in note and "R = 1/5" in note
+    assert "H=0" in beat_frame(build_model(d), 3) and "H=0" in render_html(d)
+
+
+def test_approved_label_needs_matching_ks_approve(hero):
+    m = build_model(hero)
+    assert all(not p["_approved"] for p in m["plans"]) and m["approvals"] == []
+
+
+def test_audit_beat_names_first_bad_index_and_reason(run, tmp_path):
+    bad = tmp_path / "bad"
+    shutil.copytree(run, bad)
+    lines = (bad / "record.jsonl").read_text().splitlines()
+    k = next(i for i, x in enumerate(lines) if '"decision":"exec"' in x and i > 5)
+    lines[k] = lines[k].replace('"decision":"exec"', '"decision":"deny"', 1)  # the one-line edit
+    (bad / "record.jsonl").write_text("\n".join(lines) + "\n")
+    m = build_model(bad)
+    a = m["beats"][4]
+    assert a["status"] == "fail" and a["first_bad"] == m["verify"]["first_bad"] and a["reason"] == m["verify"]["reason"]
+    assert a["first_bad"] is not None and f"first bad seq {a['first_bad']}" in a["lines"][0]
+    assert f"first bad index: {a['first_bad']} ({a['reason']})" in beat_frame(m, 4)
+    assert "first bad index" in render_html(bad)
+    ok = build_model(run)["beats"][4]
+    assert ok["first_bad"] is None and "first bad index" not in beat_frame(build_model(run), 4)
+
+
+def test_failed_verify_tamper_shows_real_first_bad_no_unwitnessed_claim(hero, tmp_path):
+    bad = tmp_path / "bad"
+    shutil.copytree(hero, bad)
+    lines = (bad / "record.jsonl").read_text().splitlines()
+    k = next(i for i, x in enumerate(lines) if '"decision":"exec"' in x and i > 5)
+    lines[k] = lines[k].replace('"decision":"exec"', '"decision":"deny"', 1)
+    (bad / "record.jsonl").write_text("\n".join(lines) + "\n")
+    m = build_model(bad)
+    v, a = m["verify"], m["beats"][4]
+    assert not v["ok"] and v["first_bad"] is not None
+    txt = " ".join(a["lines"])
+    assert f"first bad seq {v['first_bad']}" in txt and v["reason"] in txt
+    assert "tamper-evident up to" not in txt and "unwitnessed" not in txt
+    assert not any(r["unwitnessed"] for r in m["records"])
+
+
+def test_unwitnessed_tail_counts_only_beyond_last_witnessed_seq(hero, tmp_path):
+    t = tmp_path / "tail"
+    shutil.copytree(hero, t)
+    w = t / "witness.jsonl"
+    ls = w.read_text().splitlines()
+    assert len(ls) > 2
+    w.write_text("\n".join(ls[:-1]) + "\n")  # the newest witnessed head is gone: its records are the unwitnessed tail
+    m = build_model(t)
+    v = m["verify"]
+    assert v["ok"], v
+    lw = v["last_witnessed_seq"]
+    tail = [r["seq"] for r in m["records"] if r["unwitnessed"]]
+    assert tail and all(s_ > lw for s_ in tail) and len(tail) == sum(1 for r in m["records"] if r["seq"] > lw)
+    assert not any(r["unwitnessed"] for r in m["records"] if r["seq"] <= lw)
+    txt = " ".join(m["beats"][4]["lines"])
+    assert f"{len(tail)} record(s) after the last witnessed head (seq {lw}) are unwitnessed" in txt
+    assert "tamper-evident up to the last witnessed head" in txt
+
+
+def test_truncated_record_fails_with_real_first_bad_not_unwitnessed(hero, tmp_path):
+    t = tmp_path / "trunc"
+    shutil.copytree(hero, t)
+    r = t / "record.jsonl"
+    ls = r.read_text().splitlines()
+    r.write_text("\n".join(ls[:-3]) + "\n")  # records cut below the witnessed head
+    m = build_model(t)
+    v, a = m["verify"], m["beats"][4]
+    assert not v["ok"] and v["first_bad"] is not None
+    txt = " ".join(a["lines"])
+    assert f"first bad seq {v['first_bad']}" in txt and v["reason"] in txt
+    assert "unwitnessed" not in txt and "tamper-evident up to" not in txt
+
+
+def _copy(run, tmp_path):
+    bad = tmp_path / "bad"
+    shutil.copytree(run, bad)
+    return bad
+
+
+def _assert_fail_page(bad, capsys=None):
+    m = build_model(bad)
+    assert not m["verify"]["ok"] and m["beats"][4]["status"] == "fail"
+    assert all(b["status"] != "live" for b in m["beats"])
+    assert m["beats"][4]["reason"] and "verify FAILED" in " ".join(m["beats"][4]["lines"])
+    assert frame(bad) and any(b["kind"] == "verify" for b in m["banners"])
+    return m
+
+
+def test_malformed_record_line_renders_fail_page(run, tmp_path):
+    bad = _copy(run, tmp_path)
+    lines = (bad / "record.jsonl").read_text().splitlines()
+    lines[3] = lines[3][:20] + "{{not json"
+    (bad / "record.jsonl").write_text("\n".join(lines) + "\n")
+    m = _assert_fail_page(bad)
+    assert m["verify"]["reason"] == "parse_error" and m["beats"][4]["first_bad"] == m["verify"]["first_bad"] is not None
+    out = tmp_path / "o.html"
+    main(["console", str(bad), "--html", str(out)])
+    assert out.is_file() and "parse_error" in out.read_text()
+
+
+def test_truncated_record_renders_fail_page(run, tmp_path):
+    bad = _copy(run, tmp_path)
+    b = (bad / "record.jsonl").read_bytes()
+    (bad / "record.jsonl").write_bytes(b[: len(b) // 2])
+    _assert_fail_page(bad)
+    (bad / "record.jsonl").write_bytes(b"")
+    build_model(bad)
+    render_html(bad)
+
+
+def test_malformed_score_alerts_plan_witness_do_not_crash(hero, tmp_path):
+    bad = tmp_path / "bad"
+    shutil.copytree(hero, bad)
+    (bad / "score.json").write_text("{not json")
+    for p in (bad / "plans").glob("*.json"):
+        p.write_text("[[")
+    if (bad / "alerts.jsonl").exists():
+        (bad / "alerts.jsonl").write_text("garbage\n")
+    for p in bad.glob("witness*"):
+        if p.is_file():
+            p.write_text("garbage")
+    m = build_model(bad)
+    assert m["score"] is None and m["scorecard"] is None
+    assert m["beats"][3]["status"] == "pending"
+    assert render_html(bad) and frame(bad)
+
+
+def test_no_lineage_hold_contrast_banner(run, tmp_path):
+    """B3-51 / contracts 1.6: a `--hold 0 --no-lineage-hold` run carries RunConfig.lineage_hold = false; the page and
+    the live view show the NO-LINEAGE-HOLD banner; a normal run shows none."""
+    from ks.contracts import NO_LINEAGE_HOLD_BANNER
+    assert not any(b["kind"] == "contrast" for b in build_model(run)["banners"])
+    out = tmp_path / "contrast"
+    p = subprocess.run([sys.executable, "-m", "ks", "run", "--scenario", "world", "--ticks", "8", "--hold", "0",
+                        "--no-lineage-hold", "--out", str(out)], capture_output=True, text=True)
+    assert p.returncode == 0, p.stderr
+    m = build_model(out)
+    assert m["config"]["lineage_hold"] is False and m["verify"]["ok"] and m["verify"]["lineage_hold"] is False
+    assert {"kind": "contrast", "text": NO_LINEAGE_HOLD_BANNER} in m["banners"]
+    assert "NO-LINEAGE-HOLD contrast run" in render_html(out) and "NO-LINEAGE-HOLD contrast run" in frame(out)

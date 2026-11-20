@@ -43,6 +43,15 @@ anaya · 19 Nov 2026 · D13: every outside number in the abstract comes from thi
 
 **Notes on the A~ rows.** #1: METR does say "cyber evaluations" / "cyber task", but "internal" is unconfirmed for this evaluation; keep the safe wording "ExploitGym evaluation runs". #4: numbers confirmed on the arXiv abstract + Table 1, but ICML 2025 is not shown on the arXiv page and not yet confirmed from an official ICML page; cite the venue only once confirmed. #11: the new repo states no stability level, and the registry shows Deprecated keys plus Development values. #13: the PDF does not name SIGMOD. R: today's fetch failed; RES-08 read the report once through a summariser.
 
+## Our own results (B3-27, real container runs, F2+ hero, seeds 0/1/2; from score.json, re-checked by anaya 20 Nov)
+
+| # | Fact · exact number | Must travel with it | Source |
+|---|---|---|---|
+| O1 | Residual damage R = **0/1, 0/5, 0/9**; collateral loss C = **0**; both tainted-effect metrics and reemitted = **0** | **D-17:** every R = 0 claim states it holds *after the operator released N held items, M of them honest*: seed 0: 1 (0 honest), seed 1: 5 (3 honest), seed 2: **9 (7 honest)** | `fp_cost.operator_unholds` |
+| O2 | Operator releases (`operator_unholds` tainted + honest): seed 0 **1+0**, seed 1 **2+3**, seed 2 **2+7**; `held_honest_actions` **0 / 3 / 7** | honest = an item recovery did not act on (ADR-06 A3) | score.json `fp_cost` |
+| O3 | `collateral_stall` **0/389, 0/382, 0/381** | **proxy** (`basis: s_star`, divergence from S\* over non-culprit keys outside B), never "the S0 measure" | ADR-06 A3 |
+| O4 | TTI detect **0 / 2 / 2** ticks, attribute **0**; TTC **1** tick | ticks, not seconds; 3 seeds only | score.json |
+
 ## Not safe to print (never quote)
 
 - **Exact HF/METR dates or times** (6, 8, 11, 13, 19, 21 Jul; 23:00 UTC). The outlets disagree. Say "July 2026" and "about two days later".

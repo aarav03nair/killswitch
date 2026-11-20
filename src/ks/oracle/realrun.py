@@ -22,15 +22,20 @@ __all__ = ["real_ledger"]
 def real_ledger(run_dir: str | Path) -> list[dict[str, Any]]:
     run = Path(run_dir)
     tick_of: dict[int, int] = {}
+    recov: dict[int, set[tuple[str, int, str]]] = {}  # seq of a ks.recover.* record -> what it wrote
     prov: dict[tuple[int, str, str], set[tuple[str, int, str]]] = {}  # (seq, agent, action_id) -> {(obj, after ver, after hash)} the record's write_set lists
     for line in (run / "record.jsonl").read_text().splitlines():
         if line:
             r = json.loads(line)
             tick_of[r["seq"]] = r["tick"]
             env = r.get("envelope")
-            if env:
+            if env and r.get("sig_ok"):  # an unsigned / forged record backs nothing
                 prov.setdefault((r["seq"], env["agent_id"], env["action_id"]), set()).update(
                     (w["obj"], w["after"]["ver"], w["after"]["hash"]) for w in r.get("write_set") or [])
+                if env["agent_id"] == "ks.recovery" and env["tool"].startswith("ks.recover.") and r["decision"] == "exec" and r.get("sig_ok"):
+                    # B3-27: a re-run (M14) writes under the ORIGINAL agent/action ids; its own record still lists
+                    # each (obj, ver, hash) it wrote, which is what backs the version
+                    recov[r["seq"]] = {(w["obj"], w["after"]["ver"], w["after"]["hash"]) for w in r.get("write_set") or []}
     store = open_world_store(run / "workspace" / "state.db")
     out: list[dict[str, Any]] = []
 
@@ -45,8 +50,11 @@ def real_ledger(run_dir: str | Path) -> list[dict[str, Any]]:
             for h in store.history(obj):
                 # recorded only if the record at that seq lists THIS obj with the matching after ver and hash; matching
                 # (seq, agent, action_id) alone is spoofable by a bypass write to another object.
-                ak = (h.seq, h.author, "seed" if h.author == SEED_AUTHOR else h.action_id)  # seed rows: action_id seed-<pk>, record 'seed'
-                if (obj, h.ver, h.hash) in prov.get(ak, ()):
+                # seed rows: action_id seed-<pk>, record 'seed'. B3-27: only those; ks.gateway also authors every
+                # ks.dispatch / hold status change (action_id dispatch-<id> etc.), which must match its own record
+                seed_row = h.author == SEED_AUTHOR and (h.action_id or "").startswith("seed-")
+                ak = (h.seq, h.author, "seed" if seed_row else h.action_id)
+                if (obj, h.ver, h.hash) in prov.get(ak, ()) or (obj, h.ver, h.hash) in recov.get(h.seq, ()):
                     tick, seq = tick_of.get(h.seq, 0), h.seq
                 else:
                     # bypass: no record backs this version. seq null (never forgiven, ADR s1); tick is its position,

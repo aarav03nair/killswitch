@@ -80,8 +80,10 @@ def _agent_limits() -> None:  # runs in the child after setuid, before exec: may
 
 
 def spawn_child(module: str, args: Iterable[str], *, uid: int | None, pass_socks: Iterable[socket.socket],
-                agent: bool) -> subprocess.Popen:
-    """Start ``module.main(args)`` via BOOT under ``uid`` (``None`` = same uid as us: degraded mode)."""
+                agent: bool, env: dict[str, str] | None = None) -> subprocess.Popen:
+    """Start ``module.main(args)`` via BOOT under ``uid`` (``None`` = same uid as us: degraded mode). ``env`` adds
+    variables to the clean env (B3-27: ``KS_FAULT`` for the culprit only; ``/proc/<pid>/environ`` of a non-dumpable
+    child is readable by root only, unlike its cmdline)."""
     fds = tuple(s.fileno() for s in pass_socks)
     debug = os.environ.get("KS_DEBUG") == "1"
     kw: dict = {}
@@ -91,7 +93,7 @@ def spawn_child(module: str, args: Iterable[str], *, uid: int | None, pass_socks
             kw["preexec_fn"] = _agent_limits
     return subprocess.Popen(
         [sys.executable, "-s", "-P", "-c", BOOT, SRC, module, *args],
-        env={"PYTHONHASHSEED": "0"}, cwd="/", close_fds=True, pass_fds=fds, stdin=subprocess.DEVNULL,
+        env={"PYTHONHASHSEED": "0", **(env or {})}, cwd="/", close_fds=True, pass_fds=fds, stdin=subprocess.DEVNULL,
         stdout=subprocess.DEVNULL, stderr=None if debug else subprocess.DEVNULL, **kw)
 
 

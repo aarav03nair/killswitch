@@ -329,7 +329,7 @@
       "type": "object"
     }
   },
-  "$id": "https://killswitch.local/schema/1.5.0/c5.recover_args.schema.json",
+  "$id": "https://killswitch.local/schema/1.6.0/c5.recover_args.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Args of a ``ks.recover.<op>`` envelope: one step of an approved plan (G6).",

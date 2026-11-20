@@ -1,0 +1,58 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>4. Identity and isolation</title><link rel="stylesheet" href="assets/style.css"></head>
+<body><nav id="side"></nav><main>
+<h1>4. Identity and isolation</h1>
+<p class="lead">How the system knows <i>which agent</i> did something, and why an agent can't fake it. Files: <code>identity/</code>, <code>runtime/spawn.py</code>, <code>runtime/agent_template.py</code>, <code>runtime/isoprobe.py</code>.</p>
+
+<h2>The problem</h2>
+<p>If an agent could sign as another agent, or read another's memory, "who did it" would be meaningless. Identity needs two things: <b>keys the agent can't get</b> and <b>a process boundary the agent can't cross</b>.</p>
+
+<h2>Keys (<code>identity/keys.py</code>)</h2>
+<ul>
+<li>Ed25519 keys for every principal: the gateway, monitor, operator, recovery, and each agent.</li>
+<li>Private keys live <b>in memory in the gateway process</b> and never touch disk. Only the public <code>keyring</code> is written.</li>
+<li>The witness makes its own key inside its own process.</li>
+<li><b>Two key modes:</b> <code>fresh</code> (random per run, the secure mode) and <code>repro</code> (derived with HKDF from a secret plus the seed, so a replay is byte-identical). Repro is explicitly <b>not a security run</b>.</li>
+<li><code>verify_hex(pub, sig, data)</code> never raises. It returns True or False.</li>
+</ul>
+<pre><code>derive_key_bytes(secret, seed, principal) =
+    HKDF-SHA256(secret, salt=seed as 8 bytes, info=b"ks/key/v1/" + principal)</code></pre>
+
+<h2>The signer service (<code>identity/signer.py</code>)</h2>
+<p>The agent holds no key, so it asks for a signature over a socket pair that only it and the gateway share.</p>
+<div class="diagram">agent process                          gateway process
+  builds Envelope
+  SignRequest{header}  ───────────────►  SignerService.handle
+                                          checks: schema, current epoch, per-tick quota
+  ◄───────────────  SignReply{sig}        or SignRefusal{reason}
+  sends SubmitFrame(envelope + sig) ───►  Gateway.admit (verifies the signature again)</div>
+<ul>
+<li>Each agent has its own path-less socket pair, so one agent can't reach another's signer.</li>
+<li><code>signer_refusal()</code> refuses if the agent's epoch isn't current or it has used its signing quota (<code>MAX_SIGN_PER_TICK</code>). A suspended agent can't even get new signatures.</li>
+<li>A flood of signer lines is counted and dropped without a reply.</li>
+</ul>
+
+<h2>Process isolation (<code>runtime/spawn.py</code>)</h2>
+<ul>
+<li>Each agent runs as <b>its own OS process under its own numeric uid</b>: agents get 60001 and up (<code>agent_uid</code>), the witness gets 60000. This needs root inside the container (CAP_SETUID), which is why the Dockerfile uses <code>USER root</code>.</li>
+<li>Processes are made <b>non-dumpable</b> (<code>set_nondumpable</code>), so another uid can't read their memory via ptrace or core dumps. They also get a clean environment and an adjusted OOM score.</li>
+<li>Teardown kills processes <b>by uid</b> (<code>kill_uids</code>), so nothing survives a run.</li>
+<li><code>runtime/isoprobe.py</code> and <code>setup.isolation_problems</code> <b>read back</b> the real uids from <code>/proc</code> before tick 0. The system does not assume isolation happened. It checks, and records it in the <code>Isolation</code> object and the banner.</li>
+</ul>
+<div class="box warn"><b class="t">Degraded mode</b>Without per-agent uids (native macOS, or <code>--shared-uid</code>) attribution is declared <b>VOID</b>. The run still happens, but the banner and the verify report say isolation was degraded. Use Docker for the real demo.</div>
+
+<h2>The agent process (<code>runtime/agent_template.py</code>)</h2>
+<p>This is all that runs inside an agent process. It holds two sockets and nothing else: no keys, no paths, no record access.</p>
+<ol class="steps">
+<li>Read a <code>TickFrame</code> from the gateway: tick, epoch, and the <b>view</b>.</li>
+<li>Call the behaviour module's <code>step(agent_id, seed, tick, view, sched)</code>, which returns an action or <code>None</code>.</li>
+<li>Build an <code>Envelope</code>: nonce from <code>ks.rng</code>, <code>expiry_tick = tick + 2</code>, current epoch.</li>
+<li>Send a <code>SignRequest</code> to the signer. If it replies <code>SignRefusal</code>, send a no-op.</li>
+<li>Send <code>SubmitFrame</code> (or <code>NoopFrame</code>) to the gateway, then read the <code>ReplyFrame</code>.</li>
+</ol>
+<p>The behaviour is a pluggable module (<code>--behaviour</code>). For the world scenario, <code>KS_FAULT</code> is passed as an environment variable <b>only to the culprit's process</b>, so no other agent and not the gateway knows a fault is planned.</p>
+
+<h2>Connection binding</h2>
+<p>The barrier binds each connection to one agent (<code>Gateway.bind</code>, a 1:1 rule). A frame signed by agent B on agent A's connection fails with <code>bad_sig</code>. A frame on an unbound connection also fails. A system principal id on an agent connection is never verified.</p>
+
+<div class="pager" id="pager"></div>
+</main><script src="assets/nav.js"></script></body></html>

@@ -64,7 +64,7 @@ Controls: **D6** chain + signatures + witness + `verify --head`; **D7** auto-sus
 | Rogue | RT5 | Write flood during suspension (TOCTOU) | Rule 5 (epoch + deny-list in the write txn) | 0 culprit writes after suspension `seq` |
 | Rogue | RT12 | Suspended agent retries or acts through a revoked ancestor | Rules 4, 10; deny-list | 0 effects from probe |
 | Rogue | none | Sleep, loop, fork or memory bomb | Per-tick deadline (miss = no-op, EOF after 3); rlimits | Other agents keep ticking |
-| Rogue | RT13 | Replays recorded operator decisions, or runs a rogue in repro mode | Source must pass `verify --head`, plan_hash match; both refused with `--rogue`; repro = gateway holds the witness key, never anchored (SKEL-01 #6) | 0 Controls replayed; repro refused |
+| Rogue | RT13 | Replays recorded operator decisions, or runs a rogue in repro mode | Source must pass `verify --head`, plan_hash match; both refused with `--rogue`; repro = gateway holds the witness key, never anchored (SKEL-01 #6); a replay that differs from its source is `replay_mismatch`, exit 6 `DIVERGED` (contracts 1.5, ADR-02 §6) | 0 Controls replayed; repro refused; divergence exit 6 |
 | Rogue | F3 (pytest) | Emails PII (rogue comms) | `inv.pii_egress`; rule 9 | 0 values reachable |
 | Colluding | RT9 | Laundering: A plants ticket, B writes IBAN | D8 + rule 7; backward taint | A in top-3 root candidates; payment held |
 | Colluding | none | Splitting under thresholds | I-class invariants do not depend on rate. **No RT, no claim** | none |

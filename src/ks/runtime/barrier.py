@@ -174,6 +174,9 @@ class TickBarrier:
             c.misses = 0
             if len(line) > MAX_FRAME_BYTES or not line.endswith(b"\n"):
                 c.close()  # oversize closes the connection (SEC-03 F8)
+        for c in self.conns:
+            if c.conn_id in self.gateway.flooded:
+                c.close()  # F8 (B3-32): flood-suspended conn is closed; the agent is not suspended
         for conn_id, reply in replies:
             by_conn[conn_id].send(encode_frame(reply))
         for c in missed:

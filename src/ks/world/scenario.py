@@ -25,7 +25,7 @@ SCOPES: dict[str, tuple[tuple[str, bool, int], ...]] = {
     "billing": (("suppliers", True, 8), ("invoices", False, 4), ("customers", False, 8)),
     "comms": (("invoices", False, 4), ("suppliers", True, 8)),
     "compliance": (("ledger", False, 8),),
-    "crm": (("suppliers", False, 8), ("customers", False, 8)),
+    "crm": (("suppliers", False, 8), ("customers", False, 8), ("tickets", False, 8)),
     "docs": (("docs", False, 8),),
     "intake": (("tickets", False, 8),),
     "inventory": (("stock", False, 8),),

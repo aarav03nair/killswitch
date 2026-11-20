@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "cancel_outbox only for the suspect's own seed-action items and released items of non-re-run actions; other tainted items stay held and are listed",
   "acceptance": [
     "F2+x plan has 0 cancel_outbox for rider/replan/flagged items; Planned.held lists each (outbox_id, blocking flag or replan) and render prints one held line each",
@@ -17,7 +17,7 @@
   "depends": [],
   "deliverable": "src/ks/recovery/planner.py",
   "summary": "ADR-05 §6.1 amended: cancel_outbox only for suspect's own window items (queued/held/released) and released items of non-re-run actions. Other tainted queued/held items (rider, replan, no_compensator, tainted_i2, compensate, no creating record) get no step and stay held. New Planned.held: tuple[Held(outbox_id, status, action, blocked_by)] (default ()). DryRun.held = planned.held + held_extra (items of re-runs the dry-run drops: rider/redacted_args; a released one there gets cancel_outbox via _refine). render prints one 'held outbox:<id> <status> <agent> seq N  no step, waits for <blocker>' line each. Plan shape unchanged (same step types/order; F2+x simply has 10 fewer cancel_outbox steps, now 5 steps: restore, 2 rerun, 2 flag). F2+x: 0 cancels, 10 held each blocked by flag(write_write_conflict suppliers:S-22), exactly 1 conflict flag; hero: 0 cancels, held=(), 0 flags, golden unchanged. Tests: test_planner::test_outbox_dispatched_is_flag_and_queued_is_cancelled rewritten (culprit queued item and released rider item cancelled; replanned comms item and held rider item held); test_conflict::test_f2plus_x_rider_items_stay_held_not_cancelled; test_rerun redacted-args test checks rider items held. Env 919 passed, 8 skipped.",
-  "review": "",
+  "review": "[maya · done] Accepted. planner.py: cancel_outbox only for the suspect's own window items (queued/held/released) and released items of non-re-run actions; every other tainted queued/held item gets no step and is listed in Planned.held with its blocker (rider/replan/flag/compensate/no_creating_record); re-run items are skipped (M14 re-hold). dryrun.py: items of dropped re-runs go to DryRun.held (released ones cancelled via _refine); render prints one held line each. Matches ADR-05 §6.1 as amended. Integration-checked against B3-30 apply (tests/runtime/test_recover.py::test_bench_never_releases_rider_items_f2plus_x): F2+x plan applied through c-0, rider items stay HELD under lineage_hold, bench_releasable never lists them, verify OK. Non-blocking: a held entry may carry status queued (not yet due); it is held by the release phase's lineage_hold when due, so 'stays held' is true in effect, but the render word 'held' for a queued item could confuse a juror; consider printing 'queued (held when due)'.",
   "log": [
     {
       "t": "20 Nov 06:22",
@@ -28,6 +28,16 @@
       "t": "20 Nov 06:39",
       "who": "vikram",
       "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 06:40",
+      "who": "vikram",
+      "msg": "→ in_review: Riders' outbox items now stay held, not cancelled. Planned.held and DryRun.held added. Env 919 passed, 8 skipped; container 927 passed"
+    },
+    {
+      "t": "20 Nov 06:45",
+      "who": "maya",
+      "msg": "review: done"
     }
   ]
 }

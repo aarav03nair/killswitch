@@ -1,0 +1,69 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>9. Monitor and containment</title><link rel="stylesheet" href="assets/style.css"></head>
+<body><nav id="side"></nav><main>
+<h1>9. Monitor and containment</h1>
+<p class="lead">How a fault is noticed, pinned on an agent, and stopped. Files: <code>monitor/</code>, <code>containment/</code>, <code>gateway/control.py</code>.</p>
+
+<h2>Detect, then attribute (two separate steps)</h2>
+<div class="box key"><b class="t">The rule</b>Detectors find <i>bad data</i> and cite evidence. They never name anyone. A different module names the author, by lookup in the record. That's why attribution can't be fooled by what an agent says about itself.</div>
+
+<h2>Detectors (<code>monitor/detectors.py</code>)</h2>
+<p>Pure functions <code>Context → list[Finding]</code>. No LLM, no clock. A finding has evidence: record seqs and object versions.</p>
+<table>
+<tr><th>Detector</th><th>Looks for</th></tr>
+<tr><td><code>iban_checksum</code></td><td>Invalid IBAN written to a payee field (uses <code>ibanlib</code>).</td></tr>
+<tr><td><code>beneficiary_changed_then_paid</code></td><td>A payee changed and then paid.</td></tr>
+<tr><td><code>price_vs_history</code></td><td>A price far out of line with its own history (the x10 price).</td></tr>
+<tr><td><code>ledger_balance</code></td><td>Books that don't balance.</td></tr>
+<tr><td><code>scope_breach</code></td><td>Writes outside a role's scope.</td></tr>
+<tr><td><code>pii_egress</code></td><td>Personal data leaving through a sink.</td></tr>
+<tr><td><code>rate</code></td><td>An unusual burst of actions.</td></tr>
+<tr><td><code>signature</code>, <code>tamper</code>, <code>reconcile</code>, <code>witness_stall</code>, <code>barrier_deadline</code></td><td>Problems with the platform itself: bad signatures, broken chain, state not matching record, witness not answering, deadlines missed.</td></tr>
+</table>
+<p>Whether an alert is <b>hard</b> or <b>soft</b> isn't decided in the detector. <code>monitor/alerts.py</code> takes it from the C4 contract table.</p>
+
+<h2>Attribution (<code>monitor/attribute.py</code>)</h2>
+<ul>
+<li><code>writers_of</code> looks up which executed record wrote each evidence version, and returns the attributed agent. This is a <b>write-set lookup</b>.</li>
+<li><code>root_candidates[0]</code> is the sole writer of the evidence. A bounded backward walk over <b>recorded read sets</b> then ranks other agents that wrote what the writer read.</li>
+<li>Agent-declared lineage and <code>act_chain</code> are <b>never used</b> (rule D8).</li>
+<li>Read-reached agents are <b>never auto-suspended</b>. If two or more distinct writers share the evidence, or none, nobody is suspended. A human decides.</li>
+<li>This is honest about collusion: it returns <b>root candidates</b>, not a verdict.</li>
+</ul>
+
+<h2>Containment (<code>containment/__init__.py</code>)</h2>
+<p><code>Containment.respond</code> runs inside the same tick the fault was seen, before the next <code>Gateway.open</code>. For each alert it admits on <code>c-0</code>:</p>
+<ol class="steps">
+<li>One <b><code>ks.alert</code></b> record per alert, signed by <code>ks.monitor</code> and chained.</li>
+<li>For a <b>hard</b> alert with a decided target, one <b><code>ks.control suspend</code></b> record (<code>auto=True</code>, <code>alert_id</code> set, fresh strictly higher epoch).</li>
+</ol>
+<table>
+<tr><th>Alert kind</th><th>Who gets stopped</th></tr>
+<tr><td><code>invariant</code> (I-class), <code>scope</code></td><td>The attributed writer (<code>root_candidates[0]</code>) is auto-suspended.</td></tr>
+<tr><td><code>signature</code></td><td>Only the <b>connection</b>, not the agent.</td></tr>
+<tr><td><code>reconcile</code></td><td>Nobody.</td></tr>
+<tr><td><code>anomaly</code>, <code>rate</code></td><td>Alert only (a human clicks).</td></tr>
+<tr><td><code>tamper</code>, <code>witness_stall</code></td><td>Nobody is suspended, but recovery is <b>frozen</b> until a human looks (rule M12).</td></tr>
+</table>
+
+<h2>Why epochs make the kill switch reliable</h2>
+<div class="diagram">before:   crm epoch = 3        crm signs envelope with epoch 3     -> exec
+suspend:  control record -> crm epoch = 4, status suspended
+after:    crm envelope presigned at epoch 3   -> deny/stale_epoch
+          crm envelope signed at epoch 4      -> deny/suspended   (signer would refuse anyway)
+release:  control record -> epoch = 5, status active
+          old envelope at epoch 4             -> deny/stale_epoch</div>
+<p>An agent that pre-signed a batch of actions before being suspended can't use them later, because their epoch is stale. The effect starts at the <b>record seq</b> of the suspend, and the step-13 re-read inside the transaction enforces it even for an action already in flight.</p>
+
+<h2>Human controls</h2>
+<p><code>release</code> and <code>revoke</code> are operator actions (<code>runtime/operator.py</code>), via <code>ks contain suspend|release|revoke|hold|unhold</code>. Auto-suspend happens on hard evidence (bad signature, scope, tamper, I-class invariant). Anomalies get one click. Revocation is permanent and comes after confirmation.</p>
+
+<h2>What gets held when an agent is contained</h2>
+<ul>
+<li>The suspended agent's <b>own</b> future actions: denied.</li>
+<li>Outbox items whose lineage touches tainted versions: held (<code>lineage_hold</code>). That is how bad data is stopped from leaving as a payment or email.</li>
+<li>Independent agents: keep running.</li>
+</ul>
+<p>Time-to-contain is measured from the records only. <code>contain_times</code> recomputes it from a run directory, and the scorer does the same.</p>
+
+<div class="pager" id="pager"></div>
+</main><script src="assets/nav.js"></script></body></html>

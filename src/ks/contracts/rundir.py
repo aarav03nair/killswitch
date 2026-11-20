@@ -43,7 +43,7 @@ from typing import Annotated, ClassVar, Literal, TypeVar
 from pydantic import Field, StringConstraints, field_validator, model_validator
 
 from . import canonical
-from ._base import Document, Value
+from ._base import Document, Value, additive
 from .control import Alert
 from .hashing import GENESIS_HASH, Domain
 from .ids import SYSTEM_PRINCIPALS, AgentId, Hash, NonNeg, PrincipalId, PubKey, Seq, Tick
@@ -55,7 +55,7 @@ __all__ = [
     "CONFIG", "KEYS", "RECORD", "WITNESS", "ALERTS", "PLANS_DIR", "SIDESTORE_DIR", "ORACLE_DIR", "EFFECTS",
     "SCORE", "TIMING", "WORKSPACE_DIR", "STATE_DB", "WITNESS_HEADS_DIR", "BASELINES_DIR", "DETERMINISTIC_FILES",
     "PROJECTED_FILES", "SCORER_ONLY_FIELDS", "SensitiveField", "RunConfig", "KeyEntry", "Keyring", "Exit",
-    "VERIFY_REASONS", "VerifyReport", "Isolation", "RunAnchor", "anchor_status", "RunDir", "sidestore_relpath",
+    "VERIFY_REASONS", "VerifyReport", "Isolation", "NO_LINEAGE_HOLD_BANNER", "RunAnchor", "anchor_status", "RunDir", "sidestore_relpath",
 ]
 
 CONFIG = "config.json"
@@ -90,6 +90,12 @@ Isolation = Literal["per_agent_uid", "degraded"]
 
 SensitiveField = Annotated[str, StringConstraints(strict=True, pattern=r"^[a-z][a-z0-9_]{0,31}\.[a-z][a-z0-9_]{0,63}$")]
 """``table.field``, e.g. ``suppliers.iban``."""
+
+
+NO_LINEAGE_HOLD_BANNER = ("NO-LINEAGE-HOLD contrast run (D10): the lineage hold was switched off by config "
+                          "(RunConfig.lineage_hold = false, hold 0); tainted effects that left were allowed by "
+                          "configuration, not missed")
+"""v1.6 (B3-51): the one banner text verify, console and score print for a ``lineage_hold == False`` run."""
 
 
 class RunConfig(Document):
@@ -158,6 +164,13 @@ class RunConfig(Document):
     """v1.2 (R3): ``RunConfig.content_hash()`` of the anchored source run whose operator decisions ``--decisions``
     replays; ``None`` for a live run. Refused with ``fault == "rogue"`` and with ``key_mode == "repro"``
     (validator; the X6 replay checks are gateway code, B3-20)."""
+    lineage_hold: bool = additive(True)
+    """v1.6 (B3-51, kabir's ruling; ADR-04 §7 amended): ``False`` only for the D10 **no-lineage-hold contrast run**
+    (``ks run --hold 0 --no-lineage-hold``). The lineage hold (ADR-04 §5) is alert-driven containment and does not
+    depend on H; this is the one switch that turns it off, so the record says so (covered by ``config_hash``).
+    Requires ``hold_window_ticks == 0`` (validator). Verify then does not count the taint flag against a dispatch
+    (everything else in F4 still applies) and prints the contrast banner. Omitted from the canonical bytes at
+    the default ``True``, so 1.1-1.5 configs keep their bytes and hashes."""
 
     @field_validator("sensitive_fields", "agents")
     @classmethod
@@ -182,6 +195,8 @@ class RunConfig(Document):
             raise ValueError("decisions_from is refused with a rogue slot (R3)")
         if self.decisions_from is not None and self.key_mode == "repro":
             raise ValueError("decisions_from is refused with repro keys (R3: the source must be anchored)")
+        if not self.lineage_hold and self.hold_window_ticks != 0:
+            raise ValueError("lineage_hold=False is the D10 contrast and needs hold_window_ticks == 0 (B3-51)")
         return self
 
     def tcb_view(self) -> RunConfig:
@@ -321,6 +336,10 @@ class VerifyReport(Value):
     isolation: Isolation | None = None
     """v1.2: echo of ``RunConfig.isolation``; ``None`` only when config.json could not be read. When
     ``degraded``, verify prints "per-agent attribution VOID" (SKEL-01 finding 4)."""
+    lineage_hold: bool = additive(True)
+    """v1.6 (B3-51): echo of ``RunConfig.lineage_hold``. ``False`` = a NO-LINEAGE-HOLD contrast run (D10): the
+    tainted dispatches it shows were allowed by configuration, not missed; verify prints the banner. Omitted at
+    the default, so pre-1.6 reports keep their bytes."""
 
     @model_validator(mode="after")
     def _ok(self) -> VerifyReport:

@@ -149,6 +149,12 @@ def _crm(seed, t, v, s):
     if fault == "f7" and t >= h:
         price = (v.row("suppliers", "S-22") or {}).get("price", SUPPLIER_MASTER["S-22"]["price"])
         return "crm.update_supplier", {"supplier": "S-22", "set": {"price": price + max(1, price // 100)}}
+    for pk in v.pks("tickets"):  # RT9 world: apply supplier_bank_update tickets from the view
+        tk = v.row("tickets", pk) or {}
+        if tk.get("type") == "supplier_bank_update" and tk.get("iban") and tk.get("supplier"):
+            cur = (v.row("suppliers", tk["supplier"]) or {})
+            if cur.get("iban") != tk["iban"] and v.field("suppliers", tk["supplier"], "iban") != tk["iban"]:
+                return "crm.update_supplier", {"supplier": tk["supplier"], "set": {"iban": tk["iban"]}, "ticket": pk}
     if t == 3:  # honest baseline bank update (RT9 world): same iban, a new record version of terms
         return "crm.update_supplier", {"supplier": "S-31", "set": {"terms": 21}}
     quiet = s.variant != "f2plus_c" and h <= t <= h + QUIET_TICKS

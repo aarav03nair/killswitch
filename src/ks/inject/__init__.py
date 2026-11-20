@@ -6,8 +6,8 @@ holds the hero precondition guard. ``InjectSpec`` is scorer-only: agents, gatewa
 (the planner is t0-blind, ``test_t0_est_tcb_blind``). Imports ks.world and ks.rng only, never ks.runtime.
 """
 
-from .spec import (FAULT_VARIANT, InjectSpec, HeroGuardError, check_hero_guard, culprit_window, make_spec,
-                   t_inject_for, world_fault)
+from .spec import (FAULT_VARIANT, InjectSpec, RogueSpec, HeroGuardError, check_hero_guard, culprit_window, make_spec,
+                   rogue_spec, t_inject_for, world_fault)
 
-__all__ = ["FAULT_VARIANT", "InjectSpec", "HeroGuardError", "check_hero_guard", "culprit_window", "make_spec",
+__all__ = ["FAULT_VARIANT", "InjectSpec", "RogueSpec", "rogue_spec", "HeroGuardError", "check_hero_guard", "culprit_window", "make_spec",
            "t_inject_for", "world_fault"]

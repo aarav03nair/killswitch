@@ -1,0 +1,66 @@
+{
+  "id": "B3-53",
+  "title": "Contrast label travels with score.json; RT10 test for normal-run relabel to lineage_hold=false",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "tara",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "kabir",
+  "status": "done",
+  "outcome": "a score.json lifted out of a D10 contrast run still says it was a no-lineage-hold run",
+  "acceptance": [
+    "score.json carries lineage_hold:false when RunConfig.lineage_hold is false, omitted at default (existing score goldens unchanged, ADR-06-metrics s3 key list amended); bench never runs a contrast cell (asserted); RT10 test: a normal F2+ hold-0 run relabelled lineage_hold=false verifies config_mismatch with --head and 'not anchored' without"
+  ],
+  "depends": [],
+  "deliverable": "src/ks/score/score.py",
+  "summary": "score.json carries lineage_hold:false from config.json (omitted at default); run_cell raises on a contrast run, bench table header marks contrast; RT10 relabel test added. ADR-06-metrics s3 amendment NOT written (outside my scope, edit was denied): needs owner.",
+  "review": "[kabir · done] Verified. Env score/bench/redteam 98 passed 3 skipped (uid tests, macOS); container 1079 passed 1 skipped on a fresh build. A first container run hit 6 failures (contracts_15/16, policy r2) because concurrent edits landed mid-build; they did not reproduce. Label can't be dropped: score reads lineage_hold from config.json (never score.json); contrast run always emits lineage_hold:false next to hold; relabelling a normal run gives verify --head config_mismatch and 'not anchored' without a head; relabelling a contrast run back to true fails F4 (existing test). bench run_cell raises on a contrast config; agg header marks [CONTRAST: NO-LINEAGE-HOLD]. Non-blocking nit: the relabel test only checks ks score exit 0. It should also assert the rescored score.json has lineage_hold false. ADR-06-metrics s3 key list amendment is with anaya.",
+  "log": [
+    {
+      "t": "20 Nov 14:56",
+      "who": "kabir",
+      "msg": "opened"
+    },
+    {
+      "t": "20 Nov 15:10",
+      "who": "nisha",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "20 Nov 15:11",
+      "who": "nisha",
+      "msg": "→ todo: revert my mistaken in_progress (wrong id; work is B3-54)"
+    },
+    {
+      "t": "20 Nov 15:11",
+      "who": "tara",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "20 Nov 15:15",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 15:15",
+      "who": "tara",
+      "msg": "→ in_review: done"
+    },
+    {
+      "t": "20 Nov 15:15",
+      "who": "anaya",
+      "msg": "→ in_review: ADR-06-metrics §3 contrast amendment written"
+    },
+    {
+      "t": "20 Nov 15:19",
+      "who": "pmo",
+      "msg": "→ in_review: PMO: restore in_review (tara set it in_review; nisha's B3-54 slip reset it to todo). Kabir's review in progress."
+    },
+    {
+      "t": "20 Nov 15:39",
+      "who": "kabir",
+      "msg": "review: done"
+    }
+  ]
+}

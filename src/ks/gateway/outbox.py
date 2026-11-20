@@ -79,6 +79,10 @@ class Outbox:
                  record_at: Callable[[int], Any] | None = None):
         self.store, self.config, self.taint = store, config, taint
         self._tick_of_seq = tick_of_seq
+        # D10 contrast only (B3-51, contracts 1.6): RunConfig.lineage_hold False drops the alert-driven lineage hold
+        # so that, with H = 0, a tainted payment dispatches and is scored. It is in config.json / config_hash, so
+        # the record shows the run was a contrast run; `ks run --hold 0 --no-lineage-hold` is the only setter.
+        self.lineage_holds = config.lineage_hold
         self._record_at = record_at  # seq -> the landed Record or None (provenance check before any dispatch)
 
     # --- creation ----------------------------------------------------------------------------------
@@ -145,7 +149,7 @@ class Outbox:
         """Why this due item must not leave, or None (ADR-04 §5, §7)."""
         if self._unrecorded(d):
             return "unrecorded_item"
-        if self._tainted(d.item.lineage):
+        if self.lineage_holds and self._tainted(d.item.lineage):
             return "lineage_hold"
         if self.config.hold_window_ticks > 0 and self._sensitive_moved(d.item.lineage):
             return "sensitive_field"
@@ -264,10 +268,14 @@ class Outbox:
         return best
 
     def _sensitive_moved(self, lineage: Iterable[ReadEntry]) -> bool:
+        """A sensitive field the item read now holds a different value. B3-27: compared by hash as well as version,
+        so an approved restore back to the value the item read (the hero's iban) does not strand honest items that
+        read the original; an item that read the changed version still differs from the restored head."""
         for e in lineage:
             if self._is_sensitive(e.obj):
-                head = self.store.conn.execute("SELECT head_ver FROM objects WHERE obj = ?", (e.obj,)).fetchone()
-                if head is not None and head[0] != e.ver:
+                head = self.store.conn.execute("SELECT head_ver, head_hash FROM objects WHERE obj = ?",
+                                               (e.obj,)).fetchone()
+                if head is not None and head[0] != e.ver and head[1] != e.hash:
                     return True
         return False
 

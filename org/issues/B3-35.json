@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "tests/redteam executes every SPEC v2 RT against the hero build; each passes or is an xfail naming an issue",
   "acceptance": [
     "Every RT in SPEC v2 has a runnable test; no silent skips (root-only tests run as root in CI-style command)",
@@ -22,8 +22,8 @@
     "B3-32"
   ],
   "deliverable": "tests/redteam/",
-  "summary": "",
-  "review": "",
+  "summary": "Built the rogue slot (src/ks/runtime/rogue.py plus run.py wiring; CLI: rogue runs are monitored) and the harness tests/redteam/conftest.py. Added RT1-RT13 modules plus tests/redteam/test_rt12_epoch_fence.py (kabir's B3-49 attack cases). Xfails: none left. The three strict xfails (B3-50 ks score refused rogue runs, RT11a; B3-51 hold=0 contrast, RT10/D10; B3-52 crm did not apply bank-update tickets, RT9) were fixed by tara, who removed the markers (B3-50/52 done, B3-51 in review). Fixes in other people's modules: gateway/stub.py (the dispatcher released a suspended author's queued items; RT5 found it); verify/core.py (epoch fence now covers HOLD and suspended/revoked act_chain ancestors); monitor/detectors.py (nested cc/bcc fail closed). The last native failure was mine: rogue.py's report channel used json.dumps, which broke the single-serializer test. It now uses canonical dumps_line through a sanitizer (_plain: bytes become hex, floats/big ints/other types become repr). RT2 now checks for the canonical '\"kind\":\"done\"'. Docs: ADR-02 §6 (epoch fence, replay_mismatch exit 6), THREAT-MODEL RT13 row, SPEC §5 as-built map. Evidence: full container suite (root, so the per-agent-uid tests run) at PYTHONHASHSEED 0/1/999: 1058 passed, 1 skipped (test_cli:121 'runtime serves these now', not a red-team test), 0 xfail, each time. Native: 1046 passed, 12 skipped (container-only uid tests). One failure there, test_run_options field list, came from a concurrent with_baselines edit and passes after the 12:02 test update. make smoke: OK (anchored).",
+  "review": "[kabir · done] Verified. Container redteam 82 passed (root); native 79 passed, 3 skipped (uid-only). Each test docstring names its THREAT-MODEL claim. Mutation check (bind-mounted copies, repo untouched): epoch fence off -> 9 RT12 epoch-fence tests fail; pii_egress off -> 6 RT10 cc/bcc tests fail (the F3 run passes because scope suspends first, as its docstring says); stub dispatcher re-check off -> RT5, RT12 persistence, RT10 F3 fail; outbox provenance (unrecorded_item) off -> no RT fails, but 4 tests in tests/gateway/test_outbox.py do (unit only, no THREAT-MODEL row, acceptable). GAP: witness link ack signature check off (link._ingest accepts any sig) -> nothing in the whole suite fails. Not reachable by an agent (path-less socketpair, witness uid), so it doesn't block. Follow-ups: RT3c refused-peer count (run.py:289), ADR-02 s6 + RT13 exit 6, cc/bcc nested test, B3-49 attack cases + HOLD + dead act_chain, RT9 Pass wording all done. CARRIED to S4 (not done): (1) score ttc is still null rather than {unavailable: reason} when no containment deny (score.py:190); needs the B3-51 schema enum. (2) New test: a bad-sig or mismatched witness ack makes WitnessLink.push return None and leaves newest unchanged.",
   "log": [
     {
       "t": "19 Nov 11:34",
@@ -39,6 +39,46 @@
       "t": "20 Nov 06:27",
       "who": "pmo",
       "msg": "→ todo: From kabir's B3-47 review: document replay_mismatch / exit 6 (DIVERGED) in ADR-02 §6 and the RT13 row of THREAT-MODEL/red-team spec."
+    },
+    {
+      "t": "20 Nov 06:54",
+      "who": "pmo",
+      "msg": "→ todo: From kabir's B3-32 review: add a cc/bcc pii_egress test and check nested cc fields fail closed; F8 budget is a backstop only (barrier sends one frame per connection per tick; F8b deferred by CALL-02)."
+    },
+    {
+      "t": "20 Nov 09:13",
+      "who": "pmo",
+      "msg": "→ todo: From kabir's B3-49 review (non-blocking): extend the epoch fence to HOLD decisions, add his attack cases (same tick, re-suspend, revoke, future epoch) as red-team tests, and check revoked act_chain ancestors."
+    },
+    {
+      "t": "20 Nov 10:21",
+      "who": "maya",
+      "msg": "→ in_progress: start: rogue slot runtime (ks.runtime.rogue), harness tests/redteam/conftest.py, RT1-RT13 modules"
+    },
+    {
+      "t": "20 Nov 11:51",
+      "who": "maya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 14:49",
+      "who": "pmo",
+      "msg": "→ in_progress: From kabir's B3-52/B3-50 re-review: update RT9 Pass wording in tests/redteam/SPEC.md (never-dispatched + EVIL lineage + false_accusations>=1); after B3-51, score ttc as {unavailable: reason} not null for runs without containment."
+    },
+    {
+      "t": "20 Nov 14:50",
+      "who": "maya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 14:50",
+      "who": "maya",
+      "msg": "→ in_review: Full container suite green at PYTHONHASHSEED 0/1/999; native green; smoke anchored; no xfails left"
+    },
+    {
+      "t": "20 Nov 15:11",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

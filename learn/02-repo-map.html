@@ -1,0 +1,66 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>2. Repo map</title><link rel="stylesheet" href="assets/style.css"></head>
+<body><nav id="side"></nav><main>
+<h1>2. Repo and folder map</h1>
+<p class="lead">What lives where, and the rules about who may import whom.</p>
+
+<h2>Top level</h2>
+<table>
+<tr><th>Path</th><th>What it is</th></tr>
+<tr><td><code>src/ks/</code></td><td>The product code. Everything below this table is about this folder.</td></tr>
+<tr><td><code>tests/</code></td><td>Tests, one folder per module, plus <code>redteam/</code> (attack spec RT1–RT13).</td></tr>
+<tr><td><code>scripts/demo.sh</code></td><td>The end-to-end demo (see page 12).</td></tr>
+<tr><td><code>Dockerfile</code>, <code>Makefile</code></td><td>Container image and the <code>demo</code>, <code>test</code>, <code>smoke</code>, <code>shell</code> targets.</td></tr>
+<tr><td><code>org/</code></td><td>The team process: charter, ADRs (design decisions), threat model, issues, meeting notes. <b>Read the ADRs when you want to know why.</b></td></tr>
+<tr><td><code>research/</code>, <code>abstract/</code></td><td>Prior-art research and the hackathon submission kit.</td></tr>
+<tr><td><code>board/</code>, <code>.claude/agents/</code></td><td>Generated project board, and the persona definitions the AI team used.</td></tr>
+<tr><td><code>HANDOFF.md</code>, <code>CLAUDE.md</code></td><td>Current status, and the rules and conventions.</td></tr>
+</table>
+
+<h2>Inside <code>src/ks/</code></h2>
+<div class="diagram">contracts/   shared data shapes + one serializer      (imports nothing else in ks)
+rng.py       the one deterministic random function
+runtime/     processes, uids, tick barrier, operator socket, recovery service, rogue-agent support
+gateway/     the reference monitor: admission, control, outbox, holds, system envelopes, policy seam
+policy/      the world's rules: which role may call which tool and touch which table
+world/       the test company: 10 agents, tools, scenario, seed data
+state/       versioned object store (SQLite)
+identity/    keys and the signer service
+recorder/    hash-chained record + side store
+witness/     separate checkpoint process
+monitor/     detectors, attribution, alerts
+containment/ alert -> signed suspend
+taint/       blast-radius closure and root candidates
+recovery/    planner, dry-run, re-run, conflicts, baselines
+verify/      offline verifier + decision replay
+inject/      fault specs (which agent, which tick)
+oracle/      the "fault never happened" run (S*) and the effect ledger
+score/       computes R, C, time-to-identify, time-to-contain
+bench/       seeds x faults x hold-window benchmark
+console/     read-only incident view (HTML or live terminal)
+cli/         the `ks` command</div>
+
+<h2>Who may import whom</h2>
+<p><code>ARCHITECTURE.md</code> in <code>src/ks/</code> defines the seams, and <code>tests/skeleton/test_boundaries.py</code> enforces them.</p>
+<ul>
+<li><code>contracts</code> imports no other <code>ks</code> module. Everything else imports it.</li>
+<li>Direction: <code>runtime → gateway → (ToolDispatcher protocol) ← world</code>. Only <code>runtime/run.py</code> wires <code>world</code> into <code>gateway</code>.</li>
+<li><code>world</code> never imports <code>runtime</code>. Agent processes import <code>world.agents</code> but never the gateway-side <code>world.tools</code>.</li>
+<li><code>verify</code> never imports <code>recorder</code>. It re-checks from files, so it can't share a bug with the writer.</li>
+<li>The planner and the gateway never see <code>fault</code>, <code>culprit</code> or <code>fault_tick</code>. <code>RunConfig.tcb_view()</code> strips them (rule A3), and a test scans the planner source for them.</li>
+</ul>
+<div class="box note"><b class="t">Why TCB?</b>"Trusted computing base" is the small set of code you must trust: gateway, recorder, signer, witness, verify. Everything else (agents, tools) is treated as potentially wrong or hostile.</div>
+
+<h2>What a run leaves on disk (the run directory)</h2>
+<table>
+<tr><th>File</th><th>Meaning</th></tr>
+<tr><td><code>config.json</code>, <code>keys.json</code></td><td>Run config and the public keyring (private keys are never on disk).</td></tr>
+<tr><td><code>record.jsonl</code></td><td>The hash-chained record, one line per envelope the gateway saw.</td></tr>
+<tr><td><code>witness.jsonl</code>, <code>witness-heads/</code></td><td>The witness's signed checkpoints.</td></tr>
+<tr><td><code>sidestore/</code></td><td>Raw args, results and values, filed by hash.</td></tr>
+<tr><td><code>state.db</code></td><td>The versioned state store.</td></tr>
+<tr><td><code>alerts.jsonl</code></td><td>A convenience copy of alerts. Verify checks it against the chained <code>ks.alert</code> records.</td></tr>
+<tr><td><code>plans/</code>, <code>score.json</code></td><td>Recovery plans, and the scorecard.</td></tr>
+</table>
+
+<div class="pager" id="pager"></div>
+</main><script src="assets/nav.js"></script></body></html>

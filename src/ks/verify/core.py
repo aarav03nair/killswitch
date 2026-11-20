@@ -13,13 +13,14 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-from ks.contracts import (GENESIS_HASH, SEED_TOOL, SYSTEM_CONN, SYSTEM_PRINCIPALS, VERIFY_REASONS,
+from ks.contracts import (GENESIS_HASH, NO_LINEAGE_HOLD_BANNER, SEED_TOOL, SYSTEM_CONN, SYSTEM_PRINCIPALS, VERIFY_REASONS,
                           CanonicalError, Decision, EpochFold, Keyring, Record, RunAnchor, RunConfig, VerifyReport,
                           WitnessCheckpoint, anchor_status, args_hash, system_tool_signers, witness_chain_problems)
 from ks.contracts.rundir import CONFIG, KEYS, RECORD, STATE_DB, WITNESS
 from ks.identity import verify_hex
 
 from .recovery import recovery_pass
+from .reexec import reexec_pass
 from .window import Violation, alerts_pass, side_pass, window_pass
 
 __all__ = ["verify"]
@@ -54,13 +55,16 @@ def verify(run: str | Path, anchor: RunAnchor | None = None, *, log=lambda s: pr
         code = VERIFY_REASONS[reason]
         return VerifyReport(ok=code == 0, exit=int(code), first_bad=first_bad, reason=reason,
                             last_witnessed_seq=state["lws"], anchored=anchored, unanchored_reason=why,
-                            isolation=cfg.isolation if cfg is not None else None)
+                            isolation=cfg.isolation if cfg is not None else None,
+                            lineage_hold=cfg.lineage_hold if cfg is not None else True)
 
     try:
         config, keyring, record_bytes = _load(run)
         state["config"] = config
         if config.isolation == "degraded":
             log("verify: isolation degraded: per-agent attribution VOID for this run")
+        if not config.lineage_hold:
+            log(f"verify: {NO_LINEAGE_HOLD_BANNER}")
         if anchor is not None:
             probs = anchor.problems(keyring, config)
             if probs:
@@ -71,6 +75,7 @@ def verify(run: str | Path, anchor: RunAnchor | None = None, *, log=lambda s: pr
         recs: list = []
         hashes = _record_pass(record_bytes, keyring, writes, config, recs)
         try:
+            reexec_pass(recs)  # B3-25 (F9)
             window_pass(run, recs, config)
             alerts_pass(run, recs)
             side_pass(run, recs)
@@ -179,6 +184,21 @@ def _record_pass(data: bytes, keyring: Keyring, writes: list, config: RunConfig,
                 if (env.agent_id not in system_tool_signers(env.tool) or rec.conn_id != SYSTEM_CONN or not rec.sig_ok
                         or (rec.control is not None and rec.control.issued_by != env.agent_id)):
                     raise _Fail("agent_sig_mismatch", i, f"{env.tool} executed outside a verified system principal on c-0")
+            if (rec.decision in (Decision.EXEC, Decision.HOLD) and env.agent_id in config.agents
+                    and env.agent_id not in SYSTEM_PRINCIPALS):
+                # B3-49: epoch fence. An admitted agent record (re-executions included) carries the agent's current
+                # epoch folded from earlier executed Controls; none while suspended/revoked. B3-35 (kabir's B3-49
+                # follow-ups): a HOLD is fenced too (the gateway denies at steps 8-9, before policy can hold), and
+                # no act_chain ancestor may be suspended/revoked at admission (step 9, revoked_ancestor).
+                cur = epochs.epoch(env.agent_id)
+                if cur is None or env.epoch != cur:
+                    raise _Fail("epoch_regression", i, f"{env.agent_id} admitted ({rec.decision.value}) at epoch "
+                                f"{env.epoch} while the fold says {'suspended/revoked' if cur is None else cur}")
+                dead = [l.principal for l in env.act_chain if l.principal in config.agents
+                        and epochs.epoch(l.principal) is None]
+                if dead:
+                    raise _Fail("epoch_regression", i, f"{env.agent_id} admitted ({rec.decision.value}) with "
+                                f"suspended/revoked act_chain ancestor {dead[0]}")
             if rec.control is not None and rec.decision == Decision.EXEC:
                 try:
                     epochs.apply(rec.control)

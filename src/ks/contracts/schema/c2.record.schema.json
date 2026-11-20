@@ -405,7 +405,7 @@
       "type": "object"
     }
   },
-  "$id": "https://killswitch.local/schema/1.5.0/c2.record.schema.json",
+  "$id": "https://killswitch.local/schema/1.6.0/c2.record.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "C2 Record. Field docs give the OTel mapping (span name ``execute_tool {tool}``).",

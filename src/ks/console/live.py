@@ -43,7 +43,26 @@ def frame(run) -> str:
 def beat_frame(m: dict, i: int) -> str:
     b, (_, title, sub) = m["beats"][i], BEATS[i]
     head = f"== Beat {i + 1}/5 {title.upper()} ({BEAT_SECONDS[i]}s) [{b['status'].upper()}] =="
-    return "\n".join([head] + ["  " + x for x in b["lines"]])
+    body = ["  " + x for x in b["lines"]]
+    if b.get("plan"):
+        body += ["  plan steps:"] + [f"    {s['n']}. {s['text']}" + (f" [{s['reason']}]" if s.get("reason") else "") for s in b["plan"]["steps"]]
+        body += ["  dry-run diff (hashes only):"] + [f"    {d['obj']}: now v{d['current']} -> {d['planned_hash']}" for d in b["plan"]["diff"]]
+    if b["id"] == "recover":
+        body += ["  " + x for x in scorecard_lines(m)]
+    if b["id"] == "audit" and b.get("first_bad") is not None:
+        body.append(f"  first bad index: {b['first_bad']} ({b['reason']})")
+    return "\n".join([head] + body)
+
+
+def scorecard_lines(m: dict) -> list[str]:
+    sc = m.get("scorecard")
+    if not sc:
+        return ["scorecard: not run (no score.json; ks score RUN)"]
+    out = ["scorecard (" + " | ".join(sc["columns"]) + "):"]
+    out += [f"  {r['label']}: " + " | ".join(r["cells"]) for r in sc["rows"]]
+    if sc["hold_note"]:
+        out.append(sc["hold_note"])
+    return out
 
 
 def beat_ticks(run) -> list[int | None]:

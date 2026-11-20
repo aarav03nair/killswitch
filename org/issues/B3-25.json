@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "Verify checks each reexec_of target is a sig_ok hold record with the same envelope_hash, an executed unhold in between, re-executed at most once",
   "acceptance": [
     "Hand-built record with reexec_of to a non-hold record -> TAMPER reexec_invalid at that seq",
@@ -19,13 +19,33 @@
     "B3-15"
   ],
   "deliverable": "src/ks/verify/",
-  "summary": "",
-  "review": "",
+  "summary": "New src/ks/verify/reexec.py reexec_pass, wired in core.py before window_pass: reexec_invalid (TAMPER, first_bad = re-exec seq) for non-hold/missing target, non-approval hold, envelope_hash/agent/conn mismatch, second re-exec, no executed manual unhold action:<id> in between. tests/verify/test_reexec.py (7). Local 927 pass; container: 4 fails in tests/runtime/test_recover.py (Alert 'tamper cannot be hard', not mine); smoke OK.",
+  "review": "[kabir · done] Done. Tried every case on real B3-19 runs: per-record on held_action, plus full verify() on a witnessed W.run with records re-signed by the run's gateway key. All give TAMPER reexec_invalid at the re-exec seq: target is not a hold (seed); same hold re-executed twice (flagged at the second); different conn; no unhold at all; unhold denied; unhold aimed at another hold; unhold after the re-exec; hold with sensitive_field reason; hold record changed to exec; args differ (envelope_hash no longer matches, and integrity also flags it). Hold and re-exec both in the unwitnessed tail: honest run verifies ok (lws 209 < hold 212). Removing the unhold gives reexec_invalid@213; a duplicate re-exec gives reexec_invalid@215. A reexec_of pointing at a later seq or at itself is already refused when the record is parsed. A different agent is blocked by envelope_hash or the integrity check. Local and container runs of tests/verify and tests/containment: 62 passed each. Non-blocking follow-up: verify does not check the re-exec envelope's epoch against the EpochFold (the gateway does, in _control_denial). Verify has no epoch-fence check for any record, so this gap is general.",
   "log": [
     {
       "t": "19 Nov 11:34",
       "who": "maya",
       "msg": "opened"
+    },
+    {
+      "t": "20 Nov 06:39",
+      "who": "arjun",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "20 Nov 06:54",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 06:54",
+      "who": "arjun",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "20 Nov 08:54",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

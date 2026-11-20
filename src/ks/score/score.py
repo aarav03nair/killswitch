@@ -12,9 +12,9 @@ from ks.contracts.control import Alert
 from ks.contracts.hashing import args_hash
 from ks.contracts.rundir import SCORE, sidestore_relpath
 from ks.inject import InjectSpec, culprit_window
-from ks.oracle import b_set, equal, fold, g_set, real_ledger, t0_of
+from ks.oracle import b_set, equal, fold, g_set, outbox_key, real_ledger, t0_of
 
-__all__ = ["SCORE_KEYS", "CONTAINMENT_REASONS", "score_run", "suspend_tick_of", "write_score"]
+__all__ = ["SCORE_KEYS", "CONTRAST_KEY", "item_tainted", "CONTAINMENT_REASONS", "score_run", "suspend_tick_of", "write_score"]
 
 CONTAINMENT_REASONS = frozenset({"suspended", "revoked", "revoked_ancestor", "stale_epoch"})
 SCORE_KEYS = ("seed", "fault", "hold", "baseline", "baseline_oracle_assisted", "t_inject", "t_rec", "t0", "t_alert",
@@ -22,6 +22,17 @@ SCORE_KEYS = ("seed", "fault", "hold", "baseline", "baseline_oracle_assisted", "
               "irreversible_tainted_released", "R", "b_empty", "C", "c_culprit_window", "invariants_ok", "clean",
               "revert_precision", "revert_recall", "replan_cost", "kept_without_redo", "reemitted",
               "false_accusations", "fp_cost", "damage_in_window", "exposure", "collateral_stall")
+CONTRAST_KEY = "lineage_hold"
+"""B3-53: present (``false``) only when ``RunConfig.lineage_hold`` is false (D10 contrast run); omitted at default so
+every existing score.json is byte-identical. Read from config.json, never inferred from the effects."""
+
+
+def _lineage_hold(run: Path) -> bool:
+    from ks.contracts import RunDir
+    try:
+        return RunDir(run).config().lineage_hold
+    except FileNotFoundError:
+        return True
 
 
 def _na(reason: str) -> dict[str, str]:
@@ -66,6 +77,69 @@ def _controls(recs: Iterable[Mapping[str, Any]]) -> list[tuple[int, int, Mapping
     return [(r["tick"], r["seq"], r["control"]) for r in recs if r.get("control") and r["decision"] == "exec"]
 
 
+def _recovery_keys(run: Path, recs: Iterable[Mapping[str, Any]], led: Iterable[Mapping[str, Any]],
+                   tools: tuple[str, ...]) -> set[str]:
+    """Ledger keys written by executed chained ``tools`` records (ks.recovery on c-0): row/field effects carrying the
+    record's seq, and outbox items by their gateway-derived idempotency key (read from the run's state store)."""
+    seqs: set[int] = set()
+    items: list[tuple[str, int]] = []
+    for r in recs:
+        env = r.get("envelope")
+        if not env or env["tool"] not in tools or r["decision"] != "exec" or not r.get("sig_ok"):
+            continue
+        seqs.add(r["seq"])
+        items += [(w["obj"], w["after"]["ver"]) for w in r.get("write_set") or [] if w["obj"].startswith("outbox:")]
+    out = {e["key"] for e in led if e["seq"] in seqs and e["table"] != "outbox"}
+    if items:
+        from ks.world.scenario import open_world_store
+        store = open_world_store(run / "workspace" / "state.db")
+        try:
+            for obj, ver in items:
+                v = store.value_at(obj, ver)
+                if isinstance(v, dict) and v.get("idempotency_key"):
+                    out.add(outbox_key(v["idempotency_key"]))
+        finally:
+            store.close()
+    return out
+
+
+def _outbox_events(run: Path, recs: Iterable[Mapping[str, Any]]) -> list[tuple[str, str, str, Mapping[str, Any]]]:
+    """Executed hold / unhold Controls on outbox items (A3): ``(op, outbox obj, ledger key, control)``; the key comes
+    from the item's idempotency_key in the run's state store (the version the Control wrote)."""
+    evs = []
+    for r in recs:
+        c = r.get("control")
+        if not c or r["decision"] != "exec" or not r.get("sig_ok") or c["op"] not in ("hold", "unhold"):
+            continue
+        for w in r.get("write_set") or []:
+            if w["obj"].startswith("outbox:"):
+                evs.append((c["op"], w["obj"], w["after"]["ver"], c))
+    out = []
+    if evs:
+        from ks.world.scenario import open_world_store
+        store = open_world_store(run / "workspace" / "state.db")
+        try:
+            for op, obj, ver, c in evs:
+                v = store.value_at(obj, ver)
+                if isinstance(v, dict) and v.get("idempotency_key"):
+                    out.append((op, obj, outbox_key(v["idempotency_key"]), c))
+        finally:
+            store.close()
+    return out
+
+
+def item_tainted(key: str, touched: set[str], b: set[str], rf: Mapping[str, Any], sf: Mapping[str, Any]) -> bool:
+    """A3 (taint-based, PMO/anaya re-audit): an outbox item is tainted if recovery acted on it, or its key is in B and
+    its payload (value_hash, delivery ignored) is not what S* has (or S* has no such item). Honest otherwise: a held
+    honest item that S* also sends, with S*'s payload, is stalled, not tainted. Scorer-side: no ks.taint import."""
+    if key in touched:
+        return True
+    if key not in b:
+        return False
+    r, s = rf.get(key), sf.get(key)
+    return s is None or r is None or r["value_hash"] != s["value_hash"]
+
+
 def suspend_tick_of(run_dir: str | Path, culprit: str) -> int | None:
     """Tick of the first executed chained ``ks.control`` suspend of ``agent:<culprit>`` (X3a input for S*)."""
     for t, _, c in _controls(_records(Path(run_dir))):
@@ -90,7 +164,9 @@ def score_run(run_dir: str | Path, spec: InjectSpec, star: list[dict[str, Any]],
                  (r["envelope"]["tool"].startswith("ks.recover.") or r["envelope"]["tool"] == "ks.approve")
                  and r["decision"] == "exec"]
     t_rec = min(rec_ticks) if rec_ticks else None
-    b = b_set(led, star, t_rec)
+    # B3-27: recovery lands in the control phase at the START of tick t_rec (ADR-00 step 1), before any other effect
+    # of that tick, so "B at t_rec" is the fold over ticks < t_rec (folding t_rec itself would count the repair)
+    b = b_set(led, star, None if t_rec is None else t_rec - 1)
     g = g_set(led, b, t_inj)
     t0 = t0_of(led, b, t_inj)
     rf, sf = fold(led), fold(star)
@@ -99,20 +175,38 @@ def score_run(run_dir: str | Path, spec: InjectSpec, star: list[dict[str, Any]],
     b_effs = sorted((e for e in led if e["key"] in b and e["tick"] >= t_inj), key=lambda e: (e["tick"], e["seq"] or -1))
     first_seq = next((e["seq"] for e in b_effs if e["seq"] is not None), None)
 
-    # TTI: chained alerts only
-    t_alert = a_attr = top3 = None
+    # TTI: chained alerts only. Primary path: the alert's evidence includes a record that produced a B effect (landed
+    # bad write). Fallback (B3-33 review, ADR-06-metrics A5): when no alert cites a B-producing record, a DENIED or held
+    # bad action is still a detection: the first chained alert at tick >= t_inject with root_candidates[0] == culprit
+    # whose evidence cites a culprit-signed record at tick >= t_inject. t_bad = that record's tick (the bad action).
+    t_alert = a_attr = top3 = t_bad = None
     if t0 is not None:
         for a in alerts:
             if a["_tick"] >= t0 and b_prod & set(a["evidence_seqs"]):
                 t_alert = a["_tick"]
                 break
+    bad_ticks: dict[int, int] = {r["seq"]: r["tick"] for r in recs if r.get("envelope") and r["sig_ok"]
+                                 and r["envelope"]["agent_id"] == culprit and r["tick"] >= t_inj}
+    denied_path = False
+    if t_alert is None:
         for a in alerts:
-            if t_alert is not None and a["_tick"] >= t_alert and a["root_candidates"] \
-                    and a["root_candidates"][0] == culprit and first_seq in a["evidence_seqs"]:
+            ev = [q for q in a["evidence_seqs"] if q in bad_ticks]
+            if a["_tick"] >= t_inj and a["root_candidates"] and a["root_candidates"][0] == culprit and ev:
+                t_alert, t_bad, denied_path = a["_tick"], min(bad_ticks[q] for q in ev), True
+                first_bad = min(ev)
+                break
+    if t_alert is not None:
+        first = first_bad if denied_path else first_seq
+        for a in alerts:
+            if a["_tick"] >= t_alert and a["root_candidates"] and a["root_candidates"][0] == culprit \
+                    and first in a["evidence_seqs"]:
                 a_attr = a["_tick"]
                 break
-        top3 = any(culprit in a["root_candidates"][:3] and b_prod & set(a["evidence_seqs"]) for a in alerts)
-    tti_detect = None if t_alert is None or t0 is None else t_alert - t0
+    if t0 is not None or denied_path:
+        top3 = any(culprit in a["root_candidates"][:3] and (b_prod & set(a["evidence_seqs"])
+                   or (denied_path and any(q in bad_ticks for q in a["evidence_seqs"]))) for a in alerts)
+    t_start = t0 if not denied_path else t_bad
+    tti_detect = None if t_alert is None or t_start is None else t_alert - t_start
     tti_attr = None if a_attr is None or t_alert is None else a_attr - t_alert
 
     # TTC: first culprit envelope denied for a containment reason, from t_alert
@@ -127,8 +221,12 @@ def score_run(run_dir: str | Path, spec: InjectSpec, star: list[dict[str, Any]],
     if t_alert is None:
         post = _na("no_alert") if b else 0
     else:
-        post = sum(1 for e in led if e["key"] in b and e["tick"] > t_alert and e["state"] in ("present", "dispatched"))
-    irrev = sum(1 for e in led if e["kind"] in ("payment", "email") and e["state"] == "dispatched" and e["key"] in b)
+        post = sum(1 for e in led if e["key"] in b and e["tick"] > t_alert and e["state"] in ("present", "dispatched")
+                   and not equal(e, sf.get(e["key"])))  # A2 only: a wrong repair still counts
+    # B3-27: an effect identical to S*'s (same payload, same delivery) is not tainted even if its key is in B: G3 holds
+    # put honest items that S* dispatched before t_rec into B by timing alone; they leave later with S*'s payload
+    irrev = sum(1 for e in led if e["kind"] in ("payment", "email") and e["state"] == "dispatched" and e["key"] in b
+                and not equal(e, sf.get(e["key"])))
 
     r_n = sum(1 for k in b if lost(k))
     c_lost = {k for k in g if lost(k)}
@@ -162,8 +260,9 @@ def score_run(run_dir: str | Path, spec: InjectSpec, star: list[dict[str, Any]],
                     revoked.add(ident)
             elif kind == "conn" and any(x != culprit for x in conn_agents.get(ident, ())):
                 accused.add(ident)
-        if kind == "agent" and ident != culprit and c["op"] in ("suspend", "release"):
-            susp.setdefault(ident, []).append((t if c["op"] == "suspend" else -t - 1))
+        if kind == "agent" and ident != culprit and c["op"] in ("suspend", "revoke", "release"):
+            # a revoke is a suspension that never ends (anaya B3-26): it stalls the honest agent to T
+            susp.setdefault(ident, []).append((t if c["op"] in ("suspend", "revoke") else -t - 1))
     stall = 0
     for ev in susp.values():
         start = None
@@ -177,18 +276,31 @@ def score_run(run_dir: str | Path, spec: InjectSpec, star: list[dict[str, Any]],
             stall += T - start
     approvals = sum(1 for r in recs if r.get("envelope") and r["envelope"]["tool"] == "ks.approve"
                     and r["decision"] == "exec")
+    # A3: held / released items from the chained hold and unhold Controls. Tainted = recovery had to act on the item
+    # (restore / compensate / cancel / re-run output); every other held item is honest work that was stalled.
+    x_keys = _recovery_keys(run, recs, led, ("ks.recover.restore", "ks.recover.compensate", "ks.recover.cancel_outbox"))
+    redo = _recovery_keys(run, recs, led, ("ks.recover.rerun", "ks.recover.replan"))
+    touched = x_keys | redo
+    oev = _outbox_events(run, recs)
+    held_keys = {k for op, _, k, _ in oev if op == "hold"}
+    tainted = {k for k in {k for _, _, k, _ in oev} | held_keys if item_tainted(k, touched, b, rf, sf)}
+    held_honest = len(held_keys - tainted)
+    held_act = sum(1 for r in recs if r["decision"] == "hold" and r.get("envelope") and not r.get("reexec_of")
+                   and r["envelope"]["agent_id"] != culprit)
+    un = [(k, c) for op, _, k, c in oev if op == "unhold" and not c.get("auto")]
+    unholds = {"total": len(un), "honest": sum(1 for k, _ in un if k not in tainted),
+               "tainted": sum(1 for k, _ in un if k in tainted)}
     fp_cost = {"honest_suspensions": len({i for i, v in susp.items() if any(x >= 0 for x in v)} | revoked), "stall_ticks": stall,
-               "held_honest_actions": _na("real_ledger emits no held items (B3-19 containment holds)"),
-               "approvals": approvals}
+               "held_honest_actions": held_honest + held_act, "held_honest_outbox": held_honest,
+               "held_honest_policy_actions": held_act, "operator_unholds": unholds, "approvals": approvals}
 
     ex = [r["envelope"]["tool"] for r in recs if r.get("envelope") and r["decision"] == "exec"
           and r["envelope"]["tool"].startswith("ks.recover.")]
-    if ex:
-        pre = rec_na = _na("step-to-key map needs B3-30 apply")
-        kept = _na("step-to-key map needs B3-30 apply")
-    else:
-        pre, rec_na = _ratio(0, 0), _ratio(0, len(b))
-        kept = _ratio(sum(1 for k in g if not lost(k)), len(g))
+    # B3-27 step-to-key map (B3-30 apply): ledger keys an executed recovery record wrote (rows/fields by obj id,
+    # outbox items by their gateway-derived idempotency key, read from the side store)
+    pre = _ratio(len(x_keys & b), len(x_keys))
+    rec_na = _ratio(len(x_keys & b), len(b))
+    kept = _ratio(sum(1 for k in g if k not in redo and k not in x_keys and not lost(k)), len(g))
     rerun, replan = ex.count("ks.recover.rerun"), ex.count("ks.recover.replan")
     replan_cost = {"rerun": rerun, "replan": replan, "approvals": approvals, "g": _ratio(rerun + replan, len(g))}
 
@@ -201,7 +313,10 @@ def score_run(run_dir: str | Path, spec: InjectSpec, star: list[dict[str, Any]],
         exposure = t_contain - t0
 
     if s0 is None:
-        cstall: Any = _na("needs the unmirrored fault-off run S0")
+        # A3: no unmirrored S0 on a real run; proxy = end-state divergence from S* over non-culprit keys outside B
+        # (B is R's; everything else an honest agent produced should equal S*). Basis is named in the value.
+        keys = {k for k, e in sf.items() if e["agent"] != culprit and k not in b}
+        cstall: Any = {**_ratio(sum(1 for k in keys if not equal(rf.get(k), sf[k])), len(keys)), "basis": "s_star"}
     else:
         s0f = fold(s0)
         keys = {k for k, e in s0f.items() if e["agent"] != culprit}
@@ -219,7 +334,11 @@ def score_run(run_dir: str | Path, spec: InjectSpec, star: list[dict[str, Any]],
            "kept_without_redo": kept, "reemitted": reemitted,
            "false_accusations": len(accused), "fp_cost": fp_cost, "damage_in_window": dmg, "exposure": exposure,
            "collateral_stall": cstall}
-    assert tuple(out) == SCORE_KEYS
+    if not _lineage_hold(run):
+        out = dict((k, v) for kv in out.items() for k, v in ([kv, (CONTRAST_KEY, False)] if kv[0] == "hold" else [kv]))
+        assert tuple(k for k in out if k != CONTRAST_KEY) == SCORE_KEYS
+    else:
+        assert tuple(out) == SCORE_KEYS
     return out
 
 

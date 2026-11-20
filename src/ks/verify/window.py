@@ -2,7 +2,8 @@
 
 * :func:`window_pass` (ADR-02 F4, reason ``window_violation``): every executed ``ks.dispatch`` must release an item
   whose creating record checks out, no earlier than its release tick, with no hold / taint seed / author suspension
-  in ``(created_seq, dispatched_seq)`` left unlifted by an unhold / release.
+  in ``(created_seq, dispatched_seq)`` left unlifted by an unhold / release. In a NO-LINEAGE-HOLD contrast run
+  (``RunConfig.lineage_hold`` False, B3-51) the taint seed alone is not a violation; everything else still is.
 * :func:`alerts_pass` (F6, ``alert_mismatch``): ``alerts.jsonl`` is only a copy; it must equal, in order, the
   executed chained ``ks.alert`` records (compared by ``args_hash``).
 * :func:`side_pass` (``side_entry_mismatch``): every ``sidestore/`` file parses, is named by its hash, and a
@@ -95,7 +96,7 @@ def window_pass(run: Path, records: list[Record], config: RunConfig) -> None:
                         flags.add("hold")  # B2 re-creation: back on hold by creation until unheld
                     items[oid] = dict(rec=r, flags=flags, done=False, author=env.agent_id, lineage=lineage)
             elif env.tool == DISPATCH_TOOL:
-                _check_dispatch(r, items, release_tick)
+                _check_dispatch(r, items, release_tick, lineage_hold=config.lineage_hold)
             elif env.tool == ALERT_TOOL:
                 a = _alert_value(run, r)
                 seeds = {(ov["obj"], ov["ver"]) for ov in (a or {}).get("evidence_versions", ())
@@ -127,7 +128,10 @@ def _apply_control(r: Record, items: dict) -> None:
                     it["flags"].discard("suspend")
 
 
-def _check_dispatch(r: Record, items: dict, release_tick) -> None:
+def _check_dispatch(r: Record, items: dict, release_tick, *, lineage_hold: bool = True) -> None:
+    """``lineage_hold`` False (contracts 1.6, B3-51: the D10 NO-LINEAGE-HOLD contrast run, recorded in config.json
+    and config_hash) skips ONLY the taint flag: the run was configured not to lineage-hold. Unrecorded items,
+    double dispatch, the release tick, recorded holds and author suspensions are still enforced."""
     def bad(why: str):
         raise Violation("window_violation", r.seq, f"dispatch at seq {r.seq}: {why}")
 
@@ -142,8 +146,9 @@ def _check_dispatch(r: Record, items: dict, release_tick) -> None:
         bad("creating record does not write the item")
     if r.tick < release_tick(cr):
         bad(f"tick {r.tick} is before the item's release tick {release_tick(cr)}")
-    if it["flags"]:
-        bad(f"{oid} has an unlifted {'/'.join(sorted(it['flags']))} since seq {cr.seq}")
+    flags = it["flags"] if lineage_hold else it["flags"] - {"taint"}
+    if flags:
+        bad(f"{oid} has an unlifted {'/'.join(sorted(flags))} since seq {cr.seq}")
     it["done"] = True
 
 

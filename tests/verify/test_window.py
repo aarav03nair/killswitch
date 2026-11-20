@@ -221,3 +221,31 @@ def test_delete_alert_side_entries_is_failure(tmp_path):
         (run / sidestore_relpath(args_hash(a.to_obj()))).unlink()
     rep = verify(run, **Q)
     assert (rep.reason, rep.first_bad) == ("side_entry_mismatch", 2)
+
+
+# --- B3-51 / contracts 1.6: NO-LINEAGE-HOLD contrast run skips ONLY the taint flag -----------------------------------
+
+def _contrast(lineage_hold: bool):
+    from ks.contracts import RunConfig
+    return RunConfig.model_validate({**_cfg().to_obj(), "hold_window_ticks": 0, "lineage_hold": lineage_hold})
+
+
+def test_contrast_run_skips_only_the_taint_flag(tmp_path):
+    ent = ReadEntry(obj="suppliers:S-17", ver=2, hash=H64)
+    cr = _rec(2, 10, "payments", "payments.send", {"x": 1}, write_set=(_w(1),), outbox_ids=("ob-000001",),
+              read_set=(ent,))
+    al, a = _alert(3, 11, 1, AlertKind.TAMPER, "verify", (ObjVer(obj="suppliers:S-17", ver=2),))
+    run = tmp_path / "r"
+    _side(run, a)
+    tainted = _rechain(_seal(), cr, al, _dispatch(4, 11))
+    window_pass(run, tainted, _contrast(False))  # the contrast run lets the tainted item leave
+    with pytest.raises(Violation) as e:  # the same dispatch in a normal H=0 run is a window_violation
+        window_pass(run, tainted, _contrast(True))
+    assert (e.value.reason, e.value.first_bad) == ("window_violation", 4)
+    # everything else is still enforced in a contrast run
+    for recs in ([_create(2, 10), _ctl(3, 10, ControlOp.HOLD, "outbox:ob-000001"), _dispatch(4, 11)],
+                 [_create(2, 10), _ctl(3, 10, ControlOp.SUSPEND, "agent:payments"), _dispatch(4, 11)],
+                 [_create(2, 10), _dispatch(3, 10), _dispatch(4, 11)],
+                 [_dispatch(2, 10)]):
+        with pytest.raises(Violation):
+            window_pass(Path("/nonexistent"), _rechain(_seal(), *recs), _contrast(False))

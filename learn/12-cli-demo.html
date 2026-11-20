@@ -1,0 +1,50 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>12. CLI, demo, console</title><link rel="stylesheet" href="assets/style.css"></head>
+<body><nav id="side"></nav><main>
+<h1>12. CLI, demo, console</h1>
+<p class="lead">How you drive it. <code>cli/__init__.py</code> defines the <code>ks</code> command, <code>scripts/demo.sh</code> strings it into the demo, and <code>console/</code> renders the incident view.</p>
+
+<h2>Commands</h2>
+<table>
+<tr><th>Command</th><th>What it does</th></tr>
+<tr><td><code>ks run</code></td><td>Run agents through the gateway and write a run directory. Options: <code>--scenario skeleton|world</code>, <code>--agents</code>, <code>--ticks</code>, <code>--seed</code>, <code>--key-mode fresh|repro</code>, <code>--tick-deadline-ms</code>, <code>--run-id</code>, <code>--shared-uid</code>, <code>--out</code>, plus <code>--pause-at</code>, <code>--step</code>, <code>--pause-on-alert</code>.</td></tr>
+<tr><td><code>ks inject</code></td><td>Sugar for <code>run --fault … / --rogue …</code>.</td></tr>
+<tr><td><code>ks verify RUN [--head ANCHOR] [--json]</code></td><td>The offline audit (page 8).</td></tr>
+<tr><td><code>ks blame RUN</code></td><td>Root candidates of a run.</td></tr>
+<tr><td><code>ks contain suspend|release|revoke|hold|unhold TARGET RUN</code></td><td>Operator controls on a live run. Targets: <code>agent:ID</code>, <code>conn:ID</code>, <code>outbox:ob-N</code>, <code>action:r-N</code>.</td></tr>
+<tr><td><code>ks recover RUN --dry-run</code> / <code>--apply PLAN_ID</code> [<code>--approve ITEM…</code>]</td><td>Show the plan diff, then apply an approved plan (page 10).</td></tr>
+<tr><td><code>ks score RUN</code></td><td>Write <code>score.json</code>.</td></tr>
+<tr><td><code>ks repro A B</code></td><td>Compare determinism views of two run directories.</td></tr>
+<tr><td><code>ks bench</code></td><td>The benchmark.</td></tr>
+<tr><td><code>ks console RUN --html OUT | --live</code></td><td>Incident console.</td></tr>
+</table>
+<p>The CLI returns its own usage code (64) rather than argparse's 2, and uses the contract <code>Exit</code> codes elsewhere.</p>
+
+<h2>The live operator loop</h2>
+<p>With <code>--pause-at</code>, <code>--step</code> or <code>--pause-on-alert</code> the gateway pauses between ticks. The operator talks to the running gateway over a local socket (<code>runtime/operator.py</code>, peer-credential checked), so a human decision enters the chain as a <code>ks.operator</code>-signed record, not a side channel.</p>
+
+<h2>What <code>scripts/demo.sh</code> does</h2>
+<ol class="steps">
+<li>Builds the image if needed, then starts a detached container (no network) running <code>ks run --scenario world --fault F2+ --seed 2 --ticks 40 --pause-on-alert</code>. Seed and ticks are overridable with <code>SEED</code> and <code>TICKS</code>.</li>
+<li>The fault lands, the monitor alerts, and containment suspends the culprit. The run <b>pauses</b> before the tick after the suspend (the operator beat).</li>
+<li><code>ks recover RUN --dry-run</code> prints the plan and a plan id (<code>p-…</code>).</li>
+<li><code>ks recover RUN --apply p-…</code> applies it. The output lists outbox items to release.</li>
+<li>The script runs <code>ks contain unhold outbox:ob-…</code> for each listed item, then sends a <code>resume</code>.</li>
+<li>The container exits. The script reads the <b>RunAnchor</b> from the log.</li>
+<li><code>ks verify --head ANCHOR RUN</code> checks the run, <code>ks score RUN</code> writes the scorecard, and <code>ks console RUN --html …</code> renders the incident page.</li>
+<li>A final check asserts verify exit 0, anchored true, and prints the isolation mode.</li>
+</ol>
+<div class="box note"><b class="t">Make targets</b><code>make demo</code> runs this script. <code>make smoke</code> is the small 2-agent anchored check. <code>make test</code> runs pytest in the container with <code>--network none</code>.</div>
+
+<h2>The console (<code>console/</code>)</h2>
+<p>Read-only. <code>model.py</code> builds a model of the incident from the run directory alone (<code>BEATS</code>: the five story beats), <code>html.py</code> renders it to static HTML, and <code>live.py</code> shows it in the terminal, optionally stopping at each beat (<code>--pace</code>). It derives everything from the chained records, so the console can't show anything the evidence doesn't support.</p>
+
+<h2>Running things yourself (suggested)</h2>
+<pre><code>make test        # full suite in the container
+make smoke       # 2 agents, 10 ticks, anchored verify
+make demo        # the hero path; open the printed console HTML
+ks verify --json --head "$ANCHOR" runs/&lt;id&gt;
+ks bench --seeds 1-5 --faults F2+ --hold 6     # a quick look at the benchmark</code></pre>
+<p>I haven't run these commands for this course. Natively on macOS isolation is degraded, so use the container for anything about attribution.</p>
+
+<div class="pager" id="pager"></div>
+</main><script src="assets/nav.js"></script></body></html>

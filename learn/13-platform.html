@@ -1,0 +1,57 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>13. Gateway as a platform</title><link rel="stylesheet" href="assets/style.css"></head>
+<body><nav id="side"></nav><main>
+<h1>13. The gateway as a platform</h1>
+<p class="lead">Which parts are general, which parts are tied to the demo, and how you would put a different system behind this gateway. This is my reading of the code, not something the project documents as a product.</p>
+
+<h2>The platform is the part that doesn't know about suppliers</h2>
+<table>
+<tr><th>General (reusable)</th><th>Demo-specific (replace for a new domain)</th></tr>
+<tr><td><code>contracts/</code> (envelope, record, canonical bytes)</td><td><code>world/</code> (agents, tools, scenario, registry)</td></tr>
+<tr><td><code>gateway/</code> (admission, control, holds, outbox, system envelopes)</td><td><code>policy/</code> (roles, tool and table scopes)</td></tr>
+<tr><td><code>recorder/</code>, <code>witness/</code>, <code>verify/</code></td><td>Banking-flavoured detectors (<code>iban_checksum</code>, <code>price_vs_history</code>, <code>beneficiary_changed_then_paid</code>) and <code>ibanlib</code></td></tr>
+<tr><td><code>identity/</code> (keys, signer)</td><td><code>inject/</code> faults and the hero schedule</td></tr>
+<tr><td><code>state/</code> (versioned objects, sensitive fields from config)</td><td><code>runtime/agent_template.py</code> behaviour module (pluggable via <code>--behaviour</code>)</td></tr>
+<tr><td><code>taint/</code>, <code>recovery/</code> planner</td><td>Compensators registered per tool</td></tr>
+<tr><td><code>runtime/</code> (barrier, spawn, operator)</td><td>The lockstep tick (a simulation choice; see below)</td></tr>
+</table>
+
+<h2>The extension points</h2>
+<div class="grid">
+<div class="card"><h3>ToolDispatcher</h3><p><code>classify(env)</code> says R, C, I1, I2 or U. <code>execute(env, txn)</code> does the work, reading and writing only through <code>txn</code>. Implement this to expose your own tools.</p></div>
+<div class="card"><h3>ViewProvider</h3><p><code>view(agent, tick, state)</code> decides what each agent can see. Because views feed the read set, this is where dependency tracking comes from.</p></div>
+<div class="card"><h3>Policy</h3><p><code>decide(env, class)</code> returns None to admit, or a deny/hold verdict with a rule token.</p></div>
+<div class="card"><h3>Sensitive fields</h3><p>A list in the run config (<code>table.field</code>). Each becomes its own versioned object so it can be reverted independently.</p></div>
+<div class="card"><h3>Detectors</h3><p>Pure functions over a context. Add yours to the catalogue in <code>monitor/detectors.py</code> and declare the alert kind in the C4 contract.</p></div>
+<div class="card"><h3>Behaviour module</h3><p>For agents: a module with <code>step(...)</code> loaded in the agent process. An LLM-backed agent would fit here (a stretch goal in HANDOFF).</p></div>
+<div class="card"><h3>Compensators</h3><p>For class C tools: the registered opposite action the planner can run.</p></div>
+<div class="card"><h3>Outbox sinks</h3><p>Destinations like <code>payments</code> and <code>email</code>. A real deployment adds a real delivery behind <code>ks.dispatch</code>.</p></div>
+</div>
+
+<h2>A recipe: put a new system behind the gateway</h2>
+<ol class="steps">
+<li><b>Model your data as objects.</b> Pick object ids (<code>table:pk</code>), and list sensitive fields that should be reversible on their own.</li>
+<li><b>Write a dispatcher.</b> One adapter per tool. Classify each as R, C, I1, I2. Anything unlisted is U and denied.</li>
+<li><b>Write the view.</b> Decide what each role sees. Less is better: less read means less taint.</li>
+<li><b>Write the policy.</b> Which roles may call which tools and write which tables.</li>
+<li><b>Write invariants.</b> The things that must never be true of your data. Each becomes a detector.</li>
+<li><b>Register compensators</b> for class C tools, and decide your hold window <code>H</code>.</li>
+<li><b>Run a fault drill.</b> Make an inject spec for each failure you fear, with an oracle run to score against.</li>
+</ol>
+
+<h2>What would have to change for real deployments</h2>
+<div class="box warn"><b class="t">Gaps between this and a product</b>
+<ul>
+<li><b>Lockstep ticks.</b> Real agents run asynchronously. The ordering and view-visibility rules (a write at tick t is visible at t+1) assume ticks. A real system needs an equivalent logical clock or sequence-based visibility.</li>
+<li><b>State store.</b> It is a SQLite store the gateway owns. Real systems have Postgres, S3, SaaS APIs and so on. You would need adapters that can supply before and after versions with hashes, or accept coarser guarantees.</li>
+<li><b>Reads must be mediated.</b> Dependency tracking only works if every read goes through the gateway's view or adapter. Reads that bypass it are invisible to taint.</li>
+<li><b>Isolation.</b> Per-agent uids inside a Docker container. In production you'd get this from separate containers, sandboxes or workload identities.</li>
+<li><b>Irreversible effects.</b> Outbox gating only works if the dispatch really happens behind the gateway.</li>
+<li><b>LLM agents.</b> The planner re-plans them with approval. There is no replay of a language model's behaviour.</li>
+<li><b>Scale.</b> Admission is sequential per tick and the code scans records in places. The project targets about 10 agents.</li>
+</ul></div>
+
+<h2>The mental model to keep</h2>
+<div class="box key"><b class="t">In one paragraph</b>The platform turns "agents doing things" into "a ledger of who read which versions and wrote which versions, signed and witnessed". Containment is a state change in that ledger (an epoch bump). Recovery is a query over it (taint closure), a diff of the plan against the store, and a set of recorded repair actions. Anything that can express its actions as reads and writes of versioned objects can sit behind it.</div>
+
+<div class="pager" id="pager"></div>
+</main><script src="assets/nav.js"></script></body></html>

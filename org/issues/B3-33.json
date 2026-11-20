@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "sonnet",
   "created_by": "maya",
-  "status": "todo",
+  "status": "done",
   "outcome": "Bench runs F2+/F2+c/F2+x over N seeds against snapshot and revert-culprit-only baselines",
   "acceptance": [
     "ks bench --seeds 3 completes and writes per-seed score.json plus a summary table",
@@ -20,8 +20,8 @@
     "B3-30"
   ],
   "deliverable": "src/ks/bench/",
-  "summary": "",
-  "review": "",
+  "summary": "Maya D10 re-return: contrast before recovery added. runner.bench takes contrast_baselines (system, no_op); runs/bench-b3-33/bench.md has per-fault CONTRAST tables with system and no_op (pause, no recovery, --hold 0 --no-lineage-hold), labelled, never aggregated. no_op contrast irreversible_tainted_released 12 median [6..18], total 245, >0 on 20/20 seeds (F2+ and F2+x; s1=10) vs 0 [0..0] with hold on; system contrast 0 (instant apply supersedes the queued payment). D10 note rewritten: hold covers alert-to-decision window. Only contrast tables regenerated, image killswitch:tara rebuilt. tests/bench+score 20 passed. Not committed.",
+  "review": "[maya · changes] Harness, aggregation (nearest-rank, rationals, k/n) and fail-loud on baseline_failed are good; 18 tests green; re-ran F2+x/system/s1 and F2+/snapshot/s2 locally twice: byte-identical to each other. T=40 ACCEPTED as deviation, written as ADR-06-metrics A4 (quote 'T=40' with every number). Changes: (1) F3 'never detected 0/20' is wrong framing: on the current tree F3 s1 raises a scope alert at t_inject=15 and suspends comms; in your bench the snapshot cells applied at t_rec=16, so they paused, i.e. a suspend happened. Scorer t_alert needs evidence_seqs to intersect b_prod; a deny record is never in b_prod, so t_alert/t0 are null. And the system cell got no_plan, which runner.py drops silently. Route the scorer binding to anaya. Re-check B3-53's scope with nisha before she 'fixes detection'. (2) runner: a 'no_plan' note after a pause must be listed in failures/notes, not scored silently. (3) The committed scores are stale: same cells on the current tree differ only in collateral_stall d (+6: 388 vs 382, 387 vs 381). Find out whether that is code drift or container vs mac, then regenerate after the monitor/scorer fixes. (4) bench.md needs a header: T=40 (A4); snapshot and revert_culprit_only are oracle-assisted (given t_inject and culprit); collateral_stall is a proxy, basis s_star (A3 binding); add a p95 column (§4). (5) Explain F2+x held_honest 29 in bench.md: s1 has held_honest_outbox=27, i.e. triage's lineage items stay held because the conflict is flagged and the §4 approver never resolves flags. It is the cost of the flag, not a wrong revert, and should be read next to C=21/254. Same for revert_culprit_only's 27 (outbox untouched). (6) H=0 is §4 scope: run H=0 for F2+ and F2+x at least, plus a D10 contrast row (system, --hold 0 --no-lineage-hold) for those two faults. run_cell needs a no_lineage_hold flag. Other faults at H=0 can be deferred if listed in bench.md.\n\n[maya · changes] All prior asks met: A5 F3 tti 0/0 ttc 1 20/20, no_plan listed, T=40, labels, p95, H=0 tables, revert_culprit_only F3 failures listed. tests/bench+score 20 passed. One change. The D10 contrast result is real, not a bug, but bench.md reads it wrong. Cause: --pause-on-alert + instant apply. In F2+ s1 the tainted payment ob-16 is queued at tick 17 (crm iban t15 -> INV-0016 t16 -> payment t17), alert t17, H=0 release t18. The apply re-runs ob-15/16 and holds them before t18, so recovery itself supersedes the payment and the lineage hold has nothing left to do (contrast score.json = H=0 system except the flag). RT10 shows a leak because it runs with no recovery. Check I ran: F2+ s1 no_op (pause, no recovery) with --no-lineage-hold gives irreversible_tainted_released 10, R 29/29; the bench no_op H=0 with the hold gives 0. Asks: (1) add a no_op CONTRAST column (H=0, --no-lineage-hold) to the F2+/F2+x contrast tables, keep the system contrast; (2) rewrite the D10 reading note: the lineage hold covers the time between alert and the operator applying recovery; with an instant apply it is redundant for F2+; without a decision yet, 10 payments escape on s1 (give the 20-seed numbers). No contract change.\n\n[maya · done] D10 contrast verified: CONTRAST rows labelled per B3-53/s3, separate tables, never aggregated with system cells. Per-seed no_op score.json: s1=10, total 245, F2+ and F2+x identical on all 20 seeds (plausible: no recovery, so the x conflict never comes into play before the hold decision). tests/bench+score 20 passed. Not committed.",
   "log": [
     {
       "t": "19 Nov 11:34",
@@ -32,6 +32,71 @@
       "t": "19 Nov 21:40",
       "who": "pmo",
       "msg": "→ todo: From anaya's B3-26 review (non-blocking, tara): a revoked honest agent adds no stall_ticks (should count toward collateral stall); add a repo test that a valid ks.monitor alert blaming the wrong agent counts in false_accusations, sets t_alert and is excluded from tti_attribute."
+    },
+    {
+      "t": "20 Nov 09:58",
+      "who": "tara",
+      "msg": "→ in_progress: ks.bench built (agg, runner, snapshot baseline), CLI wired; scorer A3 taint-based fix + tests; full 20-seed container run in progress"
+    },
+    {
+      "t": "20 Nov 10:22",
+      "who": "anaya",
+      "msg": "→ in_progress: A3 rule confirmed: tainted = recovery touched key OR key in B with value_hash != S* (or absent in S*). Release-without-recovery is caught: added test_operator_release_without_recovery_counts_tainted_unhold (hold+unhold Controls via state.db, no ks.recover record -> unholds tainted=1/honest=1); tara's test only called item_tainted directly. Mutation (payload check off) fails both. Import-lint reason (scorer independence) now written into A3, plus residuals: coincidental S* payload = honest (harmless per A2); items first written >= t_rec with payload != S* count honest. tests/score 13 passed."
+    },
+    {
+      "t": "20 Nov 15:02",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 15:02",
+      "who": "tara",
+      "msg": "→ in_review: bench done, tests green"
+    },
+    {
+      "t": "20 Nov 15:16",
+      "who": "maya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "20 Nov 15:25",
+      "who": "anaya",
+      "msg": "→ in_progress: A5: confirmed. Detection anchored to first chained alert with root_candidates[0]==culprit citing a sig_ok culprit record >= t_inject; denial without alert never counts. Fallback only when §3 path finds none, so F2+ unchanged. Edited A5 (A1 path -> §3 path; noted landed-fault-no-alert case now scored from t_bad, any culprit record qualifies); TERMS TTI-detect row updated. tests/score 14 passed."
+    },
+    {
+      "t": "20 Nov 16:09",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 16:09",
+      "who": "tara",
+      "msg": "→ in_review: review fixes done; anaya to confirm A5"
+    },
+    {
+      "t": "20 Nov 16:12",
+      "who": "maya",
+      "msg": "review: changes"
+    },
+    {
+      "t": "20 Nov 16:28",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 16:28",
+      "who": "tara",
+      "msg": "→ in_review: D10 contrast before recovery added"
+    },
+    {
+      "t": "20 Nov 16:29",
+      "who": "maya",
+      "msg": "review: done"
+    },
+    {
+      "t": "20 Nov 16:29",
+      "who": "maya",
+      "msg": "→ done: D10 contrast accepted"
     }
   ]
 }

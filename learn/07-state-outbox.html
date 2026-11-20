@@ -1,0 +1,68 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>7. State and outbox</title><link rel="stylesheet" href="assets/style.css"></head>
+<body><nav id="side"></nav><main>
+<h1>7. State store and outbox</h1>
+<p class="lead">Where the data lives, why every old version is kept, and how irreversible effects (payments, emails) are held back until they are safe. Files: <code>state/</code>, <code>gateway/outbox.py</code>.</p>
+
+<h2>The versioned store (<code>state/store.py</code>)</h2>
+<p>A SQLite database, <code>state.db</code>, used only by the gateway. It never overwrites. It <b>appends versions</b>.</p>
+<table>
+<tr><th>Table</th><th>Holds</th></tr>
+<tr><td><code>objects</code></td><td>The current head of each object: <code>obj</code>, <code>head_ver</code>, <code>head_hash</code>, <code>head_value</code>, <code>head_redacted</code>.</td></tr>
+<tr><td><code>versions</code></td><td>Every version ever written: <code>(obj, ver, hash, author, seq, action_id)</code>. <b>Append-only</b>: SQL triggers abort any UPDATE or DELETE.</td></tr>
+<tr><td><code>side</code></td><td>Raw values by hash, with a redacted flag.</td></tr>
+<tr><td><code>meta</code></td><td>Settings such as the sensitive-field list.</td></tr>
+</table>
+<ul>
+<li>Each version records its <b>author</b> and the <b>record seq</b> that wrote it. That is the join between state and evidence.</li>
+<li>The hash is of the value, so a later read can say "I read this exact version".</li>
+<li><b>Reconciliation:</b> <code>state_digest</code> over the live store should equal the digest of folding the record. If they differ, verify says <code>RECONCILE</code>.</li>
+<li><b>Savepoints and <code>simulate</code></b> let the recovery dry-run execute re-runs inside a transaction that is always rolled back, with transaction-control SQL blocked so simulated code can't commit.</li>
+<li>A tombstone hash represents "object deleted" or "didn't exist before".</li>
+</ul>
+
+<h2>Objects, rows and sensitive fields (<code>state/fields.py</code>)</h2>
+<p>Object ids look like <code>suppliers:S-22</code> (a row) or <code>suppliers:S-22.iban</code> (a <b>field object</b>). Config lists <code>sensitive_fields</code> such as <code>suppliers.iban</code>. For those fields:</p>
+<ul>
+<li>The field is its <b>own versioned object</b>, and the row's value no longer contains it.</li>
+<li>A read of the whole row lists the row <i>and</i> its field objects.</li>
+</ul>
+<div class="box key"><b class="t">Why this matters</b>If the IBAN lives inside the supplier row, reverting the IBAN means reverting the row, which would also erase triage's unrelated risk note. As a separate object, the IBAN can be restored alone and the note survives. That is the "triage's note is kept" line in the abstract. Sensitivity comes only from config; there is no IBAN-specific code in the store.</div>
+
+<h2>Views (the read side)</h2>
+<p>Agents don't query the store. At <code>Gateway.open</code>, the <code>ViewProvider</code> (the world's <code>build_view</code>) produces each agent's per-tick view from a snapshot that excludes this tick's writes. Every view entry is added to the read set of whatever the agent does that tick. Scope per role is in <code>world/scenario.py</code> (<code>SCOPES</code>) and enforced as the read scope in the policy.</p>
+
+<h2>The outbox (<code>gateway/outbox.py</code>)</h2>
+<p>Some effects can't be undone: a payment, an email. The outbox makes them <b>two-step</b>. A tool never sends anything. It returns an <code>OutboxRequest(sink, class, payload)</code>.</p>
+
+<h3>Creating an item</h3>
+<p>Inside the same transaction and the same record as the action, the gateway creates an object <code>outbox:ob-NNNNNN</code> (a C3 <code>OutboxItem</code>). The <b>gateway</b> derives everything a tool must not choose:</p>
+<ul>
+<li>the id and the <b>idempotency key</b> (<code>idempotency_key(agent, action, sink, n)</code>), so a re-run never sends the same effect twice</li>
+<li>the <b>lineage</b>: the record's read set (never what the agent declares)</li>
+<li>the <b>release tick</b>: <code>tick + H</code> where <code>H = hold_window_ticks</code></li>
+</ul>
+<pre><code>release_tick = tick + H
+release_tick = max(tick + H, v + 2H)    # if lineage holds a sensitive-field version written at tick v</code></pre>
+
+<h3>Status lifecycle</h3>
+<div class="diagram">queued ──► released? ──► dispatched   (a signed ks.dispatch record; the effect leaves)
+   │
+   ├──► held        (lineage touches a tainted version, or a sensitive field changed)
+   │        └─ unhold ─► queued again (re-checked at the next release phase)
+   └──► cancelled   (recovery or operator)</div>
+
+<h3>The release phase</h3>
+<p>At the start of each tick, for each due item in id order:</p>
+<table>
+<tr><th>Condition</th><th>Result</th></tr>
+<tr><td>Author is suspended or revoked</td><td>Stays queued, no record. Leaves only after a release.</td></tr>
+<tr><td>Lineage touches a tainted version</td><td><code>ks.control hold</code>, reason <code>lineage_hold</code></td></tr>
+<tr><td>A sensitive-field version in the lineage is no longer the head</td><td>Hold, reason <code>sensitive_field</code></td></tr>
+<tr><td>Otherwise</td><td><code>ks.dispatch</code></td></tr>
+</table>
+<p>Every outcome is a signed gateway envelope on <code>c-0</code> whose write set is the status change, so a refusal to dispatch is itself recorded. <code>ks verify</code> then checks the <b>dispatch window</b> (F4): each dispatched item must have been released no earlier than its release tick, with no unlifted hold, taint seed or author suspension in between.</p>
+
+<div class="box note"><b class="t">The hold window</b><code>H</code> is the grace period. With H=0 an item is released the next tick, with H&gt;0 there is time for the monitor to react before money moves. The benchmark compares both (<code>--hold 0,6</code>). The honest cost of holding is measured as "collateral stall".</div>
+
+<div class="pager" id="pager"></div>
+</main><script src="assets/nav.js"></script></body></html>

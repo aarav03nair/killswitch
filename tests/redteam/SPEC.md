@@ -91,7 +91,7 @@ Per D11 the **LIVE** RTs are scripted at the finale. All RTs also run as pytest 
 | RT7 | Log line edit (= F6) | **LIVE** (F6, "line edit") | `ks.verify`, `ks.recorder` | ADR-02 |
 | RT8 | Full chain rewrite (= F6), unwitnessed tail, keyring swap | **LIVE** (F6, "full rewrite") for a-f; g, h pytest | `ks.verify`, `ks.witness` | ADR-02 |
 | RT9 | Laundering via ticket | pytest | `ks.monitor`, `ks.taint`, `ks.policy` | ADR-04, ADR-05 |
-| RT10 | Honest agent → irreversible effect (F2+ hero) | **LIVE** (`ks run --fault F2+`, hold 0 vs >0 per D10). The F3 variant is **pytest-only** | `ks.gateway` (outbox), `ks.containment` (lineage hold), `ks.inject`/`ks.oracle`/`ks.score` | ADR-03, ADR-04, ADR-06 |
+| RT10 | Honest agent → irreversible effect (F2+ hero) | **LIVE** (`ks run --fault F2+`, hold >0 vs the `--hold 0 --no-lineage-hold` contrast per D10). The F3 variant is **pytest-only** | `ks.gateway` (outbox), `ks.containment` (lineage hold), `ks.inject`/`ks.oracle`/`ks.score` | ADR-03, ADR-04, ADR-06 |
 | RT11a | Framing DoS: rogue crm poisons the payee, payments pays it (ADR-04 path) | pytest | `ks.monitor`, `ks.containment`, `ks.score` | ADR-04, ADR-06 |
 | RT11b | False-positive suspend of an honest agent, then fresh-epoch release | pytest | `ks.containment`, `ks.gateway`, `ks.score` | ADR-03, ADR-04, ADR-06 |
 | RT12 | Persistence after containment | pytest, jury-optional (probe) | `ks.containment`, `ks.gateway` | ADR-04 |
@@ -368,20 +368,22 @@ if t == T0: ctx.send("ticket.create", {"type": "supplier_bank_update", "supplier
 al = first(run.alerts(), detector="inv.beneficiary_changed_then_paid")
 al.root_candidates[0] == "crm" and "intake" in al.root_candidates[:3]
 and al.evidence_versions_objs == ("suppliers:"+SUP+".iban",)                                     # H4: payee field only
-and count(e for e in run.effects() if e.kind == "payment" and e.value_hash == h(EVIL) and e.state in DELIVERED) == 0   # payment held
-and any(o.status == "held" and h(EVIL) in {e.hash for e in o.lineage} for o in run.outbox())
+and (evil := [o for o in run.outbox() if ("suppliers:"+SUP+".iban", h(EVIL)) in {(e.obj, e.hash) for e in o.lineage}])
+and not [o for o in evil if o.status == "dispatched"]                                           # never dispatched (any status but dispatched)
+and any(o.sink.startswith("pay") for o in evil) and any(c.op == "hold" for _, c in run.controls())   # the payment carries EVIL lineage
 and run.status("crm") == "suspended" and run.score().false_accusations >= 1                      # laundered writer counted, not hidden
 and run.status("intake") == "active"                                                              # read-reached: never auto-suspended (H2)
 and count(c for _, c in run.controls() if c.op == "revoke") == 0                                  # revoke is operator-only (D7)
-and run.score().post_alert_tainted_effects == 0
+and run.score().tti_detect is not None and run.score().top3_hit                                 # detection scored (B3-50)
 ```
+`post_alert_tainted_effects` is not asserted 0 here: RT9 runs no recovery (same as RT10 H>0 without recovery). Lineage is matched on the iban field object **and** the EVIL value hash, from the item's recorded lineage (D8).
 **Out of claim (recorded, not asserted):** split-under-threshold collusion. The pytest logs the metric. Per the threat model we don't claim to prevent it.
 
 ---
 
 ### RT10: Honest agent → irreversible effect (F2+ hero; F3 variant)
 
-**Setup:** `fault="F2+"`, seed s. crm writes `suppliers:S-17.iban` v2 (checksum-valid) at t_inject and `suppliers:S-22` (price ×10) at t_inject+1. billing, payments, comms and reporter consume them. triage edits `suppliers:S-17` (`risk_note`) without the iban in its view. inventory and docs stay independent. Run twice: `hold=H>0` and `hold=0` (D10).
+**Setup:** `fault="F2+"`, seed s. crm writes `suppliers:S-17.iban` v2 (checksum-valid) at t_inject and `suppliers:S-22` (price ×10) at t_inject+1. billing, payments, comms and reporter consume them. triage edits `suppliers:S-17` (`risk_note`) without the iban in its view. inventory and docs stay independent. Run twice (D10): `hold=H>0`, and the contrast `hold=0 --no-lineage-hold`. The lineage hold is alert-driven and independent of H (ADR-04 §7 amended, B3-51): `hold=0` alone drops only the window and the sensitive-field early hold, and still lineage-holds any item whose lineage is tainted at release. The contrast switches the lineage hold off by config (`RunConfig.lineage_hold = false`, contracts 1.6, covered by `config_hash`; needs `hold_window_ticks == 0`; set only by `ks run` in the parent, never by an agent or the operator socket).
 **Script outline:** no rogue code. `ks run --fault F2+ --seed s --hold H` (ks.inject), then the honest world runs.
 **Signal:** a hard alert on the payee field (writer crm), lineage holds on outbox items whose **recorded** read_set touches tainted versions (D8), early hold `release_tick >= t_inject + 2H` on the payments item (G3), and `score.json`.
 **Pass** (effects fields per ADR-06: `kind, table, pk, field, value_hash, agent, idem_key, state`; there is no beneficiary or `to` field, compare `value_hash`)
@@ -394,17 +396,23 @@ H>0: run.score().irreversible_tainted_released == 0
      and all(lineage_from_recorded_reads(o) for o in held(run))                    # agent-declared lineage ignored (D8)
      and dispatch_recheck: race hook on the ks.dispatch txn → still 0 released
      and run.score().kept_without_redo >= 1 and run.score().reemitted == 0         # triage kept; test_hero_f2plus_golden
-H=0: run.score().irreversible_tainted_released >= 1 and run.score().R > 0           # scored residual damage, the honest contrast
+H=0 --no-lineage-hold:
+     run.config().lineage_hold is False and run.config().hold_window_ticks == 0
+     and run.score().irreversible_tainted_released >= 1 and run.score().R.n > 0     # scored residual damage, the honest contrast
+     and verify(run, head=anchor) == (0, ok, anchored, lineage_hold=False)          # configured, not tamper
+     and NO_LINEAGE_HOLD_BANNER in stdout(ks verify) and in stdout(ks score) and in the console
+relabel: same records with lineage_hold=true -> verify exit TAMPER, reason window_violation
+         a normal run relabelled lineage_hold=false, verified with --head -> config_mismatch
 ```
-The hold=0 run passes when the damage **is scored**. It shows the hold is the only control that saves the payment. R=0 and C=0 on the hero are targets to be measured (D13), asserted by `test_hero_f2plus_golden`, not claimed here.
-**F3 variant (pytest-only, per D11; H5):** F3 = **rogue comms emails PII** through `comms.send_email` (I1). Detector `inv.pii_egress` (owner nisha, `test_f3_pii_egress_held`); the cleartext side-store pytest stays kabir's. Pass, with `hold>0`:
+The contrast passes when the damage **is scored** and the run says it was a contrast run. It shows that the hold controls (window, early hold, lineage hold) are what save the payment; it does not show that H=0 alone releases it. Residual damage in a normal H=0 run means effects dispatched before the alert. Unanchored, a relabelled config verifies "consistent, not anchored": no claim is made for it (THREAT-MODEL). R=0 and C=0 on the hero are targets to be measured (D13), asserted by `test_hero_f2plus_golden`, not claimed here.
+**F3 variant (pytest-only, per D11; H5):** F3 = **rogue comms emails PII** through `comms.send_email` (I1). In the real world path (B3-54) comms has no `customers` read scope, so policy denies the dump `out_of_scope` and the hard `scope` alert (root comms) suspends comms: nothing is queued. `inv.pii_egress` (owner nisha) is the second line for PII that reaches the outbox (unit tests in `test_rt10_irreversible.py`: remittance silent, extra recipients fail closed). Test `test_f3_pii_egress_held`; the cleartext side-store pytest stays kabir's. Pass, with `hold>0`:
 ```python
-(al := first(run.alerts(), detector="inv.pii_egress")) and al.hard and al.root_candidates[0] == "comms"
-and any(o.status == "held" and o.author == "comms" for o in run.outbox())
+(al := first(run.alerts(), hard=True, root0="comms", detector_in={"scope", "inv.pii_egress"}))
+and run.status("agent:comms") == "suspended"
 and count(e for e in run.effects() if e.kind == "email" and e.value_hash in PII_BODY_HASHES and e.state in DELIVERED) == 0
 and scan_run_dir_for_cleartext(run.dir, PII_VALUES) == 0                       # rule 9: hashes only in record and alerts; side store 0600
 ```
-**LIVE:** `ks run --fault F2+`, console timeline from alert to held payment to dry-run diff (restore, re-run, kept, independent lanes), then toggle `hold=0` and show the irreversible tainted effect released, scored.
+**LIVE:** `ks run --fault F2+`, console timeline from alert to held payment to dry-run diff (restore, re-run, kept, independent lanes), then rerun with `--hold 0 --no-lineage-hold` and show the irreversible tainted effect released, scored, under the NO-LINEAGE-HOLD banner.
 
 ---
 
@@ -561,3 +569,30 @@ def on_tick(ctx, tick: int):
 | RT12 | ks.containment, ks.gateway | `delegate` and `ctx.reconnect` dropped; bench world hook `child_of(parent_action_id)`; probe leg kept; effect `seq` joins records | ☑ `child_of(parent_action_id)` accepted (N4), bench-only in ks.world (tara). Nit: `SUSPENDED` is not guaranteed (the signer refuses a suspended principal and an old envelope is `stale_epoch`); assert `REVOKED_ANCESTOR` plus a subset of {suspended, revoked, stale_epoch} |
 | RT13 | ks.cli, ks.runtime, ks.verify | **new**: X6 replayed decisions, X7 repro | ☑ `Exit.USAGE`, `key_mode`, `repro_keys` in v1.1.0. **Fix (e):** `repro_keys` is `VerifyReport.unanchored_reason`, not `reason` (which is `ok`) |
 | harness | ks.bench, ks.cli | `key_mode`, `decisions`, `run.anchor()`, `run.snapshot`, `run.controls()` returns (record, Control) | ☑ `perms="relaxed"` and the template are ks.runtime (maya) |
+
+---
+
+## 5. As built (B3-35, maya, 20 Nov): RT → test → THREAT-MODEL claim
+
+Harness: `tests/redteam/conftest.py` drives real `ks run --scenario world` subprocesses (`world_run`, operator requests at `--pause-at` ticks through the operator socket) and an in-process `inproc_run` only where the attacker is *given* something the runtime never exposes (RT2 key capture, RT8 gateway key + `GatewayHooks.skip_checkpoint`). The rogue slot is `ks.runtime.rogue` (§3 template: `on_start`/`on_tick`, `ctx.send/sign_envelope/submit/raw_send/report/dump`, `ctx.epoch/view`); its attempt log is `<run>/rogue.jsonl` (harness-side, 0600, 4 MiB cap). Rogue runs are monitored and use fresh keys, H=6, `fault="rogue"`, `fault_tick = T//4`. Tests marked `NEEDS_UIDS` assert the per-agent uid boundary and run in the container command (Linux root); natively they skip with that reason.
+
+| RT | Test module | Claim (THREAT-MODEL §5 row) | Status |
+|---|---|---|---|
+| RT1 a/b | `test_rt01_db_bypass.py` | Blocked; else flagged in ≤1 tick, names nobody, `verify` RECONCILE | a container; b everywhere (harness off-gateway write while paused) |
+| RT2 | `test_rt02_key_theft.py` | 0 key bytes reachable (all KeyStore keys scanned; witness key never leaves its process) | container |
+| RT3 | `test_rt03_forgery.py` | 0 executed; claimed agent not suspended; connection suspended | pass |
+| RT3b | `test_rt03b_sibling_hijack.py` | EPERM on ptrace / pidfd_getfd / process_vm_readv | container |
+| RT3c | `test_rt03_forgery.py` | 0 forged Controls applied; run summary prints refused peers | pass; leg (d) container only (degraded: rogue uid = operator uid) |
+| RT4 | `test_rt04_replay.py` | nonce_reused, expired, stale_epoch; 0 duplicate executions | pass |
+| RT5 | `test_rt05_toctou.py` | 0 culprit writes or dispatches after suspension seq; hook window | pass (found and fixed: dispatcher released a suspended author's queued items) |
+| RT6 | `test_rt06_clock.py` | gateway ordering; claim frame `deny/schema` | pass |
+| RT7 a-f | `test_rt07_line_edit.py` | `verify --head` non-zero with first bad seq; FROZEN; redaction boundary passes by design | pass (b, f use the args side entry; state values live in state.db) |
+| RT8 a,e-h, stall | `test_rt08_chain_rewrite.py` | detected against the anchor; witness stall soft, suspends nobody | pass |
+| RT9 | `test_rt09_laundering.py` | writer suspended, origin top 3 | pass (B3-52) |
+| RT10 H>0, F3, cc/bcc | `test_rt10_irreversible.py` | 0 irreversible tainted released; PII never leaves; extra recipients at any depth fail closed | pass; F3 is stopped by policy (`out_of_scope`) before `inv.pii_egress` |
+| RT10 H=0 contrast | `test_rt10_irreversible.py` | `--hold 0 --no-lineage-hold`: damage scored, verify exit 0 anchored with banner; relabelled to lineage_hold=true fails window_violation, anchored relabel config_mismatch | pass (B3-51, contracts 1.6) |
+| RT11a | `test_rt11_framing.py` | writer suspended, payer not; no auto-revoke; triage cannot write `.iban` | pass; FP score pass (B3-50) |
+| RT11b | `test_rt11_framing.py` | fresh-epoch release; operator FP counted | pass |
+| RT12 | `test_rt12_persistence.py`, `test_rt12_epoch_fence.py` | 0 effects as / through a suspended-revoked agent (live, rogue reporter declares a comms act_chain); verify epoch fence incl. HOLD and dead ancestors | pass |
+| RT13 a-e + exit 6 | `test_rt13_operator_path.py` | 0 Controls replayed from a bad source; repro refused / never anchored; `replay_mismatch` = exit 6 DIVERGED | pass |
+| R0 recovery | `tests/integration/test_hero_f2plus.py` | R=0, C=0 after N operator unholds (CALL-02 B2-a/B2-b) | pass |

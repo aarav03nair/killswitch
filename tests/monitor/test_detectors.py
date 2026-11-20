@@ -58,9 +58,24 @@ def test_checksum_valid_evil_iban_passes_checksum_but_beneficiary_catches_it():
 
 def test_beneficiary_changed_then_paid_fires():
     a = one(scan(hero_world()), D.BENEFICIARY_CHANGED_THEN_PAID)
-    assert a.hard and a.evidence_seqs == (10,)                         # the payment
+    assert a.hard and a.evidence_seqs == (9, 10)                       # B3-27: the payee write, then the payment
     assert [v.obj for v in a.evidence_versions] == [PAYEE]             # H4: payee field object only
     assert a.root_candidates[0] == "crm"
+
+
+def test_beneficiary_silent_on_an_approved_restore_to_a_known_value():
+    """B3-27: a ks.recover.restore (ks.recovery) back to a value the payee field already held is not a change."""
+    from ks.monitor.detectors import _approved_restore
+    from types import SimpleNamespace as N
+    w = lambda o, v, h: N(obj=o, after=N(ver=v, hash=h))  # noqa: E731
+    recs = {1: N(attributed_agent="ks.gateway", envelope=N(tool="ks.seed"), write_set=[w(PAYEE, 1, "a")]),
+            2: N(attributed_agent="crm", envelope=N(tool="crm.update_supplier"), write_set=[w(PAYEE, 2, "b")]),
+            3: N(attributed_agent="ks.recovery", envelope=N(tool="ks.recover.restore"), write_set=[w(PAYEE, 3, "a")]),
+            4: N(attributed_agent="ks.recovery", envelope=N(tool="ks.recover.restore"), write_set=[w(PAYEE, 4, "z")])}
+    ctx = N(index=N(writer=lambda o, v: recs.get(v)))
+    assert _approved_restore(ctx, recs[3], PAYEE, 3)
+    assert not _approved_restore(ctx, recs[4], PAYEE, 4)   # a new value is a change, whoever writes it
+    assert not _approved_restore(ctx, recs[2], PAYEE, 2)
 
 
 def test_beneficiary_silent_outside_window_and_on_old_version():

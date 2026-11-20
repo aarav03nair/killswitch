@@ -1,4 +1,4 @@
-# ks.contracts: C1–C6 reference (CON-01 → CON-02 → B3-01 → B3-43 → B3-46 → B3-47, contracts **1.5.0**, frozen 22 Nov)
+# ks.contracts: C1–C6 reference (CON-01 → CON-02 → B3-01 → B3-43 → B3-46 → B3-47 → B3-51, contracts **1.6.0**, frozen 22 Nov)
 
 Import from `ks.contracts`, never from submodules. Every type is a frozen pydantic model that rejects unknown
 fields. Each one has `to_canonical()` / `from_canonical()` (strict: the bytes must already be canonical) and
@@ -13,7 +13,7 @@ fields. Each one has `to_canonical()` / `from_canonical()` (strict: the bytes mu
 | C3 State | `StateView`/`StateWriter`/`SideStore` protocols; `ObjVer`, `VersionRef`, `ReadEntry` (+`source` view|tool), `ViewEntry`, `WriteEntry`, `StateRead`, `HistoryEntry`, `OutboxItem`, `SideEntry`; `make_obj_id`/`field_obj_id`/`row_obj_id`/`split_obj_id`; `idempotency_key()`; `check_read_set()`, `merge_read_set()` | `sidestore/xx/<hash>.json` |
 | C4 | `Alert` (`root_candidates` ranked; no `suspect`; H3 hard table), `Control` (target `agent:`/`conn:`/`action:`/`outbox:`), `EpochFold` | `alerts.jsonl` (copy); Alerts and Controls inside records |
 | C5 | `RecoveryPlan` (`t0_seq_est`, `t0_seq_est_literal`), `TaintSet`, steps `restore`/`rerun`/`replan`/`cancel_outbox`/`compensate`/`flag`, `DiffEntry`; `Approval`, `RecoverArgs` | `plans/<plan_id>.json` |
-| C6 | `RunConfig` (seed, `fault_tick`, `key_mode`, `decision_latency_ticks`, `hold_window_ticks`, `sensitive_fields`, agents, `isolation`, `decisions_from`; `tcb_view()`), `Keyring`, `RunAnchor`, `RunDir`, `Exit`, `VerifyReport` (+`anchored`, `isolation`) | `config.json`, `keys.json` |
+| C6 | `RunConfig` (seed, `fault_tick`, `key_mode`, `decision_latency_ticks`, `hold_window_ticks`, `sensitive_fields`, agents, `isolation`, `decisions_from`, `lineage_hold`; `tcb_view()`), `Keyring`, `RunAnchor`, `RunDir`, `Exit`, `VerifyReport` (+`anchored`, `isolation`, `lineage_hold`) | `config.json`, `keys.json` |
 | Transport | `TickFrame` (+`epoch`, `view`), `SubmitFrame`, `NoopFrame`, `ReplyFrame`, `SignRequest`, `SignReply`, `SignRefusal`; witness link `WitnessInit/Pub/Files/Ready/Head/Close` (`decode_witness_frame`); `MAX_VIEW_ENTRIES`, `MAX_SIGN_PER_TICK`, `SIGN_REFUSAL_REASONS`, `signer_refusal()` | JSON lines over Unix sockets |
 
 ## One serializer
@@ -120,6 +120,24 @@ Each is a recorded envelope on `c-0`. Every outbox status change carries a `writ
 Metric and score keys and the `effects.jsonl` schema (tara, ADR-06); policy rule ids (nisha, ADR-03); the store implementation (vikram, ADR-05); side-store and verify internals (arjun, ADR-02).
 
 ## Changelog
+
+### 1.6.0 (B3-51, 20 Nov; kabir's B3-51 ruling, ADR-04 §7 amended) — additive only
+Nothing renamed or removed; no field changed. Tests: `tests/contracts/test_contracts_16.py`,
+`tests/redteam/test_rt10_irreversible.py`.
+
+- **C6:** `RunConfig.lineage_hold: bool = True` (additive: omitted from the canonical bytes at `True`). `False` marks
+  the D10 **NO-LINEAGE-HOLD contrast run** (`ks run --hold 0 --no-lineage-hold`, the only setter): the alert-driven
+  lineage hold (ADR-04 §5) is switched off, which H alone never does. It is in config.json, so `config_hash` and the
+  RunAnchor cover it. Validator: `False` needs `hold_window_ticks == 0`. Not scorer-only (the gateway reads it).
+- **C6:** `VerifyReport.lineage_hold: bool = True` (additive): echo of the config. On `False`, `ks verify` skips
+  **only** the taint flag in the F4 dispatch-window pass (unrecorded items, double dispatch, release tick, recorded
+  holds and author suspensions are still `window_violation`), and verify, console and `ks score` print
+  `NO_LINEAGE_HOLD_BANNER`. The same records under `lineage_hold = True` still fail F4; relabelling an anchored run
+  gives `config_mismatch`.
+- **Schemas:** regenerated (version string; `lineage_hold` in run_config and verify_report, not required).
+- **Fixture:** `tests/contracts/fixtures/run-1.5-world-s0` (1.5.0 world run); 1.3, 1.4 and 1.5 runs verify under 1.6.
+
+**Golden hashes.** Only `doc:run_config` moved (`contracts_version` = 1.6.0).
 
 ### 1.5.0 (B3-47, 20 Nov; kabir's B3-20 ruling) — additive only
 Nothing renamed or removed; no field changed. Tests: `tests/contracts/test_contracts_15.py`.

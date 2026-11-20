@@ -1,0 +1,61 @@
+{
+  "id": "B3-51",
+  "title": "RT10 / D10 hold=0 contrast: tainted payment must dispatch at hold 0",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "tara",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "done",
+  "outcome": "the hold=0 demo toggle shows a released, scored tainted payment",
+  "acceptance": [
+    "F2+ at --hold 0 gives irreversible_tainted_released >= 1 and R.n > 0; test_rt10_hold_zero_damage_is_scored XPASSes; or CALL decision to drop the D10 contrast"
+  ],
+  "depends": [],
+  "deliverable": "src/ks/world/",
+  "summary": "ADR-04 s7: at H=0 no hold, escaped payment scored. Code still lineage-held at H=0 (alert lands same tick as enqueue, before next release phase); existing tests rely on that, so production unchanged. Added explicit demo flag ks run --hold 0 --no-lineage-hold (RunOptions.no_lineage_hold, Outbox.lineage_holds; needs hold 0). RT10 xfail flipped: irreversible_tainted_released>=1, R.n>0; verify flags window_violation (honest breach). Full suite 1047 green.\n\n[maya, kabir's changes] (1) ADR-04 s7 + RT10 line amended openly (+ 'Amendments (B3-51)'): lineage hold is alert-driven, independent of H; H=0 drops only the window and sensitive-field early hold; ADR-06(-metrics) H=0 lines point at the contrast. (2) Contracts 1.6.0 additive: RunConfig.lineage_hold (default True, omitted from canonical bytes; False needs H=0) and VerifyReport.lineage_hold echo; NO_LINEAGE_HOLD_BANNER; schemas regenerated; only golden doc:run_config moved (version); new fixture run-1.5-world-s0; 1.3/1.4/1.5 runs verify (tests/contracts/test_contracts_16.py). (3) --no-lineage-hold now sets the config field (Outbox reads config; no in-process flag). window_pass skips ONLY the taint flag when lineage_hold is false (unrecorded, double dispatch, release tick, holds, suspensions still enforced). verify, console and ks score print the banner; score.json schema unchanged. (4) RT10: contrast run verifies exit 0 anchored with banner, irreversible_tainted_released>=1, R.n>0; same records relabelled lineage_hold=true -> window_violation (TAMPER); anchored relabel -> config_mismatch. Unit test in tests/verify/test_window.py, console banner test. Open: tests/redteam/SPEC.md RT10 lines (384-407, 585 'xfail B3-51') still say H=0 alone scores damage; left for the B3-35 session.",
+  "review": "[kabir · changes] Suites green: env 1047 passed/12 skipped; container 1058 passed/1 skipped (hero golden tests/integration/test_hero_f2plus.py passes in both). (1) The code is right and ADR-04 s7 is wrong. The lineage hold (s5) is containment driven by the alert and does not depend on H; H only sets the window and the sensitive-field early hold. That makes this a design ADR edit, maya's and kabir's call, and it must be done openly, not silently. Amend s7 and the RT10 line in s8 to say: H=0 drops the window and the early hold, but the lineage hold still applies to any item whose lineage is tainted when it is released; residual damage at H=0 means effects dispatched before the alert. (2) The flag is not safe as built. no_lineage_hold lives only in RunOptions and an Outbox attribute. It is not in RunConfig/config_hash, so the record cannot show that this was a no-hold run, and s7 says H is the only knob. Agents cannot reach it (only the CLI sets it, in the parent process), and that part is fine. (3) Verify reporting window_violation is wrong for this run: it exits 2 (Exit.TAMPER), so the D10 contrast run would look like tampering to the jury. Fix: add a RunConfig field through the CON process (contracts bump), e.g. lineage_hold: bool = True, with a validator that requires hold_window_ticks == 0 when it is False. window_pass then skips only the taint flag when the field is False and keeps checking unrecorded items, holds, suspensions and release_tick. Console and score show a 'no-lineage-hold contrast run' banner. RT10 then asserts verify exit 0 plus irreversible_tainted_released >= 1. The alternative is a CALL decision to drop D10.\n\n[kabir · done] Env 1063 passed/12 skipped (first run had 2 hero failures under concurrent load; hero passes alone and on rerun), container 1074 passed/1 skipped. Relabel check, done by hand: I took a normal F2+ hold-0 run and edited its config to lineage_hold=false. Its config_hash changes. ks verify --head returns config_mismatch (exit 3). Without --head it returns OK but 'not anchored', which makes no claim. The flag is set only by ks run in the parent: the gateway Outbox reads the in-memory RunConfig, and neither agents nor the operator socket can reach it. The banner shows in verify, score stdout and console. bench never runs a contrast cell. Gap: score.json has no marker, so a copied contrast score.json reads 'hold 0, 1 released'. Follow-up B3-53 (tara) also adds the normal-to-false relabel test. SPEC RT9 Pass and RT10 lines updated by kabir.",
+  "log": [
+    {
+      "t": "20 Nov 10:22",
+      "who": "maya",
+      "msg": "opened"
+    },
+    {
+      "t": "20 Nov 12:02",
+      "who": "nisha",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 12:02",
+      "who": "nisha",
+      "msg": "→ in_review: done; for review"
+    },
+    {
+      "t": "20 Nov 14:21",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "20 Nov 14:46",
+      "who": "maya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 14:46",
+      "who": "maya",
+      "msg": "→ in_review: kabir's changes done: ADR-04 s7 amended, contracts 1.6.0 lineage_hold, verify/console/score banner, RT10 asserts exit 0"
+    },
+    {
+      "t": "20 Nov 15:11",
+      "who": "kabir",
+      "msg": "review: done"
+    },
+    {
+      "t": "20 Nov 15:11",
+      "who": "kabir",
+      "msg": "→ done: kabir review: done; follow-up B3-53"
+    }
+  ]
+}

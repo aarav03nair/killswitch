@@ -19,7 +19,7 @@ main{max-width:1100px;margin:0 auto;padding:16px}h1{font-size:20px;margin:0 0 4p
 .beat b{display:block}.beat span{color:var(--mut);font-size:12px}
 section{background:var(--pan);padding:12px;margin:10px 0}h2{font-size:16px;margin:0 0 6px}
 .tag{font-size:11px;padding:1px 6px;background:var(--rule);margin-left:6px}.tag.pending{background:var(--amb);color:#000}.tag.unverified,.tag.fail{background:var(--red)}
-tr.unw td{opacity:.6;font-style:italic}
+td.na{color:var(--amb)}tr.unw td{opacity:.6;font-style:italic}
 .lanes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}.lane{border:1px solid var(--rule);padding:8px}
 .lane h3{margin:0 0 4px;font-size:13px}.lane.kept{border-color:var(--ok)}ul{margin:4px 0;padding-left:18px}
 table{border-collapse:collapse;width:100%;font-size:12px}td,th{border-bottom:1px solid var(--rule);padding:2px 6px;text-align:left}
@@ -41,8 +41,15 @@ const st=E('div','beats');M.beats.forEach((b,i)=>{const d=E('div','beat '+b.stat
 M.beats.forEach((b,i)=>{const s=E('section','');const h=E('h2','',(i+1)+'. '+B[i][1]);h.append(E('span','tag '+b.status,b.status));s.append(h);
  const u=E('ul');b.lines.forEach(l=>u.append(E('li','',l)));s.append(u);
  if(b.lanes){const g=E('div','lanes');[['restore','Restore'],['rerun','Re-run'],['kept','Kept'],['independent','Independent']].forEach(k=>{const l=E('div','lane '+k[0]);l.append(E('h3','',k[1]));const q=E('ul');(b.lanes[k[0]]||[]).forEach(x=>q.append(E('li','',x)));l.append(q);g.append(l)});s.append(g)}
- if(b.id==='recover'){s.append(E('p','','Residual damage R and collateral loss C: '+(M.score?JSON.stringify(M.score):'not run')));
-  const bn=Object.keys(M.baselines);s.append(E('p','','Baselines: '+(bn.length?bn.map(n=>n+' '+JSON.stringify(M.baselines[n])).join('; '):'not run')))}
+ if(b.plan){const p=b.plan;s.append(E('h3','','Plan '+p.plan_id+': steps'));const ps=E('ul');p.steps.forEach(x=>ps.append(E('li','step '+x.op,x.n+'. '+x.text+(x.reason?' ['+x.reason+']':''))));s.append(ps);
+  s.append(E('h3','','Dry-run diff (hashes only)'));const dt=E('table');const dh=E('tr');dh.append(...['object','now','planned hash'].map(x=>E('th','',x)));dt.append(dh);
+  p.diff.forEach(d=>{const r=E('tr');[d.label+' ('+d.obj+')','v'+d.current,d.planned_hash].forEach(x=>r.append(E('td','mono',x)));dt.append(r)});s.append(dt)}
+ if(b.id==='recover'){const sc=M.scorecard;s.append(E('h3','','Scorecard'));
+  if(!sc)s.append(E('p','','not run: no score.json (ks score RUN)'));else{const t=E('table');const h=E('tr');h.append(E('th','','metric'),...sc.columns.map(c=>E('th','',c)));t.append(h);
+   sc.rows.forEach(r=>{const tr=E('tr');tr.append(E('td','',r.label),...r.cells.map(c=>E('td',/^unavailable/.test(c)?'na':'mono',c)));t.append(tr)});s.append(t);
+   if(sc.oracle_assisted.length)s.append(E('p','','oracle-assisted baselines: '+sc.oracle_assisted.join(', ')));
+   if(sc.hold_note)s.append(E('div','banner warn',sc.hold_note))}}
+ if(b.id==='audit'&&b.first_bad!==null&&b.first_bad!==undefined)s.append(E('div','banner','first bad index: '+b.first_bad+' ('+b.reason+')'));
  root.append(s)});
 const tl=E('section');tl.append(E('h2','','Timeline: records per tick'));const bars=E('div','tl');const mx=Math.max(1,...M.ticks.map(t=>t.n));
 M.ticks.forEach(t=>{const i=E('i');i.style.height=(100*t.n/mx)+'%';i.title='tick '+t.tick+': '+t.n+' records '+JSON.stringify(t.agents);bars.append(i)});tl.append(bars);

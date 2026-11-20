@@ -115,7 +115,8 @@ def _ticket_set_priority(c: _Ctx) -> Execution:
 def _ticket_create(c: _Ctx) -> Execution:
     if not _need(c, "id", "title", "priority"):
         return _err(c, "bad_args")
-    c.put_row(f"tickets:{c.args['id']}", {"title": c.args["title"], "priority": c.args["priority"]})
+    extra = {k: c.args[k] for k in ("type", "supplier", "iban") if isinstance(c.args.get(k), str)}
+    c.put_row(f"tickets:{c.args['id']}", {"title": c.args["title"], "priority": c.args["priority"], **extra})
     return c.done({"ok": True})
 
 
@@ -137,6 +138,10 @@ def _crm_update_supplier(c: _Ctx) -> Execution:
     row = c.read(obj)
     if row is None:
         return _err(c, "not_found")
+    tk = c.args.get("ticket")
+    if isinstance(tk, str):  # applying a supplier_bank_update ticket: the ticket row enters the read set
+        if c.read(f"tickets:{tk}") is None:
+            return _err(c, "not_found")
     c.put_row(obj, {**row, **c.args["set"]})
     return c.done({"ok": True})
 

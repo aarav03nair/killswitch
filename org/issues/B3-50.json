@@ -1,0 +1,56 @@
+{
+  "id": "B3-50",
+  "title": "ks score for --rogue runs (S* with slot no-op from fault_tick)",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "tara",
+  "reviewer": "anaya",
+  "model": "sonnet",
+  "created_by": "maya",
+  "status": "done",
+  "outcome": "ks score scores rogue runs so RT11a FP cost is measured",
+  "acceptance": [
+    "ks score on a --rogue run writes score.json with false_accusations and fp_cost; tests/redteam/test_rt11_framing.py::test_rt11a_scored XPASSes (remove xfail)"
+  ],
+  "depends": [],
+  "deliverable": "src/ks/score/",
+  "summary": "Kabir changes addressed. RT9: evil payment never DISPATCHED, evil-lineage held item, false_accusations>=1, tti_detect non-null. Rogue spec t_inject=0, S* slot no-op from tick 0 (RogueSpec in ks.inject); no-op rogue regression test. Container 165 passed (redteam/score/integration/cli).",
+  "review": "[kabir · changes] kabir reviewing as RT SPEC owner (listed reviewer is anaya). No leak: S* runs in the scorer after the run ends. It writes RUN/oracle/s-star (0700), and the run dir is 0711, so the rogue uid can't plant a ledger and nothing feeds back into the runtime. The S* is wrong, though: the rogue holds the slot from tick 0, but S* keeps the honest slot running until fault_tick=T//4 and uses t_inject=hero_tick. Repro (seed 2, T30): a no-op rogue scores |B|=6 in docs and 1 in crm (phantom honest work). With suspend_tick=0 both drop to 0. RT9 (rogue acts at hero-2) gives tti_detect=null and post_alert=no_alert because b_prod drops ticks < t_inject. Fix: rogue spec t_inject=0 (or the first rogue-sent tick) and suspend_tick=0. Add a regression test: no-op rogue gives B empty, and RT9 gives a non-null tti_detect. Minor: ttc is null when the rogue goes quiet after suspend (no deny); report it as unavailable, not null. Also: test_score_schema_golden is failing now because of a concurrent score.py edit (lineage_hold/exposure, 14:25). That edit isn't from this issue.\n\n[kabir · done] kabir re-review: done. RogueSpec t_inject=0, S* slot no-op from tick 0; no-op rogue scores B empty in docs and crm (new regression test); RT9 tti_detect non-null. Leftover ruled non-blocking follow-up: ttc should read 'unavailable' rather than null when the rogue goes quiet after suspend (needs a score schema enum, so fold it into or after B3-51, which maya is editing now). Env 118 passed 3 skipped; container 121 passed.",
+  "log": [
+    {
+      "t": "20 Nov 10:22",
+      "who": "maya",
+      "msg": "opened"
+    },
+    {
+      "t": "20 Nov 12:09",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 12:09",
+      "who": "tara",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "20 Nov 14:34",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "20 Nov 14:44",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "20 Nov 14:44",
+      "who": "tara",
+      "msg": "→ in_review: changes addressed"
+    },
+    {
+      "t": "20 Nov 14:48",
+      "who": "kabir",
+      "msg": "review: done"
+    }
+  ]
+}

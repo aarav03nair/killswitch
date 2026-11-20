@@ -1,0 +1,114 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>6. The gateway</title><link rel="stylesheet" href="assets/style.css"></head>
+<body><nav id="side"></nav><main>
+<h1>6. The gateway (the core)</h1>
+<p class="lead">The reference monitor. Every agent action goes through it, and it decides whether the action runs, is denied, or is held. Main file: <code>gateway/stub.py</code> (483 lines, despite the name). Read this page slowly; it is the platform.</p>
+
+<h2>What the gateway is and isn't</h2>
+<ul>
+<li>It <b>decides whether</b> an envelope executes. It does not know what a tool <i>does</i>.</li>
+<li>It owns the <b>read and write sets</b>, the <b>seq numbers</b>, the <b>transaction</b>, the <b>record</b> and the <b>outbox</b>.</li>
+<li>It talks to the outside world through three protocols, so the same gateway could front a different domain:
+<ul>
+<li><code>ToolDispatcher</code>: <code>classify(env) → ActionClass</code> and <code>execute(env, txn) → Execution</code></li>
+<li><code>ViewProvider</code>: <code>view(agent_id, tick, state) → entries</code></li>
+<li><code>Policy</code>: <code>decide(env, class) → Verdict | None</code></li>
+</ul></li>
+</ul>
+
+<h2>Its two entry points</h2>
+<h3><code>Gateway.open(tick, agents)</code></h3>
+<ol class="steps">
+<li><b>begin_tick</b>: reset the slot counter and denial counts, prune old nonces.</li>
+<li><b>Seed record</b> (first call only): append record <b>seq 1</b>, a gateway-signed <code>ks.seed</code> envelope whose write set is exactly the initial data. So every state version has a record behind it. Agent actions start at seq 2.</li>
+<li><b>Control phase</b>: admit queued system envelopes (alerts, suspends, approvals, recovery) in a fixed order, capped per tick.</li>
+<li><b>Release phase</b>: for each outbox item whose release tick has come, either dispatch it or hold it (page 7).</li>
+<li><b>Views</b>: ask the ViewProvider for each agent's view. A view sees only seqs <i>below</i> the tick's first seq, so writes made this tick are invisible until next tick.</li>
+<li>Return a <code>TickFrame</code> per agent with tick, <b>current epoch</b> and view.</li>
+</ol>
+<h3><code>Gateway.tick(tick, frames)</code></h3>
+<p>Binds each connection to its agent, <b>sorts frames by agent_id</b> (arrival order is discarded), applies the flood budget, and calls <code>admit</code> on each. Returns replies.</p>
+
+<h2>The 14-step admission pipeline</h2>
+<p>From the docstring of <code>stub.py</code> and the body of <code>Gateway.admit</code>. The <b>first failing step decides the reason</b>, and every outcome is written as a record.</p>
+<table>
+<tr><th>#</th><th>Step</th><th>Fails with</th><th>Why it exists</th></tr>
+<tr><td>1</td><td>Decode the frame</td><td><code>schema</code></td><td>Garbage in is recorded (raw bytes go to the side store) and denied. A <code>NoopFrame</code> records nothing.</td></tr>
+<tr><td>2</td><td>Schema check</td><td><code>schema</code></td><td>Unknown keys, wrong types.</td></tr>
+<tr><td>3</td><td>Signature</td><td><code>bad_sig</code></td><td>Verify against the keyring. The agent must match the connection's bound agent. System ids are refused on agent connections. Spliced args fail here.</td></tr>
+<tr><td>4</td><td>Late frame</td><td><code>late_frame</code></td><td>Frame tagged with another tick.</td></tr>
+<tr><td>5</td><td>Expiry</td><td><code>expired</code></td><td><code>expiry_tick</code> must be within [tick, tick + 8].</td></tr>
+<tr><td>6</td><td>Nonce and action id</td><td><code>nonce_reused</code></td><td>Replay protection. Nonces are consumed <b>only after</b> signature and expiry pass.</td></tr>
+<tr><td>7</td><td>Connection deny-list</td><td><code>suspended</code> / <code>revoked</code></td><td>A flood-suspended or revoked connection.</td></tr>
+<tr><td>8</td><td>Agent epoch and status</td><td><code>suspended</code>, <code>revoked</code>, <code>stale_epoch</code></td><td>The kill switch. The envelope's epoch must equal the agent's current epoch.</td></tr>
+<tr><td>9</td><td>Act chain ancestors</td><td><code>revoked_ancestor</code></td><td>If anyone the agent acts for is denied, so is the agent.</td></tr>
+<tr><td>10</td><td>Scope of <code>ks.*</code> tools</td><td><code>out_of_scope</code></td><td>Agents can never call system tools.</td></tr>
+<tr><td>11</td><td>Classify</td><td><code>class_u</code></td><td>The dispatcher assigns R/C/I1/I2/U. A dispatcher exception or an unknown answer becomes U, which is denied. Fail closed.</td></tr>
+<tr><td>12</td><td>Policy</td><td>deny or <b>hold</b></td><td>Role and table scopes, I2 approval. See <code>policy/</code>.</td></tr>
+<tr><td>13</td><td>Transaction</td><td><code>tool_error</code> or <code>suspended</code></td><td>Reserve seq, <code>BEGIN IMMEDIATE</code>, <b>re-read steps 7–9</b>, run the tool, check sets, <code>COMMIT</code>.</td></tr>
+<tr><td>14</td><td>Append the record</td><td></td><td>Sealed, signed by the gateway, hash-chained.</td></tr>
+</table>
+<div class="box note"><b class="t">Steps 7–9 run twice</b>They run once as a fast path, and again inside the transaction at step 13. Reason: if a suspend commits between the check and the use (the "check-to-use window", RT5), the second look inside the transaction still catches it. Result: <code>deny/suspended</code>, nothing executes.</div>
+
+<h2>Step 13 in detail: <code>_execute</code></h2>
+<pre><code>rtxn = recorder.begin()                       # reserve the next seq
+store.conn.execute("BEGIN IMMEDIATE")         # take the write lock
+why = self._control_denial(env, conn_id)      # re-read control state (D5)
+if why: ROLLBACK; record a deny
+ex = self._run_tool(env, txn)                 # dispatcher.execute, with transaction control blocked
+read_set, write_set = self._sets(ex, txn, agent)   # gateway-derived, tool is cross-checked
+if ex.outbox: outbox.create(...)              # gateway builds irreversible-effect items
+store.conn.execute("COMMIT")
+record = rtxn.append(...)                     # AFTER commit (step 14)</code></pre>
+<h3>What stops a tool from cheating</h3>
+<ul>
+<li><b>It can't end the transaction.</b> While the tool runs, a SQLite authorizer denies <code>BEGIN/COMMIT/ROLLBACK</code>. If the transaction is gone afterwards, the gateway refuses.</li>
+<li><b>It can't lie about writes.</b> <code>_sets</code> compares the tool's reported <code>write_set</code> with what the store itself holds for that seq (<code>writes_at</code>). A mismatch is refused.</li>
+<li><b>It can't lie about reads.</b> Every read must name a version the store really has, with the right hash.</li>
+<li><b>It can't touch the outbox.</b> Only the gateway writes <code>outbox:*</code> objects.</li>
+<li><b>Any exception is a recorded deny</b> (<code>tool_error</code>). The state transaction is rolled back, but the seq is consumed by the deny record, so there are no gaps.</li>
+<li>The agent's <b>view entries</b> are merged into the read set, tagged <code>view</code>, while the tool's own are tagged <code>tool</code>.</li>
+</ul>
+
+<h3>Why seq is taken first and the record appended last</h3>
+<p>The state transaction writes versions stamped with the seq, so the seq must exist first. The record is appended after commit. If the process crashed in between, state would hold a write no record explains. <code>ks verify</code> reports that as <code>RECONCILE</code> (compares <code>state_digest(fold(record))</code> to the live <code>state.db</code>). Not silent.</p>
+
+<h2>Control state: <code>gateway/control.py</code></h2>
+<ul>
+<li><code>FoldedControl</code> is the agent state, computed as a <b>fold over the executed <code>ks.control</code> records</b>. So status and epoch are derived from the chain, never from a hidden variable.</li>
+<li><code>EpochFold</code>: epochs are <b>strictly monotonic</b> (rule D1). Suspend, revoke and release each take <code>next_epoch = max + 1</code>.</li>
+<li><code>check()</code> runs before a control is recorded and <code>apply()</code> after, so the control state never runs ahead of the chain.</li>
+<li>A revoked agent can't come back. Release requires the agent to be suspended.</li>
+</ul>
+
+<h2>System envelopes: <code>gateway/system.py</code></h2>
+<p>The monitor, operator, recovery service and the gateway itself submit <b>signed system envelopes on connection <code>c-0</code></b>, admitted by <code>admit_system</code>. Differences from agent admission: no frame-tick, control or class steps, and scope is <b>inverted</b>: the principal must be a registered signer of that tool. Served tools: <code>ks.alert</code>, <code>ks.approve</code>, <code>ks.control</code>, <code>ks.recover.*</code>, plus gateway-internal <code>ks.seed</code> and <code>ks.dispatch</code>. They are queued in a <code>SystemQueue</code> and admitted at the next <code>open</code>, in a fixed order.</p>
+
+<h2>Holds: <code>gateway/holds.py</code></h2>
+<ul>
+<li><code>hold outbox:&lt;id&gt;</code>: a queued item becomes held, via a recorded control.</li>
+<li><code>unhold outbox:&lt;id&gt;</code>: back to queued. The next release phase re-checks taint before dispatching.</li>
+<li><code>unhold action:&lt;record id&gt;</code>: re-executes a <i>held</i> agent action once, through the normal transaction. The record carries <code>reexec_of</code> pointing at the hold. Nonce and expiry aren't re-checked.</li>
+</ul>
+
+<h2>Policy seam: <code>gateway/policy.py</code> and <code>policy/</code></h2>
+<p>The gateway only defines <code>Policy.decide</code> and runs it at step 12 (<code>AllowAll</code> by default). The world's rules live in <code>policy/__init__.py</code>:</p>
+<ul>
+<li><code>p.scope</code>: tool or table outside the role → <code>deny/out_of_scope</code> (e.g. only <code>crm</code> may call <code>crm.update_supplier</code>).</li>
+<li><code>p.i2_approval</code>: I2 → <code>hold/needs_approval</code>.</li>
+<li><code>p.i1_outbox</code>: I1 is admitted, and the outbox enqueues it.</li>
+<li>Read scope: every table a tool reads must be in the role's view tables, except the row it reads in order to modify it.</li>
+<li>The policy sees the envelope only, <b>never raw state</b>. Lineage and taint holds are the outbox's job.</li>
+</ul>
+
+<h2>Walkthrough of three requests</h2>
+<table>
+<tr><th>Request</th><th>Path</th><th>Record</th></tr>
+<tr><td>Honest crm update, tick 5</td><td>Steps 1–12 pass → txn → tool writes one object → sets match → commit</td><td><code>exec/ok</code>, class R, write_set filled</td></tr>
+<tr><td>Same crm agent after suspension, with an old epoch</td><td>Step 8 fails</td><td><code>deny/stale_epoch</code> or <code>suspended</code>, no sets</td></tr>
+<tr><td>payments sends a payment (I1)</td><td>Passes → tool returns an outbox request → gateway creates <code>outbox:ob-…</code> in the same txn</td><td><code>exec/ok</code>, <code>outbox_ids</code> set; money does not move yet</td></tr>
+</table>
+
+<div class="box key"><b class="t">Rule 11, once more</b>Denials are records too. That is what lets you audit <i>attempts</i>: a suspended agent that keeps trying shows up in the record as a stream of denies, and the score counts "post-alert tainted effects" from the ledger.</div>
+
+<div class="pager" id="pager"></div>
+</main><script src="assets/nav.js"></script></body></html>
