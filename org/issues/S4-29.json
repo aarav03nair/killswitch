@@ -1,0 +1,27 @@
+{
+  "id": "S4-29",
+  "title": "ks blame advertised in ks --help and demo-sim but prints 'not yet implemented'",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "ishaan",
+  "reviewer": "panel",
+  "model": "sonnet",
+  "created_by": "panel",
+  "status": "todo",
+  "outcome": "Every command a juror can see either works or is not shown",
+  "acceptance": [
+    "ks blame RUN [--alert ID] prints ranked root candidates from the signed alert records (or the command and the demo-sim beat are removed)",
+    "Test added; demo-sim Identify beat matches real output"
+  ],
+  "depends": [],
+  "deliverable": "src/ks/cli/__init__.py",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "21 Nov 00:52",
+      "who": "panel",
+      "msg": "opened"
+    }
+  ]
+}

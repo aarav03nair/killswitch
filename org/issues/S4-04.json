@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "Every jury-visible break found before the finale",
   "acceptance": [
     "org/reports/PANEL-JURY-01.md: >=15 attacks from the README alone (tamper, forge, replay, rogue agent, claims vs THREAT-MODEL wording, numbers vs BENCH-S3), each with result + severity; every Must becomes an issue",
@@ -15,13 +15,23 @@
   ],
   "depends": [],
   "deliverable": "org/reports/PANEL-JURY-01.md",
-  "summary": "",
+  "summary": "PANEL-JURY-01: 27 attacks from README on fresh clone of 752e971 (kabir 6 moves + zoya Q1-Q5 included). Musts: M1 HEAD red (score.py resolver; make demo fails at ks score; pytest 14F/4E) S4-26; M2 virtiofs bind mount lets rogue uid write state.db/record/heads + read all side stores S4-27; M3 mid-run state edit crashes gateway, no anchor S4-28; M4 ks blame not implemented but advertised S4-29. Tamper/forge/replay/rewrite/--head all behave as THREAT-MODEL says.",
   "review": "",
   "log": [
     {
       "t": "20 Nov 17:06",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "21 Nov 00:52",
+      "who": "panel",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 00:52",
+      "who": "panel",
+      "msg": "→ in_review: Musts: M1 S4-26 HEAD red, make demo fails at ks score (score.py:35-38 RunConfig.resolver); M2 S4-27 make-demo bind mount ignores perms, rogue writes state.db/record.jsonl; M3 S4-28 gateway crash on off-gateway state edit; M4 S4-29 ks blame unimplemented. Report org/reports/PANEL-JURY-01.md"
     }
   ]
 }

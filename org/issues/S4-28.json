@@ -1,0 +1,27 @@
+{
+  "id": "S4-28",
+  "title": "Off-gateway mid-run state edit crashes the gateway (ViewEntry) instead of a class-U alert",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "nisha",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "panel",
+  "status": "todo",
+  "outcome": "An unmediated state write is flagged within 1 tick and the run ends anchored",
+  "acceptance": [
+    "Live test: a state value edited off-gateway mid-run gives a reconcile alert naming nobody, suspends nobody, run completes with a RunAnchor",
+    "No traceback exit from ks run on a state.db value/hash mismatch"
+  ],
+  "depends": [],
+  "deliverable": "src/ks/gateway",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "21 Nov 00:52",
+      "who": "panel",
+      "msg": "opened"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "S4-27",
+  "title": "make demo bind mount (virtiofs) ignores perms: rogue uid writes state.db/record/heads and reads all side stores",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "ishaan",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "panel",
+  "status": "todo",
+  "outcome": "Per-agent uid isolation of the run dir holds on the README demo path",
+  "acceptance": [
+    "Live runs write the run dir on container-internal fs (e.g. /run/ks) and copy it to ./runs after the run, or an equivalent that a rogue uid cannot read or write",
+    "RT1a extended: rogue on the make-demo path gets EACCES on state.db, record.jsonl, witness-heads and other runs' sidestore (test added)",
+    "PANEL-JURY-01 #13 rerun shows run anchored, per_agent_uid"
+  ],
+  "depends": [],
+  "deliverable": "scripts/demo.sh",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "21 Nov 00:52",
+      "who": "panel",
+      "msg": "opened"
+    }
+  ]
+}

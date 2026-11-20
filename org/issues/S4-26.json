@@ -1,0 +1,33 @@
+{
+  "id": "S4-26",
+  "title": "HEAD red: score.py reads RunConfig.resolver that HEAD lacks; make demo fails at ks score",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "vikram",
+  "reviewer": "panel",
+  "model": "opus",
+  "created_by": "panel",
+  "status": "in_review",
+  "outcome": "Committed HEAD runs make demo to 'demo OK' and container pytest is green",
+  "acceptance": [
+    "On a fresh clone of HEAD, make demo prints demo OK and writes score.json + console page",
+    "Container pytest (python -m pytest -q in the image) 0 failed, 0 errors",
+    "Score for resolver-off runs byte-identical to the README seed-2 block"
+  ],
+  "depends": [],
+  "deliverable": "src/ks/score/score.py",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "21 Nov 00:52",
+      "who": "panel",
+      "msg": "opened"
+    },
+    {
+      "t": "21 Nov 01:01",
+      "who": "pmo",
+      "msg": "→ in_review: PMO fix: score.py _resolver uses getattr(config, 'resolver', 'off') so HEAD works without contracts 1.7. Clean HEAD copy: native 1081 passed, make demo OK anchored per_agent_uid. Cause: PMO committed score.py with vikram's S4-13 WIP lines in 752e971."
+    }
+  ]
+}

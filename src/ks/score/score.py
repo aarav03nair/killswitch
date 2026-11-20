@@ -35,7 +35,7 @@ resolver-off score.json (the F2+x before-row included) is byte-identical."""
 def _resolver(run: Path) -> str:
     from ks.contracts import RunDir
     try:
-        return RunDir(run).config().resolver
+        return getattr(RunDir(run).config(), "resolver", "off")  # field arrives with contracts 1.7 (S4-13)
     except FileNotFoundError:
         return "off"
 
