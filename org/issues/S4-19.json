@@ -1,0 +1,26 @@
+{
+  "id": "S4-19",
+  "title": "Console shows operator releases (D-17) + H=0 note + seq wording",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "ishaan",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "The console tells the same story as score.json",
+  "acceptance": [
+    "Scorecard shows operator_unholds total/honest and held_honest_actions; H=0 note says 'no lineage hold' only when it was off; test added"
+  ],
+  "depends": [],
+  "deliverable": "src/ks/console/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

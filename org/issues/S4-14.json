@@ -1,0 +1,26 @@
+{
+  "id": "S4-14",
+  "title": "T=120 headline rerun (no perf work)",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "tara",
+  "reviewer": "maya",
+  "model": "sonnet",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "Headline numbers at the ADR's T=120 if feasible overnight",
+  "acceptance": [
+    "F2+ and F2+x, H=6, system + snapshot + revert_culprit_only, seeds 1..20 run overnight; BENCH-S4-T120.md; if not done by D4, A4 stays and every number says T=40"
+  ],
+  "depends": [],
+  "deliverable": "org/reports/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

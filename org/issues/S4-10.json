@@ -1,0 +1,27 @@
+{
+  "id": "S4-10",
+  "title": "demo-sim to real numbers: D10 before-recovery contrast, unhold step, D-17 line",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "ishaan",
+  "reviewer": "zoya",
+  "model": "sonnet",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "Every number on board/demo-sim.html traces to a measured source",
+  "acceptance": [
+    "D10 reads 'pause, no recovery: hold off releases median 12 tainted payments [6..18], 20/20 seeds; hold on 0 (T=40)'; old 'R 1/6, #77 dispatched' text gone",
+    "R=0 carries the operator-release clause (D-17); no reporter re-run, no cancel; every number cites BENCH-S3 or a score.json and says T=40"
+  ],
+  "depends": [],
+  "deliverable": "board/demo-sim.html",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

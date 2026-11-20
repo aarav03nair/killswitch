@@ -1,0 +1,27 @@
+{
+  "id": "S4-02",
+  "title": "Fresh-Mac README: clone -> make demo -> ks verify passes in <10 min",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "ishaan",
+  "reviewer": "maya",
+  "model": "sonnet",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "A juror runs the real demo from README alone",
+  "acceptance": [
+    "A non-author following only README.md on a clean macOS account (OrbStack) gets exit 0, isolation=per_agent_uid, anchored=true; time recorded",
+    "Stale 'demo.sh runs the skeleton' note removed; expected output pasted; troubleshooting for daemon off / virtiofs"
+  ],
+  "depends": [],
+  "deliverable": "README.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

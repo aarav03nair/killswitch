@@ -1,0 +1,26 @@
+{
+  "id": "S4-18",
+  "title": "Kit refresh v5 + D-19 allowed measured numbers",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "zoya",
+  "reviewer": "anaya",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "Abstract Kit matches the built system and lists exactly which numbers Aarav may cite",
+  "acceptance": [
+    "Each stale row in CALL-04/zoya.md §1 resolved (TERMS 110, SKELETON 142/214, GUARDRAILS L8/L9/§1.5, JURY-QA Q8-Q10 + releases Q); D-19 allowed-values list with conditions; no abstract prose"
+  ],
+  "depends": [],
+  "deliverable": "abstract/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

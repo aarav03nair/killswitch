@@ -1,0 +1,28 @@
+{
+  "id": "S4-09",
+  "title": "Panel jury dry run #2: re-attack the fixed build",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "panel",
+  "reviewer": "maya",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "Every dry-run #1 Must is closed or a stated known limit",
+  "acceptance": [
+    "Every #1 Must re-tried and closed or written as a known limitation"
+  ],
+  "depends": [
+    "S4-04"
+  ],
+  "deliverable": "org/reports/PANEL-JURY-02.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "S4-21",
+  "title": "Mutation gate for every defence",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "kabir",
+  "reviewer": "panel",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "Every defence has a test that fails when it is disabled",
+  "acceptance": [
+    "Script disables each defence (epoch fence, pii_egress, dispatcher re-check, outbox provenance, witness ack sig, deny-list in txn, SO_PEERCRED); each kills >=1 tests/redteam test in the container; table in REDTEAM-S4.md"
+  ],
+  "depends": [
+    "S4-01"
+  ],
+  "deliverable": "tests/redteam/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

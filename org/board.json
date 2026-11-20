@@ -388,6 +388,18 @@
       "title": "R=0 claims state operator releases",
       "status": "decided",
       "summary": "DECIDED by Aarav 20 Nov: every R=0 claim says it holds after the operator released N held items (seed 2: 9, of which 7 honest). score.json reports fp_cost.operator_unholds and held_honest_actions."
+    },
+    {
+      "id": "D-18",
+      "title": "F2+x conflicts: auditable, reversible resolver",
+      "status": "decided",
+      "summary": "DECIDED by Aarav 20 Nov: build a resolver for flagged write-write conflicts where every resolution is a signed, recorded decision (rule, key, released items, rationale), verified, shown in the console, and reversible through the recovery path with its own trace. Report F2+x before and after. Owner vikram (S4-13)."
+    },
+    {
+      "id": "D-19",
+      "title": "D13: the abstract may cite measured numbers",
+      "status": "decided",
+      "summary": "DECIDED by Aarav 20 Nov: the abstract may cite BENCH-S3 measured values (T=40, 20 seeds) with their conditions (R=0 after N operator releases per D-17; F2+x disclosed). Zoya publishes the allowed list in the Kit (facts only)."
     }
   ],
   "risks": [
@@ -421,106 +433,6 @@
     }
   ],
   "activity": [
-    {
-      "t": "19 Nov 17:52",
-      "who": "tara",
-      "msg": "moved B3-44 to in_review"
-    },
-    {
-      "t": "19 Nov 17:52",
-      "who": "maya",
-      "msg": "opened B3-45 — Decision: t0_seq_est walk and the suspect's self-reads (A8 conservative vs B2 hero C=0)"
-    },
-    {
-      "t": "19 Nov 17:52",
-      "who": "maya",
-      "msg": "reviewed B3-18: changes"
-    },
-    {
-      "t": "19 Nov 17:52",
-      "who": "nisha",
-      "msg": "moved B3-14 to in_progress"
-    },
-    {
-      "t": "19 Nov 17:53",
-      "who": "maya",
-      "msg": "reviewed B3-44: changes"
-    },
-    {
-      "t": "19 Nov 17:56",
-      "who": "nisha",
-      "msg": "moved B3-14 to in_review"
-    },
-    {
-      "t": "19 Nov 17:59",
-      "who": "arjun",
-      "msg": "moved B3-15 to in_review"
-    },
-    {
-      "t": "19 Nov 17:59",
-      "who": "arjun",
-      "msg": "moved B3-42 to in_review"
-    },
-    {
-      "t": "19 Nov 18:45",
-      "who": "pmo",
-      "msg": "moved B3-45 to done"
-    },
-    {
-      "t": "19 Nov 18:45",
-      "who": "pmo",
-      "msg": "opened B3-46 — B3-45 option C: read entries tagged view|tool; t0 follows suspect self-reads through tool reads only"
-    },
-    {
-      "t": "19 Nov 18:47",
-      "who": "vikram",
-      "msg": "moved B3-18 to in_review"
-    },
-    {
-      "t": "19 Nov 18:48",
-      "who": "tara",
-      "msg": "moved B3-17 to in_review"
-    },
-    {
-      "t": "19 Nov 18:48",
-      "who": "tara",
-      "msg": "moved B3-44 to in_review"
-    },
-    {
-      "t": "19 Nov 21:01",
-      "who": "maya",
-      "msg": "moved B3-12 to changes"
-    },
-    {
-      "t": "19 Nov 21:01",
-      "who": "kabir",
-      "msg": "reviewed B3-14: done"
-    },
-    {
-      "t": "19 Nov 21:01",
-      "who": "kabir",
-      "msg": "reviewed B3-15: changes"
-    },
-    {
-      "t": "19 Nov 21:01",
-      "who": "kabir",
-      "msg": "reviewed B3-42: done"
-    },
-    {
-      "t": "19 Nov 21:01",
-      "who": "maya",
-      "msg": "reviewed B3-17: done"
-    },
-    {
-      "t": "19 Nov 21:01",
-      "who": "maya",
-      "msg": "reviewed B3-18: done"
-    },
-    {
-      "t": "19 Nov 21:01",
-      "who": "tara",
-      "msg": "moved B3-44 to in_review"
-    },
     {
       "t": "19 Nov 21:01",
       "who": "pmo",
@@ -1420,6 +1332,106 @@
       "t": "20 Nov 16:29",
       "who": "maya",
       "msg": "moved B3-33 to done"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-02 — Fresh-Mac README: clone -> make demo -> ks verify passes in <10 min"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-03 — Docker Desktop check of the ./runs bind mount"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-04 — Panel jury dry run #1: hostile, tries to break the build"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-09 — Panel jury dry run #2: re-attack the fixed build"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-10 — demo-sim to real numbers: D10 before-recovery contrast, unhold step, D-17 line"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-11 — F2+x honest disclosure in FACT-CARD and JURY-QA"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-12 — D-18 resolver design: auditable, reversible conflict resolution"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-13 — D-18 resolver build + F2+x rerun (before and after rows)"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-14 — T=120 headline rerun (no perf work)"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-15 — Bench report loose ends"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-16 — Frozen-build tag + one-command reproducer"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-17 — Finale rehearsal x2 on the frozen build"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-18 — Kit refresh v5 + D-19 allowed measured numbers"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-19 — Console shows operator releases (D-17) + H=0 note + seq wording"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-20 — RT14: view-sourced seed gap is surfaced"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-21 — Mutation gate for every defence"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-22 — Finale preflight: refuse a non-security live run"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-23 — Claim audit of README, demo-sim, console"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-24 — F2+c C=0 vs GUARDRAILS L8 (predicted C>0)"
+    },
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened S4-25 — ABS-07 comment-only review of Aarav's abstract"
     }
   ]
 }

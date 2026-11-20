@@ -1,0 +1,26 @@
+{
+  "id": "S4-20",
+  "title": "RT14: view-sourced seed gap is surfaced",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "tara",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "The known t0 limit is visible, not silent",
+  "acceptance": [
+    "Rogue crm builds write 2 from its view of write 1; dry-run prints t0_seq_est_literal and t0_delta != 0; deleting the warning fails the test"
+  ],
+  "depends": [],
+  "deliverable": "tests/redteam/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

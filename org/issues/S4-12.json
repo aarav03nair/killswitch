@@ -1,0 +1,27 @@
+{
+  "id": "S4-12",
+  "title": "D-18 resolver design: auditable, reversible conflict resolution",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "maya",
+  "reviewer": "kabir",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "A design vikram can build in <=2 days that a jury can audit",
+  "acceptance": [
+    "Design note in org/adr/ (ADR-05 amendment): resolution is a signed c-0 record (rule id, key, versions, released items, rationale, plan_hash link); verify rule; console line; undo path through ks.recover with its own trace; additive contract change if needed",
+    "Names exactly which flags the rule may resolve and which always wait for a human"
+  ],
+  "depends": [],
+  "deliverable": "org/adr/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

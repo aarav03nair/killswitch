@@ -1,0 +1,26 @@
+{
+  "id": "S4-03",
+  "title": "Docker Desktop check of the ./runs bind mount",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "ishaan",
+  "reviewer": "arjun",
+  "model": "sonnet",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "Demo works on Docker Desktop too, or README names the fallback",
+  "acceptance": [
+    "make smoke passes on Docker Desktop, or README names a named-volume fallback and make smoke-volume passes"
+  ],
+  "depends": [],
+  "deliverable": "Makefile",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

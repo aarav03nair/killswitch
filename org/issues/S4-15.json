@@ -1,0 +1,26 @@
+{
+  "id": "S4-15",
+  "title": "Bench report loose ends",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "tara",
+  "reviewer": "nisha",
+  "model": "sonnet",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "Bench table has no misleading rows",
+  "acceptance": [
+    "F3 revert_culprit_only shown as 'n/a: culprit wrote nothing landed' not under failures; F3 system 'pause-only' label in the table; the 1 xfailed test located and fixed or given a reason"
+  ],
+  "depends": [],
+  "deliverable": "src/ks/bench/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

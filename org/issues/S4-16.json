@@ -1,0 +1,26 @@
+{
+  "id": "S4-16",
+  "title": "Frozen-build tag + one-command reproducer",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "maya",
+  "reviewer": "kabir",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "The finale build is pinned and reproducible",
+  "acceptance": [
+    "Tag finale-freeze at 26 Nov 18:00; make bench-headline reproduces BENCH-S3 F2+ seed 2 bit-for-bit; full native + container suite green on the tag"
+  ],
+  "depends": [],
+  "deliverable": "Makefile",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "id": "S4-04",
+  "title": "Panel jury dry run #1: hostile, tries to break the build",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "panel",
+  "reviewer": "maya",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "Every jury-visible break found before the finale",
+  "acceptance": [
+    "org/reports/PANEL-JURY-01.md: >=15 attacks from the README alone (tamper, forge, replay, rogue agent, claims vs THREAT-MODEL wording, numbers vs BENCH-S3), each with result + severity; every Must becomes an issue",
+    "Includes kabir's 6 juror moves (F2+, TEMPLATE rogue, state.db bypass, line edit, rewrite + --head, F3) and zoya's Q1-Q5"
+  ],
+  "depends": [],
+  "deliverable": "org/reports/PANEL-JURY-01.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "id": "S4-22",
+  "title": "Finale preflight: refuse a non-security live run",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "maya",
+  "reviewer": "kabir",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "The finale can't accidentally run in degraded mode",
+  "acceptance": [
+    "Finale script aborts unless make smoke gives isolation=per_agent_uid, anchored=true, key_mode=fresh; native run shows VOID in console banner and score.json (test)"
+  ],
+  "depends": [],
+  "deliverable": "scripts/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

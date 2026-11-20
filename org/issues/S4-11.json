@@ -1,0 +1,26 @@
+{
+  "id": "S4-11",
+  "title": "F2+x honest disclosure in FACT-CARD and JURY-QA",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "anaya",
+  "reviewer": "zoya",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "F2+x is stated plainly before and after the D-18 resolver",
+  "acceptance": [
+    "FACT-CARD + JURY-QA state F2+x R 1/5, C 21/254, held honest median 29 (flagged conflict waits for a human); updated with the resolver row once S4-13 lands"
+  ],
+  "depends": [],
+  "deliverable": "abstract/FACT-CARD.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "S4-17",
+  "title": "Finale rehearsal x2 on the frozen build",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "pmo",
+  "reviewer": "panel",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "Run of show fits the slot; answers ready",
+  "acceptance": [
+    "Run of show <= finale slot, timed per beat; live make demo + demo-sim fallback; panel asks 10 JURY-QA questions, answers logged"
+  ],
+  "depends": [
+    "S4-16"
+  ],
+  "deliverable": "org/reports/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

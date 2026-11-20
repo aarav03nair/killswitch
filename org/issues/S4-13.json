@@ -1,0 +1,29 @@
+{
+  "id": "S4-13",
+  "title": "D-18 resolver build + F2+x rerun (before and after rows)",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "vikram",
+  "reviewer": "kabir",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "F2+x conflicts resolved auditably; every resolution traceable and reversible",
+  "acceptance": [
+    "Each resolution is a recorded signed decision; verify passes and fails on a forged/altered resolution; undo restores the pre-resolution state and is itself recorded",
+    "Bench F2+x reported before and after side by side; hero F2+ unchanged"
+  ],
+  "depends": [
+    "S4-12"
+  ],
+  "deliverable": "src/ks/recovery/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

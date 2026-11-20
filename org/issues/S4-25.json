@@ -1,0 +1,26 @@
+{
+  "id": "S4-25",
+  "title": "ABS-07 comment-only review of Aarav's abstract",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "zoya",
+  "reviewer": "anaya",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "Aarav gets factual, comment-only feedback by 22 Nov",
+  "acceptance": [
+    "Comments only, citing lines and FACT-CARD/D-19 sources; zero rewritten sentences"
+  ],
+  "depends": [],
+  "deliverable": "abstract/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

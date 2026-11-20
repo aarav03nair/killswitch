@@ -1,0 +1,26 @@
+{
+  "id": "S4-24",
+  "title": "F2+c C=0 vs GUARDRAILS L8 (predicted C>0)",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "anaya",
+  "reviewer": "vikram",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "Fixture or guardrail corrected",
+  "acceptance": [
+    "Written finding: why bench F2+c gives C=0; either the F2+c fixture or GUARDRAILS L8 is corrected"
+  ],
+  "depends": [],
+  "deliverable": "abstract/GUARDRAILS.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "id": "S4-23",
+  "title": "Claim audit of README, demo-sim, console",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "kabir",
+  "reviewer": "panel",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "No overclaim survives to the finale",
+  "acceptance": [
+    "Every number traces to a BENCH-S3 row; every R=0 has the operator-release clause; grep for never/proof/first/guarantee finds no unrefuted use; report in REDTEAM-S4.md"
+  ],
+  "depends": [
+    "S4-10"
+  ],
+  "deliverable": "org/reports/",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "20 Nov 17:06",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}
