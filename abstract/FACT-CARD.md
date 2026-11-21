@@ -63,14 +63,14 @@ anaya · 19 Nov 2026 · D13: every outside number in the abstract comes from thi
 | # | Row | R | C | honest items held | operator releases (honest + tainted-lineage) | Source |
 |---|---|---|---|---|---|---|
 | O5 | **before resolver** (resolver: off; default run) | 1/5 [0..1/5] | 21/254 [0..44/243] | 29 [0..35] | 3 [1..7] (3 + 0) | BENCH-S3 §F2+x H=6; §S4-13 before column |
-| O6 | **with resolver ww_rebase/1** (opt-in, every resolution signed and verified; undo ⚑ S4-34) | 0 [0..0] | 0 [0..0] | 3 [0..7] | 5 [1..9] (3 + 2) | BENCH-S3 §S4-13 after column |
+| O6 | **with resolver ww_rebase/1** (opt-in, every resolution signed and verified; undoable, as a recorded and verified step, until a payment or email that depended on the resolution is released or dispatched; after that a person decides) | 0 [0..0] | 0 [0..0] | 3 [0..7] | 5 [1..9] (3 + 2) | BENCH-S3 §S4-13 after column |
 
 **Must travel with O5/O6 [Fact]:**
 - Quote both rows together, and R, C and held together. O6 always says "with resolver on" (D-19, ADR-05a §7); the resolver is off unless the run turns it on.
 - **D-17:** O6's R = 0 holds after the operator released a median 5 held items, 3 honest and 2 tainted-lineage (re-run and re-held by recovery, released by the bench approver, X4).
 - Before the resolver the flag is never resolved, because the bench approver never resolves flags: a flagged conflict waits for a human.
 - With the resolver: 1 resolution on 19 of 20 seeds (triage rebased on the clean base); seed 7 had no conflict. `ks verify` OK on all 40 runs (off and on), `per_agent_uid`, no `resolution_invalid`. Hero F2+ (seeds 1..5) score.json identical off and on (BENCH-S3 §S4-13; S4-13 review, kabir).
-- **What the resolver will not do** (ADR-05a §1, §2a): it refuses the suspect, every alert's `root_candidates[0]`, evidence writers, authors of taint origins (seed writers), and LLM, system and suspended agents. Any conflict that fails a check, and every other flag, replan or compensate, waits for a human. It merges nothing by hand and invents no value. Undo: `ks recover RUN --unresolve <plan_id>.<n>`, itself recorded, **only if no later action touched the row**; else `unresolve_blocked`. ⚑ S4-34: on live F2+x billing reads the rebased row in the apply tick, so the undo is blocked at the first pause (PANEL-JURY-02 M8). Never "undoable" without this condition.
+- **What the resolver will not do** (ADR-05a §1, §2a): it refuses the suspect, every alert's `root_candidates[0]`, evidence writers, authors of taint origins (seed writers), and LLM, system and suspended agents. Any conflict that fails a check, and every other flag, replan or compensate, waits for a human. It merges nothing by hand and invents no value. Undo: `ks recover RUN --unresolve <plan_id>.<n>`, itself recorded; it also reverts every later action that read the rebased value (writes back, items re-held). Wording: "undoable, as a recorded and verified step, until a payment or email that depended on the resolution is released or dispatched; after that a person decides" (S4-34, maya review); else `unresolve_blocked`. Never "undoable" without this condition.
 - **Known limits** (THREAT-MODEL Errata, D-18 entry): verify checks the resolution's rule, order, binding and clean inputs, **not the re-computed value** (trusted to `ks.recovery`, TCB). A **colluding** agent outside the refused set that copies the culprit's value from its own memory into its args would carry it into the rebased write (C3, no prevention claim). Deterministic built-in agents only (GUARDRAILS L6).
 
 ## Not safe to print (never quote)
@@ -87,4 +87,4 @@ anaya · 19 Nov 2026 · D13: every outside number in the abstract comes from thi
 ## Changes (S4-24, anaya, 21 Nov; D-20)
 
 - F2+c: "does not exercise honest in-window writes; C not quoted" (D-20).
-- O6 and resolver undo: "undoable" ⚑ pending S4-34; undo only if no later action touched the row (PANEL-JURY-02 M8).
+- O6 and resolver undo (PANEL-JURY-02 M8): S4-34 done; wording "undoable, as a recorded and verified step, until a payment or email that depended on the resolution is released or dispatched; after that a person decides."

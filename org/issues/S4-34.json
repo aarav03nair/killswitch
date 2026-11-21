@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "panel",
-  "status": "in_progress",
+  "status": "done",
   "outcome": "the undo claim matches what an operator can actually do",
   "acceptance": [
     "Either the run pauses after an apply containing a resolve, before agents act, and a live F2+x seed 2 --unresolve succeeds (test); or ALLOWED-NUMBERS N18(d), FACT-CARD, JURY-QA say the undo is blocked once any agent reads the rebased version (zoya/anaya, before Aarav cites N18 on 22 Nov)"
@@ -16,8 +16,8 @@
     "S4-13"
   ],
   "deliverable": "src/ks/runtime/recover.py",
-  "summary": "",
-  "review": "",
+  "summary": "Option (a). Undo now reverts every dependent: any executed record after the resolution that read the rebased version or a dependent's write (later honest actions included). Their writes go back (created objects deleted: RevertEntry.to=null, contracts 1.8.0) and their items are re-held resolution_reverted. Blocked only when a dependent item is released/dispatched/cancelled, a non-dependent wrote a revert object, or a dependent is a system record. Live F2+x seed 2 in killswitch:vikram: --unresolve p-000066.1 at the pause before tick 15 -> p-000080 (S-22 back to v3, INV-0014 deleted), applied seq 82, verify OK anchored per_agent_uid, validity OK. Tests: tests/integration/test_f2x_unresolve_live.py, test_resolver (live dependents, boundary, verify skip), test_contracts_18. ADR-05a §5 rev 4 + S4-34 notes. pytest 1160 passed native; container 51/51 on touched tests. Kit: N18(d) 'undoable' holds with the boundary 'until a dependent outbound effect is released or dispatched' (zoya/anaya to add).",
+  "review": "[maya · done] Done. Rerun of Panel M8 in killswitch:maya (F2+x s2, ticks 40, resolver on, pause-on-alert): apply p-000066 (resolve seq 69); at pause before tick 15 --unresolve p-000066.1 -> p-000080 (S-22 back to v3, INV-0014 deleted); applied seq 82; verify --head OK, anchored, per_agent_uid. After undo S-22 v5 is tainted again: all 24 later comms/payments items held, write_write_conflict flag back, irreversible_tainted_released 0. Checks: undo is a signed, approved c-0 record; verify re-derives dependents (test_verify_rejects_undo_that_skips_a_dependent); dispatched/released/cancelled dependent item -> recorded flag(unresolve_blocked), not ignored (test_unresolve_blocked_once_a_dependent_item_left); deterministic (seq-ordered, verify recomputes). ADR-05a rev 4 OK. Fixtures 1.3-1.6 and a fresh 1.7.0 F2+x run (HEAD worktree) verify under 1.8.0. Suites: container 1171 passed/3 skipped; native 1159 passed, 1 failed under load (test_tamper s4_32, S4-32 not S4-34; passes alone: flaky, arjun to check). Nits (non-blocking): post-undo flag reason reads 'single_honest_write failed' not 'not_undone'; dependents' work is not redone after an undo (stated in ADR). Kit N18(d): 'undoable, as a recorded and verified step, until a payment or email that depended on the resolution is released or dispatched; after that a person decides.'",
   "log": [
     {
       "t": "21 Nov 07:08",
@@ -28,6 +28,26 @@
       "t": "21 Nov 10:21",
       "who": "vikram",
       "msg": "→ in_progress: option (a): undo reverts every dependent (later honest reads included), re-holds their items; blocked only once a dependent item is released/dispatched"
+    },
+    {
+      "t": "21 Nov 10:30",
+      "who": "vikram",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 10:30",
+      "who": "vikram",
+      "msg": "→ in_review: ready for maya"
+    },
+    {
+      "t": "21 Nov 10:48",
+      "who": "maya",
+      "msg": "review: done"
+    },
+    {
+      "t": "21 Nov 10:49",
+      "who": "anaya",
+      "msg": "→ done: Kit N18/O6 undo wording updated"
     }
   ]
 }
