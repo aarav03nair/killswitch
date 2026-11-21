@@ -214,4 +214,4 @@ Write "residual damage R" and "collateral loss C" in full on first use, so they 
 ## Changes (S4-24, anaya, 21 Nov; D-20)
 
 - L8 and §1.5 C row: D-20 label "F2+c as built does not exercise honest in-window writes; C not quoted"; fixture fix S4-30 after the finale.
-- Resolver "undoable" ⚑ pending S4-34 (PANEL-JURY-02 M8): use only with "if no later action touched the row" (ALLOWED-NUMBERS N18 (d)).
+- Resolver "undoable" (S4-34 done): use only as "undoable, as a recorded and verified step, until a payment or email that depended on the resolution is released or dispatched; after that a person decides" (ALLOWED-NUMBERS N18 (d)).
