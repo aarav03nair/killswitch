@@ -446,51 +446,6 @@
   ],
   "activity": [
     {
-      "t": "20 Nov 09:40",
-      "who": "tara",
-      "msg": "moved B3-27 to in_review"
-    },
-    {
-      "t": "20 Nov 09:44",
-      "who": "anaya",
-      "msg": "moved B3-27 to in_review"
-    },
-    {
-      "t": "20 Nov 09:58",
-      "who": "tara",
-      "msg": "moved B3-33 to in_progress"
-    },
-    {
-      "t": "20 Nov 10:21",
-      "who": "maya",
-      "msg": "moved B3-35 to in_progress"
-    },
-    {
-      "t": "20 Nov 10:22",
-      "who": "anaya",
-      "msg": "moved B3-33 to in_progress"
-    },
-    {
-      "t": "20 Nov 10:22",
-      "who": "maya",
-      "msg": "opened B3-50 — ks score for --rogue runs (S* with slot no-op from fault_tick)"
-    },
-    {
-      "t": "20 Nov 10:22",
-      "who": "maya",
-      "msg": "opened B3-51 — RT10 / D10 hold=0 contrast: tainted payment must dispatch at hold 0"
-    },
-    {
-      "t": "20 Nov 10:22",
-      "who": "maya",
-      "msg": "opened B3-52 — RT9 world precondition: crm applies supplier_bank_update tickets"
-    },
-    {
-      "t": "20 Nov 11:52",
-      "who": "tara",
-      "msg": "moved B3-52 to in_progress"
-    },
-    {
       "t": "20 Nov 12:02",
       "who": "nisha",
       "msg": "moved B3-51 to in_review"
@@ -1444,6 +1399,51 @@
       "t": "21 Nov 15:35",
       "who": "pmo",
       "msg": "moved S4-35 to done"
+    },
+    {
+      "t": "21 Nov 15:55",
+      "who": "tara",
+      "msg": "moved S4-37 to in_review"
+    },
+    {
+      "t": "21 Nov 15:55",
+      "who": "tara",
+      "msg": "moved S4-36 to in_review"
+    },
+    {
+      "t": "21 Nov 15:58",
+      "who": "maya",
+      "msg": "reviewed S4-36: done"
+    },
+    {
+      "t": "21 Nov 16:03",
+      "who": "kabir",
+      "msg": "reviewed S4-37: changes"
+    },
+    {
+      "t": "21 Nov 16:25",
+      "who": "tara",
+      "msg": "moved S4-37 to in_review"
+    },
+    {
+      "t": "21 Nov 16:26",
+      "who": "kabir",
+      "msg": "reviewed S4-37: changes"
+    },
+    {
+      "t": "21 Nov 16:26",
+      "who": "pmo",
+      "msg": "opened S4-38 — Late wrong payload on a key S* also has is booked in C, not as an escape"
+    },
+    {
+      "t": "21 Nov 16:40",
+      "who": "tara",
+      "msg": "moved S4-37 to in_review"
+    },
+    {
+      "t": "21 Nov 16:43",
+      "who": "kabir",
+      "msg": "reviewed S4-37: done"
     }
   ]
 }

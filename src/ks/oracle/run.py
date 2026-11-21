@@ -13,7 +13,7 @@ from ks.inject import InjectSpec
 from ks.world.agents import AGENT_IDS, Schedule, step
 from ks.world.registry import SENSITIVE_FIELDS
 from ks.world.scenario import SEED_AUTHOR, build_view, open_world_store, seed_state
-from ks.world.tools import WorldDispatcher, WorldTxn
+from ks.world.tools import CATALOGUE, WorldDispatcher, WorldTxn
 
 from .ledger import LedgerBuilder, b_set, read_ledger
 
@@ -52,7 +52,8 @@ def _fresh_dir(out: Path) -> None:
 
 
 def run_pure(spec: InjectSpec, out: str | os.PathLike[str], *, faulted: bool, suspend_tick: int | None = None,
-             hold: int = 0, bypass: Callable[[object, int], None] | None = None) -> OracleResult:
+             hold: int = 0, bypass: Callable[[object, int], None] | None = None,
+             i2_approver: bool = False) -> OracleResult:
     """Run the world in-process (no gateway, no TCB) over ticks ``0..T-1`` like ``ks.runtime``.
     ``faulted=False`` is S* (``spec.oracle_schedule``); ``True`` is the faulty world (tests, harness). With
     ``suspend_tick`` the culprit does not act from that tick (X3a: S* mirrors the faulty run's suspension; ``None``
@@ -60,7 +61,10 @@ def run_pure(spec: InjectSpec, out: str | os.PathLike[str], *, faulted: bool, su
     has ``release_tick = t + H`` (G3, H > 0: ``max(t + H, v + 2H)`` when its reads hold a sensitive-field version
     written at tick v) and dispatches at the release phase of tick ``max(release_tick, t + 1)``, as the gateway does
     (ADR-06-metrics §2); items still queued at the end never leave. ``bypass(store, tick)`` is a test hook that
-    writes behind the dispatcher (its versions land in the ledger with ``seq`` null)."""
+    writes behind the dispatcher (its versions land in the ledger with ``seq`` null). ``i2_approver`` is the bench config
+    (A6, S4-37): ``p.i2_approval`` holds every CATALOGUE class-I2 action for a human, so with no approver (False, the
+    bench) an I2 action never executes in the oracle either. This is decided from the catalogue class and this flag only,
+    never from the run's record (the record is the system's testimony)."""
     out = Path(out)
     _fresh_dir(out)
     sched: Schedule = spec.schedule if faulted else spec.oracle_schedule
@@ -89,6 +93,10 @@ def run_pure(spec: InjectSpec, out: str | os.PathLike[str], *, faulted: bool, su
                     continue
                 seq += 1
                 env = SimpleNamespace(agent_id=a, action_id=act.action_id, tool=act.tool, args=act.args)
+                if not i2_approver and CATALOGUE[act.tool][0].name == "I2":  # A6: held, never approved; no effect
+                    lb.mark_recorded(seq, a, act.action_id)
+                    tick_of_seq[seq] = t
+                    continue
                 with store.txn():
                     ex = disp.execute(env, WorldTxn(store, seq))
                 lb.mark_recorded(seq, a, act.action_id)

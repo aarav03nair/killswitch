@@ -288,5 +288,6 @@ def bench(seeds: list[int], faults: list[str], holds: list[int], baselines: list
     (out / "bench.json").write_bytes(canonical.dumps_line(summary))
     (out / "bench.md").write_text("\n".join(md))
     (out / "timings.json").write_bytes(canonical.dumps_line({"ms": timings, "total_ms": sum(timings.values())}))
-    shutil.rmtree(scratch, ignore_errors=True)
+    if not keep_runs:  # S4-36
+        shutil.rmtree(scratch, ignore_errors=True)
     return summary

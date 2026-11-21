@@ -80,3 +80,69 @@ def test_header_names_the_runs_real_tick_count(tmp_path, monkeypatch, ticks, oth
     md = (tmp_path / "o" / "bench.md").read_text()
     assert f"at **T={ticks}**; do not compare ratio metrics with T={other}." in md
     assert md.startswith(f"# ks bench: T={ticks} ")
+
+
+def test_keep_runs_flag_controls_scratch_dirs(tmp_path, monkeypatch):
+    """S4-36: --keep-runs leaves the per-cell run dirs under out/_runs; without it they are removed."""
+    import ks.bench.runner as r
+    def fake(f, seed, h, b, t, d, **k):
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "score.json").write_text("{}")
+        return {"seed": seed, "R": {"n": 0, "d": 1}}
+    monkeypatch.setattr(r, "run_cell", fake)
+    r.bench([1], ["F2+"], [6], ["system"], 40, tmp_path / "keep", keep_runs=True)
+    r.bench([1], ["F2+"], [6], ["system"], 40, tmp_path / "drop")
+    assert any((tmp_path / "keep" / "_runs").iterdir())
+    assert not (tmp_path / "drop" / "_runs").exists()
+
+
+def test_late_inject_f2p_seed2_t120_has_no_i2_artefact(tmp_path):
+    """S4-37 / A6: S* applies p.i2_approval itself (no approver in the bench): the honest docs.purge held in the real
+    run is not executed by S* either, so a late t_rec (56) gives R=0 and collateral_stall=0 (was 1/6 and 1/1123)."""
+    s = run_cell("F2+", 2, 6, "system", 120, tmp_path / "c", star_cache={})
+    assert s["t_rec"] == 56 and s["R"]["n"] == 0 and s["collateral_stall"]["n"] == 0
+
+
+def test_real_only_dispatched_payment_after_t_rec_is_an_irreversible_escape(tmp_path):
+    """S4-37 / A6 (kabir's fixture): a culprit payment dispatched after t_rec that exists only in the real run (S* never
+    executes it) is an escape: irreversible_tainted_released and post_alert >= 1, not honest C / collateral_stall."""
+    from ks.bench.runner import _star
+    from ks.inject import make_spec
+    from ks.oracle.realrun import real_ledger
+    from ks.score import score_run, suspend_tick_of
+    d = tmp_path / "c"
+    s = run_cell("F2+", 2, 6, "system", 40, d, star_cache={})
+    spec = make_spec("f2plus", 2, ticks=40)
+    star = _star(spec, tmp_path / "x", suspend_tick_of(d, spec.culprit), 6)
+    led = real_ledger(d)
+    base = score_run(d, spec, star, hold=6)
+    assert base["irreversible_tainted_released"] == 0 and base["post_alert_tainted_effects"] == 0
+    proto = next(e for e in led if e["kind"] == "payment")
+    for who in (spec.culprit, "docs"):
+        esc = {**proto, "key": "outbox:tainted-late-payment", "tick": s["t_rec"] + 1, "seq": None, "state": "dispatched",
+               "agent": who, "value_hash": "ff" * 32}
+        s2 = score_run(d, spec, star, hold=6, run_ledger=led + [esc])
+        assert s2["irreversible_tainted_released"] >= 1 and s2["post_alert_tainted_effects"] >= 1
+        assert s2["clean"] is False
+        assert s2["C"] == base["C"] and s2["collateral_stall"] == base["collateral_stall"]
+
+
+def test_real_only_dispatched_purge_is_an_irreversible_escape(tmp_path):
+    """S4-37 / A6 (kabir attack2): a docs.purge (I2) dispatched only in the real run after t_rec deletes data and cannot
+    be undone: it counts in irreversible_tainted_released and post_alert, not in C / collateral_stall. No new key."""
+    from ks.bench.runner import _star
+    from ks.inject import make_spec
+    from ks.oracle.realrun import real_ledger
+    from ks.score import score_run, suspend_tick_of
+    d = tmp_path / "c"
+    s = run_cell("F2+", 2, 6, "system", 40, d, star_cache={})
+    spec = make_spec("f2plus", 2, ticks=40)
+    star = _star(spec, tmp_path / "x", suspend_tick_of(d, spec.culprit), 6)
+    led = real_ledger(d)
+    base = score_run(d, spec, star, hold=6)
+    proto = next(e for e in led if e["kind"] == "payment")
+    esc = {**proto, "kind": "purge", "key": "outbox:late-purge", "tick": s["t_rec"] + 1, "seq": None,
+           "state": "dispatched", "agent": spec.culprit, "value_hash": "cc" * 32}
+    s2 = score_run(d, spec, star, hold=6, run_ledger=led + [esc])
+    assert s2["irreversible_tainted_released"] >= 1 and s2["post_alert_tainted_effects"] >= 1 and s2["clean"] is False
+    assert s2["C"] == base["C"] and s2["collateral_stall"] == base["collateral_stall"] and list(s2) == list(base)

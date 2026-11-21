@@ -236,9 +236,12 @@ def score_run(run_dir: str | Path, spec: InjectSpec, star: list[dict[str, Any]],
     # B3-27: recovery lands in the control phase at the START of tick t_rec (ADR-00 step 1), before any other effect
     # of that tick, so "B at t_rec" is the fold over ticks < t_rec (folding t_rec itself would count the repair)
     b = b_set(led, star, None if t_rec is None else t_rec - 1)
-    g = g_set(led, b, t_inj)
     t0 = t0_of(led, b, t_inj)
     rf, sf = fold(led), fold(star)
+    # A6 (S4-37): escapes = dispatched outbox effects that exist only in the real run (key not in S*; not in B, which
+    # the existing A2 counters already cover). Any tick, any author. Scored as irreversible/post_alert, never as honest loss.
+    esc = {k for k, e in rf.items() if k not in sf and k not in b and e["state"] == "dispatched"}
+    g = g_set(led, b, t_inj) - esc
     lost = lambda k: not equal(rf.get(k), sf.get(k))  # noqa: E731
     b_prod = {e["seq"] for e in led if e["key"] in b and e["seq"] is not None and e["tick"] >= t_inj}
     b_effs = sorted((e for e in led if e["key"] in b and e["tick"] >= t_inj), key=lambda e: (e["tick"], e["seq"] or -1))
@@ -294,10 +297,12 @@ def score_run(run_dir: str | Path, spec: InjectSpec, star: list[dict[str, Any]],
     else:
         post = sum(1 for e in led if e["key"] in b and e["tick"] > t_alert and e["state"] in ("present", "dispatched")
                    and not equal(e, sf.get(e["key"])))  # A2 only: a wrong repair still counts
+        post += sum(1 for k in esc if rf[k]["tick"] > t_alert)  # A6
     # B3-27: an effect identical to S*'s (same payload, same delivery) is not tainted even if its key is in B: G3 holds
     # put honest items that S* dispatched before t_rec into B by timing alone; they leave later with S*'s payload
     irrev = sum(1 for e in led if e["kind"] in ("payment", "email") and e["state"] == "dispatched" and e["key"] in b
                 and not equal(e, sf.get(e["key"])))
+    irrev += len(esc)  # A6: real-only escape, any author or tick
 
     r_n = sum(1 for k in b if lost(k))
     c_lost = {k for k in g if lost(k)}
@@ -393,7 +398,7 @@ def score_run(run_dir: str | Path, spec: InjectSpec, star: list[dict[str, Any]],
         s0f = fold(s0)
         keys = {k for k, e in s0f.items() if e["agent"] != culprit}
         cstall = _ratio(sum(1 for k in keys if not equal(rf.get(k), s0f[k])), len(keys))
-    clean: Any = False if (r_n or c_lost) else _na("invariants_ok not computed (needs the world supplier master)")
+    clean: Any = False if (r_n or c_lost or esc) else _na("invariants_ok not computed (needs the world supplier master)")
 
     out = {"seed": spec.seed, "fault": spec.fault, "hold": hold, "baseline": baseline,
            "baseline_oracle_assisted": baseline in ("snapshot", "revert_culprit_only"),

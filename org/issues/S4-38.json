@@ -1,0 +1,26 @@
+{
+  "id": "S4-38",
+  "title": "Late wrong payload on a key S* also has is booked in C, not as an escape",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "tara",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "A dispatched effect whose payload differs from S* on a shared key after t_rec is scored as an escape, not honest collateral",
+  "acceptance": [
+    "kabir fixture scores irreversible/post-alert >=1 and not C; T=40 BENCH-S3 F2+ seed 2 unchanged; suite green"
+  ],
+  "depends": [],
+  "deliverable": "src/ks/score/score.py",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "21 Nov 16:26",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

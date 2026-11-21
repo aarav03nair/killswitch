@@ -295,3 +295,14 @@ def test_real_run_bypass_then_honest_overwrite_still_in_B(spec, tmp_path_factory
         assert "customers:C-01.name" in b_set(real, star)
     finally:
         shutil.rmtree(base, ignore_errors=True)
+
+
+def test_s_star_never_executes_i2_without_approver(tmp_path):
+    """S4-37 / A6: decided from the CATALOGUE class + config, not from any record. docs.purge fires at t%50==49."""
+    from ks.world.tools import CATALOGUE
+    assert CATALOGUE["docs.purge"][0].name == "I2"
+    long = make_spec("f2plus", 2, ticks=120)
+    star = run_s_star(long, tmp_path / "s", hold=6).effects
+    assert not any(e["kind"] == "purge" for e in star)
+    ok = run_pure(long, tmp_path / "a", faulted=False, hold=6, i2_approver=True).effects
+    assert any(e["kind"] == "purge" for e in ok)

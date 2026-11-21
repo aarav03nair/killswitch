@@ -7,20 +7,35 @@
   "reviewer": "maya",
   "model": "sonnet",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "done",
   "outcome": "--keep-runs keeps per-cell run dirs",
   "acceptance": [
     "Test: bench with --keep-runs leaves run dirs; without it they are removed; bench suite green"
   ],
   "depends": [],
   "deliverable": "src/ks/bench/runner.py",
-  "summary": "",
-  "review": "",
+  "summary": "bench() rmtree of _runs now only when not keep_runs; test_keep_runs_flag_controls_scratch_dirs added; bench suite green.",
+  "review": "[maya · done] Final rmtree now guarded by keep_runs, matching the per-cell guards (runner.py 213/245); CLI --keep-runs already wired (cli 99/556). test_keep_runs_flag_controls_scratch_dirs covers both branches with a stubbed run_cell; tests/bench 11 passed. Acceptance met.",
   "log": [
     {
       "t": "21 Nov 15:27",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "21 Nov 15:55",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 15:55",
+      "who": "tara",
+      "msg": "→ in_review: keep_runs fixed + test"
+    },
+    {
+      "t": "21 Nov 15:58",
+      "who": "maya",
+      "msg": "review: done"
     }
   ]
 }
