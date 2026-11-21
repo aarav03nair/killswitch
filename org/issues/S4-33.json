@@ -1,0 +1,41 @@
+{
+  "id": "S4-33",
+  "title": "ks score reads unverified state.db history: anchored-OK run re-scored R 0/9 -> 2/11 by editing versions.author",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "arjun",
+  "reviewer": "kabir",
+  "model": "opus",
+  "created_by": "panel",
+  "status": "in_review",
+  "outcome": "a run that verifies anchored cannot be re-scored by editing state.db",
+  "acceptance": [
+    "verify reconciles every versions row (obj, ver, hash, author, seq, action_id) against record write sets, or score refuses a mismatch; RT test re-attributing crm versions to payments gives verify non-OK or score refusal; THREAT-MODEL row updated"
+  ],
+  "depends": [],
+  "deliverable": "src/ks/verify/core.py",
+  "summary": "verify now reconciles every state.db versions row (obj,ver,hash,seq,author,action_id) with record write sets (extra/missing/re-attributed -> RECONCILE); ks score refuses unverified runs (UNVERIFIED RUN, exit = verify exit, no score.json). Tests tests/recovery/test_history_reconcile.py reproduce Panel edit; THREAT-MODEL row added; hero/F2+x finale runs still verify OK. Limit: ks.recover.* writes may carry any author. Full suite: 5 failures in tests/recorder+panel seen once while two pytest runs overlapped; all pass in isolation.",
+  "review": "",
+  "log": [
+    {
+      "t": "21 Nov 07:08",
+      "who": "panel",
+      "msg": "opened"
+    },
+    {
+      "t": "21 Nov 09:31",
+      "who": "arjun",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "21 Nov 10:19",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 10:19",
+      "who": "arjun",
+      "msg": "→ in_review: ready"
+    }
+  ]
+}

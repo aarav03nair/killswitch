@@ -182,7 +182,7 @@ Guard: "within the threat model" on every such claim [W2 · L4]
 
 Guard: TTI/TTC in ticks only (ALLOWED N1–N3); no seconds [§1.5 · X21]
 Guard: alongside containment-style metrics, not instead; no second Airlock name [W1 · D3]
-Guard: "measured" only for ALLOWED-NUMBERS values with T=40 + 20 seeds; ✗ bare R = 0 (D-17); ✗ any F2+c value (⚑ S4-24) [D-19 · X21]
+Guard: "measured" only for ALLOWED-NUMBERS values with T=40 + 20 seeds; ✗ bare R = 0 (D-17); ✗ any F2+c value (D-20: does not exercise honest in-window writes; C not quoted) · ✗ bare "undoable" for the resolver (⚑ S4-34) [D-19 · X21]
 Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" for S\* [§1.5 D13 row · W1]
 
 ### 3c. Path to banking (40)

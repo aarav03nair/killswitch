@@ -24,7 +24,7 @@ section{scroll-margin-top:120px}
 code{font-size:.9em;background:var(--pan);padding:1px 4px;overflow-wrap:anywhere}pre{overflow-x:auto;background:var(--pan);padding:10px}
 a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid var(--rule);color:var(--mut)}
 </style></head><body>
-<header><div class="brand"><b>Kill Switch</b>Abstract Kit · updated 21 Nov 2026, 06:20 IST</div><nav role="tablist"><button role="tab" id="t-start" aria-controls="start" aria-selected="true">Start here</button><button role="tab" id="t-facts" aria-controls="facts" aria-selected="false">Fact card</button><button role="tab" id="t-allowed" aria-controls="allowed" aria-selected="false">Allowed numbers</button><button role="tab" id="t-skeleton" aria-controls="skeleton" aria-selected="false">Skeleton</button><button role="tab" id="t-guard" aria-controls="guard" aria-selected="false">Guardrails</button><button role="tab" id="t-terms" aria-controls="terms" aria-selected="false">Terms</button><button role="tab" id="t-jury" aria-controls="jury" aria-selected="false">Jury Q&amp;A</button></nav></header>
+<header><div class="brand"><b>Kill Switch</b>Abstract Kit · updated 21 Nov 2026, 10:07 IST</div><nav role="tablist"><button role="tab" id="t-start" aria-controls="start" aria-selected="true">Start here</button><button role="tab" id="t-facts" aria-controls="facts" aria-selected="false">Fact card</button><button role="tab" id="t-allowed" aria-controls="allowed" aria-selected="false">Allowed numbers</button><button role="tab" id="t-skeleton" aria-controls="skeleton" aria-selected="false">Skeleton</button><button role="tab" id="t-guard" aria-controls="guard" aria-selected="false">Guardrails</button><button role="tab" id="t-terms" aria-controls="terms" aria-selected="false">Terms</button><button role="tab" id="t-jury" aria-controls="jury" aria-selected="false">Jury Q&amp;A</button></nav></header>
 <main><section id="start" role="tabpanel" >
 <h1>Abstract Kit</h1>
 <p class="lede">Everything you need to write the SEED abstract yourself: facts you may quote, how to phrase them safely, a notes-only skeleton, and the questions the jury will throw at you. Due <b>22 Nov 2026</b>, under 1,000 words, problem → fix → why it matters.</p>
@@ -219,8 +219,8 @@ a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid va
 </tbody>
 </table>
 <p><strong>Notes on the A~ rows.</strong> #1: METR does say "cyber evaluations" / "cyber task", but "internal" is unconfirmed for this evaluation; keep the safe wording "ExploitGym evaluation runs". #4: numbers confirmed on the arXiv abstract + Table 1, but ICML 2025 is not shown on the arXiv page and not yet confirmed from an official ICML page; cite the venue only once confirmed. #11: the new repo states no stability level, and the registry shows Deprecated keys plus Development values. #13: the PDF does not name SIGMOD. R: today's fetch failed; RES-08 read the report once through a summariser.</p>
-<h2>Our own results (B3-27, real container runs, F2+ hero, seeds 0/1/2; from score.json, re-checked by anaya 20 Nov)</h2>
-<p><strong>D-19 (21 Nov, zoya S4-18):</strong> the abstract cites our measured numbers only from <code>abstract/ALLOWED-NUMBERS.md</code> (BENCH-S3, T=40, 20 seeds, each with its source row and condition). Rows O1–O4 below are hero demo-seed facts (seeds 0/1/2) for the stage and Q&amp;A, not the abstract's bench numbers.</p>
+<h2>Our own results (F2+ hero, system, H=6, T=40, container; seeds 1 and 2 from <code>runs/bench-b3-33/F2p/h6/system/s{1,2}/score.json</code>, i.e. BENCH-S3 cells; re-checked by anaya 21 Nov, S4-23 K4)</h2>
+<p><strong>D-19 (21 Nov, zoya S4-18):</strong> the abstract cites our measured numbers only from <code>abstract/ALLOWED-NUMBERS.md</code> (BENCH-S3, T=40, 20 seeds, each with its source row and condition). Rows O1–O4 below are per-seed facts (seeds 1 and 2 of the BENCH-S3 F2+ H=6 system cell, T=40) for the stage and Q&amp;A, not the abstract's bench numbers. Seed 0 values were removed (S4-23 K4): no seed-0 score.json exists at HEAD and bench seeds are 1..20.</p>
 <table>
 <thead>
 <tr>
@@ -233,32 +233,33 @@ a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid va
 <tbody>
 <tr>
 <td>O1</td>
-<td>Residual damage R = <strong>0/1, 0/5, 0/9</strong>; collateral loss C = <strong>0</strong>; both tainted-effect metrics and reemitted = <strong>0</strong></td>
-<td><strong>D-17:</strong> every R = 0 claim states it holds <em>after the operator released N held items, M of them honest</em>: seed 0: 1 (0 honest), seed 1: 5 (3 honest), seed 2: <strong>9 (7 honest)</strong></td>
+<td>Residual damage R = <strong>0/5, 0/9</strong>; collateral loss C = <strong>0</strong>; both tainted-effect metrics and reemitted = <strong>0</strong></td>
+<td><strong>D-17:</strong> every R = 0 claim states it holds <em>after the operator released N held items, M of them honest</em>: seed 1: 5 (3 honest), seed 2: <strong>9 (7 honest)</strong></td>
 <td><code>fp_cost.operator_unholds</code></td>
 </tr>
 <tr>
 <td>O2</td>
-<td>Operator releases (<code>operator_unholds</code> tainted + honest): seed 0 <strong>1+0</strong>, seed 1 <strong>2+3</strong>, seed 2 <strong>2+7</strong>; <code>held_honest_actions</code> <strong>0 / 3 / 7</strong></td>
+<td>Operator releases (<code>operator_unholds</code> tainted + honest): seed 1 <strong>2+3</strong>, seed 2 <strong>2+7</strong>; <code>held_honest_actions</code> <strong>3 / 7</strong></td>
 <td>honest = an item recovery did not act on (ADR-06 A3)</td>
 <td>score.json <code>fp_cost</code></td>
 </tr>
 <tr>
 <td>O3</td>
-<td><code>collateral_stall</code> <strong>0/389, 0/382, 0/381</strong></td>
+<td><code>collateral_stall</code> <strong>0/382, 0/381</strong></td>
 <td><strong>proxy</strong> (<code>basis: s_star</code>, divergence from S* over non-culprit keys outside B), never "the S0 measure"</td>
 <td>ADR-06 A3</td>
 </tr>
 <tr>
 <td>O4</td>
-<td>TTI detect <strong>0 / 2 / 2</strong> ticks, attribute <strong>0</strong>; TTC <strong>1</strong> tick</td>
-<td>ticks, not seconds; 3 seeds only</td>
+<td>TTI detect <strong>2 / 2</strong> ticks, attribute <strong>0</strong>; TTC <strong>1</strong> tick</td>
+<td>ticks, not seconds, T=40; 2 seeds only (20-seed medians: ALLOWED-NUMBERS)</td>
 <td>score.json</td>
 </tr>
 </tbody>
 </table>
 <h2>Honest conflict F2+x: before and after the resolver (S4-11; BENCH-S3, system, H=6, T=40, 20 seeds, container)</h2>
 <p>[Fact] In F2+x triage edits the price row crm wrote (<code>suppliers:S-22</code>) → write-write conflict → flagged. CALL-04 D-18 requires both rows, side by side. Cells are median [min..max] over 20 seeds. Abstract IDs: ALLOWED-NUMBERS N15 (before), N18 (after).</p>
+<p>[Fact] <strong>F2+c (D-20):</strong> F2+c as built does not exercise honest in-window writes; C not quoted. Its C = 0 is by construction (GUARDRAILS L8), not evidence; no F2+c value may be printed. Fixture fix after the finale (S4-30).</p>
 <table>
 <thead>
 <tr>
@@ -283,7 +284,7 @@ a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid va
 </tr>
 <tr>
 <td>O6</td>
-<td><strong>with resolver ww_rebase/1</strong> (opt-in, every resolution signed, verified, undoable)</td>
+<td><strong>with resolver ww_rebase/1</strong> (opt-in, every resolution signed and verified; undo ⚑ S4-34)</td>
 <td>0 [0..0]</td>
 <td>0 [0..0]</td>
 <td>3 [0..7]</td>
@@ -297,7 +298,7 @@ a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid va
 - <strong>D-17:</strong> O6's R = 0 holds after the operator released a median 5 held items, 3 honest and 2 tainted-lineage (re-run and re-held by recovery, released by the bench approver, X4).
 - Before the resolver the flag is never resolved, because the bench approver never resolves flags: a flagged conflict waits for a human.
 - With the resolver: 1 resolution on 19 of 20 seeds (triage rebased on the clean base); seed 7 had no conflict. <code>ks verify</code> OK on all 40 runs (off and on), <code>per_agent_uid</code>, no <code>resolution_invalid</code>. Hero F2+ (seeds 1..5) score.json identical off and on (BENCH-S3 §S4-13; S4-13 review, kabir).
-- <strong>What the resolver will not do</strong> (ADR-05a §1, §2a): it refuses the suspect, every alert's <code>root_candidates[0]</code>, evidence writers, authors of taint origins (seed writers), and LLM, system and suspended agents. Any conflict that fails a check, and every other flag, replan or compensate, waits for a human. It merges nothing by hand and invents no value. Undo: <code>ks recover RUN --unresolve &lt;plan_id&gt;.&lt;n&gt;</code>, itself recorded.
+- <strong>What the resolver will not do</strong> (ADR-05a §1, §2a): it refuses the suspect, every alert's <code>root_candidates[0]</code>, evidence writers, authors of taint origins (seed writers), and LLM, system and suspended agents. Any conflict that fails a check, and every other flag, replan or compensate, waits for a human. It merges nothing by hand and invents no value. Undo: <code>ks recover RUN --unresolve &lt;plan_id&gt;.&lt;n&gt;</code>, itself recorded, <strong>only if no later action touched the row</strong>; else <code>unresolve_blocked</code>. ⚑ S4-34: on live F2+x billing reads the rebased row in the apply tick, so the undo is blocked at the first pause (PANEL-JURY-02 M8). Never "undoable" without this condition.
 - <strong>Known limits</strong> (THREAT-MODEL Errata, D-18 entry): verify checks the resolution's rule, order, binding and clean inputs, <strong>not the re-computed value</strong> (trusted to <code>ks.recovery</code>, TCB). A <strong>colluding</strong> agent outside the refused set that copies the culprit's value from its own memory into its args would carry it into the rebased write (C3, no prevention claim). Deterministic built-in agents only (GUARDRAILS L6).</p>
 <h2>Not safe to print (never quote)</h2>
 <ul>
@@ -309,6 +310,11 @@ a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid va
 <li><strong>MAST "94%"</strong>, Cordon <strong>45/45 vs 14/45</strong>, DeltaBox ms figures, any GoEx number. Any <strong>venue</strong> for MAST, Cordon, CHIEF, FAMAS, Atomix, GoEx, DeltaBox or State Footprints.</li>
 <li><strong>"First"</strong> (provenance containment, agent undo, agent gateway). <strong>"Tamper-proof"</strong>, <strong>"compliant"</strong>, <strong>"beats Who&amp;When"</strong>. Saying we reverse irreversible effects. Any Airlock "better / leaks / sim-only" claim.</li>
 <li><strong>"Tools kill one agent or all of them"</strong> as our own insight (it is Airlock's framing). <strong>"Multi-agent incidents are common"</strong>.</li>
+</ul>
+<h2>Changes (S4-24, anaya, 21 Nov; D-20)</h2>
+<ul>
+<li>F2+c: "does not exercise honest in-window writes; C not quoted" (D-20).</li>
+<li>O6 and resolver undo: "undoable" ⚑ pending S4-34; undo only if no later action touched the row (PANEL-JURY-02 M8).</li>
 </ul></section><section id="allowed" role="tabpanel" hidden><h1>ALLOWED NUMBERS: our own measured values the abstract may cite (D-19, S4-18)</h1>
 <p>zoya · 21 Nov 2026 · Reviewer: anaya · Decision: <strong>D-19</strong> (Aarav, CALL-04 decision 3, revising D13): the abstract may cite measured BENCH-S3 numbers, each with its conditions. Conditions: <strong>D-17</strong> (CALL-02 B2-b), <strong>D-18</strong> (CALL-04 decision 2), <strong>D10</strong> (CALL-01). Source of every value: <code>org/reports/BENCH-S3.md</code> (raw in <code>runs/bench-b3-33/</code>, gitignored).</p>
 <p><strong>How to use.</strong> This is a list of values and the conditions that travel with them. It is not abstract text: Aarav writes every sentence (CHARTER). A number of ours <strong>not on this list</strong> stays out of the abstract. Outside numbers still come only from <code>abstract/FACT-CARD.md</code>.</p>
@@ -409,7 +415,7 @@ a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid va
 <td>N5</td>
 <td>collateral loss C <strong>0 [0..0]</strong>; culprit-window loss <strong>0 [0..0]</strong></td>
 <td><code>C</code>, <code>c_culprit_window</code></td>
-<td>Hero F2+ only. Holds because crm writes nothing else between fault and suspension (per-seed precondition, GUARDRAILS L8). Never "C = 0" as unconditional. Do not extend to F2+c (⚑ S4-24, §5)</td>
+<td>Hero F2+ only. Holds because crm writes nothing else between fault and suspension (per-seed precondition, GUARDRAILS L8). Never "C = 0" as unconditional. Do not extend to F2+c: F2+c does not exercise honest in-window writes; C not quoted (D-20, §5)</td>
 </tr>
 <tr>
 <td>N6</td>
@@ -513,7 +519,7 @@ a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid va
 </tr>
 </tbody>
 </table>
-<h3>3b. With resolver ww_rebase/1 (opt-in; every resolution signed, verified, undoable) [Fact]</h3>
+<h3>3b. With resolver ww_rebase/1 (opt-in; every resolution signed and verified; undo ⚑ S4-34, see (d)) [Fact]</h3>
 <p>BENCH-S3 §"S4-13: F2+x before and after the resolver (D-18), H=6, T=40", column <code>system (resolver: ww_rebase/1 (on), after)</code>. Built S4-13 (vikram), reviewed PASS by kabir 21 Nov with a container rerun. Command: <code>ks bench --seeds 1-20 --faults F2+x --hold 6 --baselines system --ticks 40 --resolver-faults F2+x</code>.</p>
 <table>
 <thead>
@@ -565,7 +571,8 @@ a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid va
 - (a) Label <strong>"with resolver on"</strong> / <code>resolver: ww_rebase/1 (on)</code> (D-19, ADR-05a §7). The resolver is <strong>opt-in</strong>: off unless the run turns it on (<code>ks run --resolver ww_rebase/1</code>); every output names it. The default run is the 3a row.
 - (b) <strong>D-17:</strong> R = 0 holds <em>after the operator released</em> a median <strong>5 [1..9]</strong> held items, <strong>3 [0..7]</strong> honest and <strong>2 [1..2]</strong> tainted-lineage (items recovery re-ran and re-held; the bench approver releases them, X4). Never a bare R = 0.
 - (c) G1, G2, G3, G9: T = 40, 20 seeds, H = 6, container (<code>killswitch:kabir</code>, <code>--network none</code>, per-agent uids). Vikram's native macOS run gave the same table, but the allowed source is the container run.
-- (d) "Signed, verified, undoable" means: each resolution is one <code>ks.recover.resolve</code> record by <code>ks.recovery</code> with its rule and check ids as rationale; <code>ks verify</code> re-checks rule, order, binding and clean inputs (fails a forged or altered resolution with <code>resolution_invalid</code>); <code>ks recover RUN --unresolve &lt;plan_id&gt;.&lt;n&gt;</code> undoes it, is itself recorded, and raises the flag again (ADR-05a §1, §5; S4-13 review).
+- (d) ⚑ <strong>pending S4-34 (vikram): "undoable" is not unconditional.</strong> <code>ks recover --unresolve</code> is refused (<code>unresolve_blocked</code>) once any agent has touched the rebased row after the resolution; on live F2+x (seed 2, <code>--pause-on-alert</code>) billing reads rebased <code>suppliers:S-22</code> in the apply tick, so the undo is blocked at the first operator pause (PANEL-JURY-02 M8). Until S4-34 lands: do not write "undoable" without that condition; safe fact: an undo is offered and is refused, with the reason recorded, if a later action touched the row.
+  "Signed, verified" (and the undo, with the condition above) means: each resolution is one <code>ks.recover.resolve</code> record by <code>ks.recovery</code> with its rule and check ids as rationale; <code>ks verify</code> re-checks rule, order, binding and clean inputs (fails a forged or altered resolution with <code>resolution_invalid</code>); <code>ks recover RUN --unresolve &lt;plan_id&gt;.&lt;n&gt;</code> undoes it, is itself recorded, and raises the flag again (ADR-05a §1, §5; S4-13 review), <strong>only if no later action touched the row</strong>; otherwise <code>unresolve_blocked</code> (PANEL-JURY-02 M8, ⚑ S4-34).
 - (e) What it <strong>will not</strong> do (ADR-05a §1, §2a): it acts only on <code>write_write_conflict</code> flags that pass <strong>every</strong> check (single honest write after the suspect's, deterministic non-LLM writer, no tainted view read, clean base exists, not undone before). It <strong>refuses</strong> the suspect, every alert's <code>root_candidates[0]</code>, every evidence writer, every author of a taint origin, and LLM, system and suspended agents. Anything that fails a check, every other flag reason, every replan and every compensate <strong>waits for a human</strong>. It merges nothing by hand and invents no value.
 - (f) Known limits (THREAT-MODEL Errata, D-18 entry; ADR-05a §2a, §6): <strong>verify trusts the recorded value</strong>: it checks the resolution's rule, order, binding and clean inputs, not the re-computed value, which is trusted to <code>ks.recovery</code> (TCB). <strong>Collusion:</strong> a colluding agent outside the refused set that copies the culprit's value from its own process memory into its args would carry it into the rebased write (C3, no prevention claim). Built-in agents are deterministic and stateless; this is not tested with LLM agents (G5).
 - (g) Not on the list from this table: <code>collateral_stall</code>, <code>kept_without_redo</code>, <code>revert_precision</code>, <code>revert_recall</code> (same reasons as §1).</p>
@@ -605,9 +612,9 @@ a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid va
 </thead>
 <tbody>
 <tr>
-<td>Any <strong>F2+c</strong> value (BENCH-S3 shows C 0 [0..0], R 0 [0..1/6])</td>
-<td>⚑ Contradicts GUARDRAILS L8 (predicts C &gt; 0). Fixture or guardrail is wrong; not decided here</td>
-<td>anaya, S4-24</td>
+<td>Any <strong>F2+c</strong> value (C, <code>c_culprit_window</code>, R or any other row)</td>
+<td><strong>D-20:</strong> F2+c as built does not exercise honest in-window writes; C not quoted. Its C = 0 is by construction (GUARDRAILS L8), not evidence. Do not claim the C &gt; 0 case is measured. Fixture fix after the finale</td>
+<td>tara, S4-30</td>
 </tr>
 <tr>
 <td><strong>F3</strong> residual damage R = 1</td>
@@ -639,13 +646,18 @@ a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid va
 <h2>6. Notes for the self-check [Our view]</h2>
 <ul>
 <li>Every number of ours in the draft should map to an ID above. If it does not, cut it or ask.</li>
-<li>Tense: past tense ("measured") is fine <strong>only</strong> for values on this list, with G1–G3. Design parts (finale demo, jury break) stay future or design tense. The resolver is built and measured (S4-13, N18); past tense only with N18's conditions (a)–(f).</li>
+<li>Tense: past tense ("measured") is fine <strong>only</strong> for values on this list, with G1–G3. Design parts (finale demo, jury break) stay future or design tense. The resolver is built and measured (S4-13, N18); past tense only with N18's conditions (a)–(f); no unconditional "undoable" (⚑ S4-34).</li>
 <li>F2+x after the resolver (N18) never travels without the before row (N15) and the label "with resolver on".</li>
 <li>R = 0 without the release clause (N4) is the single most likely jury attack (JURY-QA Q13).</li>
 </ul>
 <h2>Changes (S4-11, anaya, 21 Nov)</h2>
 <ul>
 <li>§3 split into 3a (before resolver, N15, unchanged values; operator releases added from the same column) and 3b (with resolver ww_rebase/1, N18, from BENCH-S3 §S4-13, container). §5 row "F2+x after resolver: does not exist yet" removed. §6 tense note updated.</li>
+</ul>
+<h2>Changes (S4-24, anaya, 21 Nov; D-20)</h2>
+<ul>
+<li>§5 F2+c row: D-20 label "does not exercise honest in-window writes; C not quoted"; no F2+c value is allowed. N5 note updated. No allowed number relied on F2+c's C (N5 is hero F2+), so none removed.</li>
+<li>§3b heading and N18 (d): "undoable" ⚑ pending S4-34 (PANEL-JURY-02 M8): unresolve is blocked once a later action touched the rebased row, which happens live in the apply tick. §6 tense note updated.</li>
 </ul></section><section id="skeleton" role="tabpanel" hidden><h1>SKELETON: abstract outline for Aarav to fill in (ABS-06)</h1>
 <p>zoya · 19 Nov 2026 · v3 (CALL-02 freeze) · Inputs: FACT-CARD.md (ABS-01), GUARDRAILS.md v4 (ABS-02), TERMS.md v2 (ABS-04), CALL-01.md D1/D2/D3/D12/D13, CALL-02.md (hero decision, revised D13 meaning, S*), CALL-01/zoya.md §2, research/RES-08.md (headline, ref [19]).</p>
 <p><strong>What this is.</strong> Headings, word budgets and note-form points only. No line here is a sentence to paste; Aarav writes every word (CHARTER).
@@ -839,7 +851,7 @@ Guard: ✗ triage "flagged" / "conflict" in the hero; the conflict case is bench
 </ul>
 <p>Guard: TTI/TTC in ticks only (ALLOWED N1–N3); no seconds [§1.5 · X21]
 Guard: alongside containment-style metrics, not instead; no second Airlock name [W1 · D3]
-Guard: "measured" only for ALLOWED-NUMBERS values with T=40 + 20 seeds; ✗ bare R = 0 (D-17); ✗ any F2+c value (⚑ S4-24) [D-19 · X21]
+Guard: "measured" only for ALLOWED-NUMBERS values with T=40 + 20 seeds; ✗ bare R = 0 (D-17); ✗ any F2+c value (D-20: does not exercise honest in-window writes; C not quoted) · ✗ bare "undoable" for the resolver (⚑ S4-34) [D-19 · X21]
 Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" for S* [§1.5 D13 row · W1]</p>
 <h3>3c. Path to banking (40)</h3>
 <ul>
@@ -1158,8 +1170,8 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 </tr>
 <tr>
 <td>L8</td>
-<td><strong>F2+c honesty note.</strong> Hero C = 0 holds only because crm writes nothing else between fault and suspension (per-seed precondition, guard test). In bench F2+c crm does honest work in that window: it is reverted, collateral loss C &gt; 0, reported, not hidden. <strong>⚑ Pending S4-24 (anaya):</strong> BENCH-S3 F2+c system shows C 0 [0..0], <code>c_culprit_window</code> 0 [0..0], R 0 [0..1/6], which contradicts this row. Fixture or guardrail is wrong; not decided here. Until S4-24 closes: cite no F2+c value and do not state this limit with a number</td>
-<td>CALL-02 X3b, X3c; anaya dissent note; BENCH-S3 §F2+c</td>
+<td><strong>F2+c honesty note (corrected S4-24, anaya, 21 Nov; D-20: F2+c as built does not exercise honest in-window writes; C not quoted).</strong> Hero C = 0 holds only because crm writes nothing else between fault and suspension (per-seed precondition, guard test). The case "crm works honestly in that window, its work is reverted, C &gt; 0" is <strong>not measured</strong>: bench F2+c does not exercise it. Reason (records, seeds 1..20, T=40, H=6): the monitor suspends crm at t_inject+2 on 19/20 seeds (s7: at t_inject, window empty), so the window (t_inject+1, suspend] is the suspend tick only; crm's one honest action there lands in the same tick, but the mirrored S* (CALL-02 X3a) stops crm from the suspend tick, so S* never has that write: it falls in B (reverted, counted in R if left), never in G. On 11/20 seeds that action changes nothing (empty write set); on 8/20 it writes one customer row. Hence C 0 and <code>c_culprit_window</code> 0 by construction, not a measurement. Fixture fix: S4-30 (tara), after the finale (D-20). Until S4-30 closes: cite no F2+c value, do not claim C &gt; 0 is measured, do not state this limit with a number</td>
+<td>CALL-02 X3a, X3b, X3c; anaya dissent note; BENCH-S3 §F2+c; S4-24 finding</td>
 </tr>
 <tr>
 <td>L9</td>
@@ -1202,7 +1214,7 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <tr>
 <td>collateral loss C</td>
 <td>|G lost| / |G|; the culprit's reverted in-window work is reported separately (<code>c_culprit_window</code>)</td>
-<td>F2+ measured 0 [0..0], hero only (N5); F2+x 21/254 before resolver (N15); F2+c ⚑ S4-24, cite nothing</td>
+<td>F2+ measured 0 [0..0], hero only (N5); F2+x 21/254 before resolver (N15); F2+c: does not exercise honest in-window writes; C not quoted (D-20), cite nothing</td>
 </tr>
 <tr>
 <td>clean recovery</td>
@@ -1232,7 +1244,7 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <tr>
 <td>protocol</td>
 <td>≥20 seeded runs; median, p95, max; snapshot and revert-culprit-only baselines (both <strong>oracle-assisted</strong>: given t0) and no-op; hold 0 vs &gt;0; collateral stall reported apart from collateral loss; F2+x and F2+c on the bench</td>
-<td><strong>done</strong> at T=40, seeds 1..20 (BENCH-S3). T=120 rerun not done (S4-14)</td>
+<td><strong>done</strong> at T=40, seeds 1..20 (BENCH-S3); F2+c does not exercise honest in-window writes, C not quoted (D-20, S4-30). T=120 rerun not done (S4-14)</td>
 </tr>
 </tbody>
 </table>
@@ -1605,7 +1617,16 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <li>F11: hero has no cancel (B2-a): re-run under the same <code>outbox:&lt;id&gt;</code> v+1, re-held, operator unhold.</li>
 <li>F13: red-team pass values stay targets until REDTEAM-S4.</li>
 <li>L8: ⚑ pending S4-24 (anaya): BENCH-S3 F2+c shows C = 0; not decided here; cite no F2+c value.</li>
+</ul>
+<h2>Changes (S4-24, anaya, 21 Nov)</h2>
+<ul>
+<li>L8 corrected: bench F2+c C = 0 is by construction (suspend at t_inject+2, mirrored S* drops crm from the suspend tick), not a measurement; the C &gt; 0 case is not measured. Fixture fix opened as S4-30 (tara).</li>
 <li>L9: adds measured C 21/254 and 29 held honest items to R 1/5, labelled "before resolver" (D-18).</li>
+</ul>
+<h2>Changes (S4-24, anaya, 21 Nov; D-20)</h2>
+<ul>
+<li>L8 and §1.5 C row: D-20 label "F2+c as built does not exercise honest in-window writes; C not quoted"; fixture fix S4-30 after the finale.</li>
+<li>Resolver "undoable" ⚑ pending S4-34 (PANEL-JURY-02 M8): use only with "if no later action touched the row" (ALLOWED-NUMBERS N18 (d)).</li>
 </ul></section><section id="terms" role="tabpanel" hidden><h1>TERMS: one name per concept (ABS-04; updated for the design freeze in ABS-08)</h1>
 <p>Owner: zoya · Reviewer: maya · 19 Nov 2026 · v2 · Inputs: CALL-01.md, contracts 1.1.0 (<code>src/ks/contracts</code>), ABS-04 review (maya), CALL-02.md + CALL-02/resolutions.md (v1.1.0 changes), CALL-02/anaya.md §2–4, SYNTHESIS §4/§6, PANEL-ENG-00, RES-02.</p>
 <p><strong>Rule.</strong> The abstract, diagram, demo narration, incident-console labels and code use the left-hand term and nothing else. If a banned synonym appears in a draft, reviewers flag it. Glosses are written for a banking reader and are at most 15 words. They are glosses, not abstract sentences: Aarav writes his own (CHARTER). Code names come from the frozen contracts 1.1.0 (<code>src/ks/contracts</code>), with CALL-02/resolutions.md ids for the v1.1 changes (marked <strong>v1.1</strong> with the resolution id). <code>⚠</code> marks a gap still open (see §7).</p>
@@ -2121,8 +2142,8 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 </tr>
 <tr>
 <td><strong>culprit-work variant (F2+c)</strong></td>
-<td>Bench variant: crm also does honest work before suspension, so collateral loss C &gt; 0.</td>
-<td>fault <code>F2+c</code>; <code>test_culprit_honest_write_in_C</code>; golden C = {n,d} &gt; 0, reported (X3c). ⚑ Pending S4-24: BENCH-S3 F2+c shows C 0 [0..0]; gloss not changed until anaya decides</td>
+<td>Bench variant meant to have crm do honest work before suspension (C &gt; 0 by design).</td>
+<td>fault <code>F2+c</code>; <code>test_culprit_honest_write_in_C</code>; golden C = {n,d} &gt; 0, reported (X3c). <strong>D-20: as built it does not exercise honest in-window writes; C not quoted</strong> (C 0 is by construction, GUARDRAILS L8); fixture fix S4-30 after the finale</td>
 <td>edge case, corner case</td>
 </tr>
 <tr>
@@ -2303,7 +2324,7 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <ul>
 <li><strong>TM scope (agent side):</strong> <strong>in</strong> (rogue: TOCTOU flood, replay into outbox, persistence after suspend; colluding: laundering). <strong>No claim:</strong> splitting under thresholds (THREAT-MODEL §5, "no RT, no claim"); covert channels <strong>out</strong>.</li>
 <li><strong>Evidence (agent racing it):</strong> F6, C5 · D8 · rules 4, 5 (epoch and deny-list in the write transaction; dispatcher re-checks holds) · RT5, RT4 (outbox variant), RT12, RT10 (dispatch re-check race hook), RT9 (laundered value held) · T§3 (lineage hold, sensitive field: early hold) · CALL-01 §2 "Early hold".</li>
-<li><strong>Evidence (us tuning it):</strong> D10 (one config value) · BENCH-S3 F2+ H=0 system: R 0, irreversible released 0 (lineage hold stays on at H=0; ALLOWED N16) · D10 contrast, lineage hold off + pause with no recovery: 12 [6..18] payments escaped, &gt;0 on 20/20 seeds (N17, "contrast, not a security result") · §1.5 protocol row · SYN §6 (≥20 seeded runs; median, p95, max; snapshot, revert-culprit-only, no-op baselines; collateral stall and false-positive cost) · T§7 gap 5 (hold value in the run-dir config so the scorer sees it).</li>
+<li><strong>Evidence (us tuning it):</strong> D10 (one config value) · BENCH-S3 F2+ H=0 system: R 0, irreversible released 0, after operator releases 2 [1..2] (0 honest) (D-17; lineage hold stays on at H=0; T=40; ALLOWED N16) · D10 contrast, lineage hold off + pause with no recovery: 12 [6..18] payments escaped, &gt;0 on 20/20 seeds (N17, "contrast, not a security result") · §1.5 protocol row · SYN §6 (≥20 seeded runs; median, p95, max; snapshot, revert-culprit-only, no-op baselines; collateral stall and false-positive cost) · T§7 gap 5 (hold value in the run-dir config so the scorer sees it).</li>
 <li><strong>Key distinction:</strong> Holds follow recorded reads; hold zero shown and scored too.</li>
 <li><strong>Traps:</strong></li>
 <li>Holding effects released <strong>before</strong> the alert: not held; at hold 0 scored as residual damage (C5 refuse column; F6).</li>
@@ -2339,7 +2360,7 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <li>Overclaiming conflict handling: a write-write conflict is <strong>flagged</strong>, not merged (T§4; F9).</li>
 <li>Hero conflict line (CALL-02): triage's edit on the same supplier is <strong>kept</strong>, no flag; the IBAN is its own field object, so they share no datum (W6; CALL-02 B1–B3). Do not call it a conflict.</li>
 <li>"So you never get a conflict?": an honest one exists in bench <strong>F2+x</strong> (triage edits the price row crm wrote → row-level write-write conflict → flag). Give <strong>both rows</strong> (D-18, CALL-04 decision 2; FACT-CARD O5/O6; ALLOWED N15/N18), medians over 20 seeds, T=40, H=6, container. <strong>Before resolver</strong> (default, resolver off): R 1/5, C 21/254, 29 honest items held; the flag waits for a human because the bench approver never resolves flags. <strong>With resolver ww_rebase/1 (on)</strong>: R 0, C 0, 3 honest items held, after the operator released 5 items (3 honest, 2 tainted-lineage re-run and re-held; D-17); 1 resolution on 19/20 seeds (s7 had no conflict); verify OK on all 40 runs; hero unchanged off/on. Quote all three values per row and both rows together. Show it, do not hide it (L9; CALL-02 B5). Conflicts are field-level only for sensitive fields, row-level elsewhere (F9).</li>
-<li>"So the resolver auto-merges conflicts?": no. It is opt-in, and it rebases one honest deterministic write on the last clean version as one signed record that <code>ks verify</code> checks and <code>ks recover --unresolve</code> undoes (ADR-05a §1, §5). It <strong>refuses</strong> the suspect, every alert's <code>root_candidates[0]</code>, evidence writers, taint-origin (seed) writers, and LLM, system and suspended agents; anything that fails a check waits for a human (ADR-05a §1, §2a). Nothing is merged by hand, no value invented.</li>
+<li>"So the resolver auto-merges conflicts?": no. It is opt-in, and it rebases one honest deterministic write on the last clean version as one signed record that <code>ks verify</code> checks and <code>ks recover --unresolve</code> undoes <strong>if no later action touched the row</strong> (ADR-05a §1, §5; ⚑ S4-34: live F2+x blocks it at the first pause, PANEL-JURY-02 M8, so never say "undoable" bare). It <strong>refuses</strong> the suspect, every alert's <code>root_candidates[0]</code>, evidence writers, taint-origin (seed) writers, and LLM, system and suspended agents; anything that fails a check waits for a human (ADR-05a §1, §2a). Nothing is merged by hand, no value invented.</li>
 <li>"Can a compromised resolver or a colluder slip a bad value through?": known limits, stated as such (THREAT-MODEL Errata, D-18 entry): verify checks the resolution's rule, order, binding and clean inputs, <strong>not the re-computed value</strong> (trusted to <code>ks.recovery</code>, TCB); a colluder outside the refused set that copies the culprit's value from its own memory into its args would carry it into the rebased write (C3, no prevention claim). Post-finale: <code>ks verify --reexec-resolutions</code> (design, not built).</li>
 </ul>
 <h2>Q11. "Any real incident where this happened? Would this have stopped the METR / OpenAI–Hugging Face case?"</h2>
@@ -2372,7 +2393,7 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 </ul>
 <h2>Q13. "Is R = 0 just the operator releasing things by hand?"</h2>
 <ul>
-<li><strong>Evidence:</strong> ALLOWED-NUMBERS N4, N10 · BENCH-S3 §F2+ H=6 rows <code>fp_cost.operator_unholds.total/.honest/.tainted</code>, <code>fp_cost.held_honest_actions</code> · D-17 (CALL-02 resolutions B2-b) · TERMS §5 clean recovery · scripts/demo.sh line 5 (unhold step) · FACT-CARD O1–O2 (demo seed 2: 9 released, 7 honest).</li>
+<li><strong>Evidence:</strong> ALLOWED-NUMBERS N4, N10 · BENCH-S3 §F2+ H=6 rows <code>fp_cost.operator_unholds.total/.honest/.tainted</code>, <code>fp_cost.held_honest_actions</code> · D-17 (CALL-02 resolutions B2-b) · TERMS §5 clean recovery · scripts/demo.sh line 5 (unhold step) · FACT-CARD O1–O2 (bench F2+ H=6 seed 2, T=40: 9 released, 7 honest).</li>
 <li><strong>Key distinction:</strong> Releases are logged decisions; R still counts anything held at T.</li>
 <li><strong>Notes:</strong></li>
 <li>F2+ medians: 5 released [1..9] = 3 honest [0..7] + 2 tainted-lineage [1..2]. Tainted-lineage = payments recovery re-ran and re-held; they leave with clean payloads.</li>
@@ -2382,7 +2403,7 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <li>Bare R = 0 anywhere (D-17).</li>
 <li>Calling the releases automatic: they are operator <code>ks contain unhold</code> steps.</li>
 <li>Calling released tainted-lineage items "tainted payments sent": the payloads were re-run and clean.</li>
-<li>[Our view, gap] The console scorecard does not yet show release counts (S4-19); point to score.json until it does.</li>
+<li>Release counts are on the console scorecard (S4-19, <code>src/ks/console/model.py</code>): "operator released N held item(s): M honest, K tainted (recovery re-holds); honest actions held: H"; for demo seed 2 it reads 9 / 7 / 2, held 7 (REDTEAM-S4 K8).</li>
 </ul>
 <hr />
 <h2>Also likely (one-line pointers, no full entry)</h2>
@@ -2449,6 +2470,11 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <h2>Changes (S4-11, anaya, 21 Nov; D-18, D-17)</h2>
 <ul>
 <li>Q10: F2+x now gives the before-resolver row (N15) and the with-resolver ww_rebase/1 row (N18, BENCH-S3 §S4-13, container), plus two traps: what the resolver will not do, and its known limits (collusion; verify trusts the recorded value).</li>
+</ul>
+<h2>Changes (S4-24, anaya, 21 Nov; D-20)</h2>
+<ul>
+<li>Q10 trap: resolver undo carries its condition (⚑ S4-34, PANEL-JURY-02 M8).</li>
+<li>New trap for any "what about the culprit's own honest work?" question: F2+c as built does not exercise honest in-window writes; C not quoted (D-20, GUARDRAILS L8). Hero C = 0 holds only because crm writes nothing else before suspension (N5). Do not claim C &gt; 0 is measured. Fixture fix after the finale (S4-30).</li>
 </ul></section></main>
 <script>{const bs=[...document.querySelectorAll('nav button')];
 function show(id,push){bs.forEach(b=>{const on=b.getAttribute('aria-controls')===id;b.setAttribute('aria-selected',on);document.getElementById(b.getAttribute('aria-controls')).hidden=!on});if(push)history.replaceState(null,'','#'+id);window.scrollTo(0,0)}

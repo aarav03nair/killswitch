@@ -66,7 +66,7 @@ Owner: zoya · Reviewer: panel · 19 Nov 2026 · Inputs: abstract/FACT-CARD.md (
 | L5 | Key isolation: "enforced in production (uid/container), detected here by reconciliation" | C2; CALL-01 key isolation; Maya's recorded dissent |
 | L6 | Finale agents are deterministic; one LLM agent is a stretch goal | D9 |
 | L7 | Scale: about 10 agents, single host, tick barrier (logical clock) | RES-11 §3 "Us" column; CALL-01 determinism |
-| L8 | **F2+c honesty note.** Hero C = 0 holds only because crm writes nothing else between fault and suspension (per-seed precondition, guard test). In bench F2+c crm does honest work in that window: it is reverted, collateral loss C > 0, reported, not hidden. **⚑ Pending S4-24 (anaya):** BENCH-S3 F2+c system shows C 0 [0..0], `c_culprit_window` 0 [0..0], R 0 [0..1/6], which contradicts this row. Fixture or guardrail is wrong; not decided here. Until S4-24 closes: cite no F2+c value and do not state this limit with a number | CALL-02 X3b, X3c; anaya dissent note; BENCH-S3 §F2+c |
+| L8 | **F2+c honesty note (corrected S4-24, anaya, 21 Nov; D-20: F2+c as built does not exercise honest in-window writes; C not quoted).** Hero C = 0 holds only because crm writes nothing else between fault and suspension (per-seed precondition, guard test). The case "crm works honestly in that window, its work is reverted, C > 0" is **not measured**: bench F2+c does not exercise it. Reason (records, seeds 1..20, T=40, H=6): the monitor suspends crm at t_inject+2 on 19/20 seeds (s7: at t_inject, window empty), so the window (t_inject+1, suspend] is the suspend tick only; crm's one honest action there lands in the same tick, but the mirrored S\* (CALL-02 X3a) stops crm from the suspend tick, so S\* never has that write: it falls in B (reverted, counted in R if left), never in G. On 11/20 seeds that action changes nothing (empty write set); on 8/20 it writes one customer row. Hence C 0 and `c_culprit_window` 0 by construction, not a measurement. Fixture fix: S4-30 (tara), after the finale (D-20). Until S4-30 closes: cite no F2+c value, do not claim C > 0 is measured, do not state this limit with a number | CALL-02 X3a, X3b, X3c; anaya dissent note; BENCH-S3 §F2+c; S4-24 finding |
 | L9 | **F2+x honesty note.** In bench F2+x triage edits the non-sensitive row crm wrote (the ×10 price) → write-write conflict → flag, unresolved because the bench approver never resolves flags. Measured, **before resolver** (D-18 not built; values may change): residual damage R 1/5, collateral loss C 21/254, 29 honest items held (medians, ALLOWED N15). Quote all three together; this is the honest conflict case, show it if asked (JURY-QA Q10) | CALL-02 B5; BENCH-S3 §F2+x + Reading notes; CALL-04 D-18 |
 
 ### 1.5 Our numbers: definitions, measured values (D-19) and remaining targets
@@ -79,13 +79,13 @@ v5: D-19 (Aarav, CALL-04) lets the abstract cite measured BENCH-S3 values. The v
 | t0 | Oracle time of the first bad effect (never before the fault tick) | definition only |
 | B / G | Fixed at recovery start: faulty-run effects absent or different in S\* / effects that match S\* (including the culprit's honest ones) | definition only |
 | residual damage R | \|B left\| / \|B\| at run end; items still held at T and unresolved flags count as left | F2+ measured 0 [0..0] **with** D-17 release clause (N4); F2+x 1/5 before resolver (N15) |
-| collateral loss C | \|G lost\| / \|G\|; the culprit's reverted in-window work is reported separately (`c_culprit_window`) | F2+ measured 0 [0..0], hero only (N5); F2+x 21/254 before resolver (N15); F2+c ⚑ S4-24, cite nothing |
+| collateral loss C | \|G lost\| / \|G\|; the culprit's reverted in-window work is reported separately (`c_culprit_window`) | F2+ measured 0 [0..0], hero only (N5); F2+x 21/254 before resolver (N15); F2+c: does not exercise honest in-window writes; C not quoted (D-20), cite nothing |
 | clean recovery | R = 0 and C = 0 in the same run, every invariant holding at run end | F2+ only, with D-17 clause; never for F2+x |
 | post-alert tainted effects | Bad effects by any agent after the alert, counted from the ledger (score key `post_alert_tainted_effects`) | F2+ measured 0 [0..0] (N6) |
 | irreversible tainted effects released | Bad payments or emails that actually left (score key `irreversible_tainted_released`) | F2+ measured 0 [0..0] at H=6 (N7) and H=0 with lineage hold on (N16); D10 contrast only as N17 |
 | re-emitted effects | Effects sent twice by re-runs | F2+ measured 0 [0..0] (N8) |
 | TTI-detect / TTI-attribute / TTC | t0 → first alert / alert → correct agent + first bad action / alert → first denied culprit envelope | F2+ measured in **ticks**: TTI-detect 2 [0..2], TTI-attribute 0, TTC 1 (N1–N3); **no seconds** |
-| protocol | ≥20 seeded runs; median, p95, max; snapshot and revert-culprit-only baselines (both **oracle-assisted**: given t0) and no-op; hold 0 vs >0; collateral stall reported apart from collateral loss; F2+x and F2+c on the bench | **done** at T=40, seeds 1..20 (BENCH-S3). T=120 rerun not done (S4-14) |
+| protocol | ≥20 seeded runs; median, p95, max; snapshot and revert-culprit-only baselines (both **oracle-assisted**: given t0) and no-op; hold 0 vs >0; collateral stall reported apart from collateral loss; F2+x and F2+c on the bench | **done** at T=40, seeds 1..20 (BENCH-S3); F2+c does not exercise honest in-window writes, C not quoted (D-20, S4-30). T=120 rerun not done (S4-14) |
 
 Write "residual damage R" and "collateral loss C" in full on first use, so they are not confused with class R and class C (TERMS §5).
 
@@ -205,4 +205,13 @@ Write "residual damage R" and "collateral loss C" in full on first use, so they 
 - F11: hero has no cancel (B2-a): re-run under the same `outbox:<id>` v+1, re-held, operator unhold.
 - F13: red-team pass values stay targets until REDTEAM-S4.
 - L8: ⚑ pending S4-24 (anaya): BENCH-S3 F2+c shows C = 0; not decided here; cite no F2+c value.
+
+## Changes (S4-24, anaya, 21 Nov)
+
+- L8 corrected: bench F2+c C = 0 is by construction (suspend at t_inject+2, mirrored S\* drops crm from the suspend tick), not a measurement; the C > 0 case is not measured. Fixture fix opened as S4-30 (tara).
 - L9: adds measured C 21/254 and 29 held honest items to R 1/5, labelled "before resolver" (D-18).
+
+## Changes (S4-24, anaya, 21 Nov; D-20)
+
+- L8 and §1.5 C row: D-20 label "F2+c as built does not exercise honest in-window writes; C not quoted"; fixture fix S4-30 after the finale.
+- Resolver "undoable" ⚑ pending S4-34 (PANEL-JURY-02 M8): use only with "if no later action touched the row" (ALLOWED-NUMBERS N18 (d)).

@@ -1,0 +1,41 @@
+{
+  "id": "S4-30",
+  "title": "F2+c fixture: make crm's honest in-window write land strictly before the suspend tick",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "tara",
+  "reviewer": "vikram",
+  "model": "sonnet",
+  "created_by": "anaya",
+  "status": "todo",
+  "outcome": "Bench F2+c actually exercises CALL-02 X3c (culprit honest work reverted, counted in C and c_culprit_window)",
+  "acceptance": [
+    "On seeds 1..20 (T=40, H=6) crm lands >=1 non-empty honest write at a tick in [t_inject+2, suspend_tick-1], checked from record.jsonl write_set (no-op upserts do not count)",
+    "Bench F2+c system shows c_culprit_window > 0 on those seeds, or a written reason why not; BENCH-S3 F2+c table rerun",
+    "check_hero_guard f2plus_c branch counts only non-empty writes strictly before the suspend tick; ADR-06-metrics line 56 expectation updated if the mechanism changes",
+    "Fault, detectors and TCB unchanged (no fault_tick in TCB, X3); the fix is in the honest world schedule (agents.py), e.g. honest crm writes that change a value; design choice is tara's"
+  ],
+  "depends": [
+    "S4-24"
+  ],
+  "deliverable": "src/ks/world/agents.py",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "21 Nov 06:52",
+      "who": "anaya",
+      "msg": "opened"
+    },
+    {
+      "t": "21 Nov 06:52",
+      "who": "anaya",
+      "msg": "Feasibility note (anaya): crm has one action per tick and its bad writes take t_inject and t_inject+1; the monitor suspends at t_inject+2 (s7: at t_inject). So with the current F2+/ADR-06 fault schedule no honest crm write can land before the suspend tick. Options for tara (design is yours; any change to the F2+c variant definition in ADR-06 needs maya/vikram sign-off): (a) F2+c spreads the bad writes (e.g. honest crm writes between IBAN and x10) if detection still allows it, (b) honest writes that precede the IBAN but are scored in-window, or (c) report F2+c as structurally unexercisable under current detectors and drop the C>0 expectation (ADR-06 line 37, metrics line 56). Option (c) is an acceptable outcome of this issue."
+    },
+    {
+      "t": "21 Nov 09:30",
+      "who": "pmo",
+      "msg": "→ todo: D-20 (Aarav): disclose F2+c now, fix after the finale. Not before the freeze."
+    }
+  ]
+}

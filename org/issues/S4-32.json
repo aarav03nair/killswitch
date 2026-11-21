@@ -1,0 +1,41 @@
+{
+  "id": "S4-32",
+  "title": "verify prints 'consistent, not anchored (no_anchor)' and 'last witnessed seq 0' on TAMPER/RECONCILE even with --head",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "arjun",
+  "reviewer": "panel",
+  "model": "sonnet",
+  "created_by": "panel",
+  "status": "in_review",
+  "outcome": "the Audit beat's verify line matches C1 wording on failure",
+  "acceptance": [
+    "With --head on a failing run: no 'consistent', unanchored_reason is not no_anchor, last_witnessed_seq real or omitted; demo-sim Audit TAMPER line equals real output; tests for TAMPER, WITNESS, RECONCILE with and without --head"
+  ],
+  "depends": [],
+  "deliverable": "src/ks/verify/core.py",
+  "summary": "Failing verify now prints 'X reason at seq N; NOT VERIFIED (...)' with witnessed seq only if real; JSON unanchored_reason=verify_failed (new additive literal in C6 VerifyReport, schema regenerated, CONTRACTS_VERSION not bumped: kabir to decide); demo-sim line updated; test in tests/skeleton/test_tamper.py (TAMPER, WITNESS, +/- head). RECONCILE covered in S4-33 tests.",
+  "review": "",
+  "log": [
+    {
+      "t": "21 Nov 07:08",
+      "who": "panel",
+      "msg": "opened"
+    },
+    {
+      "t": "21 Nov 09:31",
+      "who": "arjun",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "21 Nov 10:03",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 10:19",
+      "who": "arjun",
+      "msg": "→ in_review: ready"
+    }
+  ]
+}

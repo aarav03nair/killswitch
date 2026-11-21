@@ -73,3 +73,75 @@ The claim defended is C6. RT15 runs **in process** (`tests/recovery/world.py`: r
 | Each kills ≥1 `tests/redteam` test in the container | table above: 12/12 killed, 0 skipped |
 | A survivor gets an RT test that kills it | RT3d (M11), RT15 (M12) |
 | Main tree never mutated; image tag `killswitch:kabir` | snapshot in a temp dir; `IMAGE` default |
+
+---
+
+# S4-23: claim audit of README, demo-sim, console and the Kit number files
+
+Owner: kabir · 21 Nov · HEAD `1b9a743` (+ working tree) · Reviewer: panel (jury dry run #2 runs concurrently from a clone; nothing here depends on it)
+
+**Scope.** `README.md`, `board/demo-sim.html`, the incident console (`ks console --html`, rendered from two real container runs: hero `runs/finale-hero-s2-20261121-064305` and F2+x `runs/finale-f2x-s2-20261121-064305`, both `ks run --resolver ww_rebase/1`, T=40 in config.json, verify OK, `per_agent_uid`), `abstract/ALLOWED-NUMBERS.md`, `abstract/FACT-CARD.md` (own-number rows O1–O6), `abstract/JURY-QA.md`. Not re-run: a new `make demo` (a demo container was live during the audit; one `ks run` per machine, K2).
+
+**Method.** Every number of ours was matched against a cell in `org/reports/BENCH-S3.md` or a named score.json. Then I checked each one for: T=40 stated, container stated, D-17 clause next to every R = 0, and the resolver label (opt-in `ww_rebase/1`) on every after-row value. I grepped for `never|proof|prove|provable|first|guarantee|tamper-proof|impossible|unforgeable|immutable` in all six files and in the rendered console strings.
+
+## Result
+
+**[Fact]** Every number traces to a BENCH-S3 cell or a named score.json except FACT-CARD seed 0 (finding K4). No unrefuted overclaim word was found. Fixed in place (one word each): "container" added to the README bench sentence and to the demo-sim banner. Open: 8 findings, listed below. None changes a value. Four of them need an owner other than me (Kit files and console code).
+
+## Trace table
+
+| Surface | Numbers checked | Source matched | T=40 | Container | D-17 at R = 0 | Resolver label |
+|---|---|---|---|---|---|---|
+| README "Expected end of output" (seed 2) | verify seq 223; tti 2/0, ttc 1; R 0/9, C 0/265, kept 263/265; 0 post-alert, 0 irreversible, 0 reemitted | `runs/bench-b3-33/F2p/h6/system/s2/score.json`; `runs/hero-s2-20261120-092934.verify.txt`; same in finale-hero score.json | yes (step 3) | yes (step 2) | R shown as raw score.json output; release counts in the beat table ("2 re-held + 7") | **no** (K2) |
+| README beat table (seed 2) | tti 2, ttc 1, 2 + 7 releases, R n=0, C n=0 | same score.json (`operator_unholds` 9 = 7 honest + 2 tainted) | via section | yes | the "score.json" row says R n=0 with the releases one row up (K3, minor) | no (K2) |
+| README bench paragraph | R 0 after 5 [..9] releases (3 honest, 2 tainted), C 0, reemitted 0, tti 2, ttc 1; F2+x R 1/5, 29 held, RCO 27 | BENCH-S3 §F2+ H=6 system; §F2+x H=6 system and RCO | yes | **fixed** (added "container") | yes | **no**: F2+x has no "before resolver" label, no after-row, no C (K1) |
+| README setup times 47 s / 15 s | not a system claim | S4-02 log (ishaan run, OrbStack arm64) | n/a | n/a | n/a | n/a |
+| demo-sim banner, beats, terminal, scorecard | t_inject 11, t_alert 13, seqs 45/52/53/59/60/63/64/65/66, tti 2/0, ttc 1, 7 held, 9 releases (7 + 2), R 0/9, C 0/265, kept 263/265, verify seq 223; bench 1 [1..1], 5 [1..9] (3, 2), R 3/5 [0..7/9], C 34/263, post-alert 1 [0..1]; contrast 12 [6..18], 0 [0..0] | HTML `SRC` comments, all checked: bench-b3-33 s2 score.json, hero-s2-20261120-092934 record/dry/apply/verify, BENCH-S3 §F2+ H=6, §CONTRAST F2+ H=0. `ks blame` lines re-run by me on finale-hero: identical | yes | **fixed** (banner); terminal says per-agent uids | yes: terminal, scorecard row, narration | blame beat says "(resolver on)"; hero results are identical off/on (BENCH-S3 §S4-13) |
+| Console, hero run | tti 2/0, ttc 1, R 0/9, C 0/265, irreversible 0; releases 9 (7 honest, 2 tainted); held honest 7 | finale-hero score.json = bench-b3-33 s2 cell for cell | **no** (K5) | implicit: `isolation=per_agent_uid` validity line | yes: release line printed under the scorecard | yes: banner `resolver: ww_rebase/1 (on)` |
+| Console, F2+x run | same values; plan step 1 `resolve suppliers:S-22 (ww_rebase/1) … undo: ks recover RUN --unresolve p-000066.1` | finale-f2x score.json = `runs/bench-s4-13-ctr/F2px/h6/system+resolver/s2/score.json` cell for cell | **no** (K5) | implicit, as above | yes | yes |
+| ALLOWED-NUMBERS N1–N18 | every cell | BENCH-S3 §F2+, §F2+x, §F2+ H=0, §CONTRAST, §S4-13: all match | yes (G1) | yes (G9; N18 (c)) | yes (N4, N18 (b), N16 states its 2 releases) | yes (3b (a)) |
+| FACT-CARD O1–O4 | seeds 1 and 2: R 0/5, 0/9; releases 2+3, 2+7; held 3/7; stall 0/382, 0/381; tti 2, ttc 1 | bench-b3-33 s1 and s2 score.json: match | **no** in the O header (K4) | yes ("real container runs") | yes (O1) | n/a (pre-resolver runs) |
+| FACT-CARD O5/O6 | before and after rows | BENCH-S3 §S4-13: match | yes | yes | yes | yes |
+| JURY-QA Q8, Q10, Q13 | Q8 3 [0..7] held, 5 releases, H=0 R 0, contrast 12 [6..18]; Q10 both F2+x rows; Q13 5 [1..9] = 3 + 2 | BENCH-S3: match | yes (standing rule; Q10 inline) | yes (Q10 inline) | **Q8 no** (K6); Q10, Q13 yes | Q10 yes |
+
+## Word grep
+
+**[Fact]** Every hit is one of four kinds:
+- a refutation or trap ("Tamper-proof" X15, "Impossible" Q5, "Guarantees" Q1, "first" X1/X5, "never a bare R = 0");
+- a usage rule ("never seconds", "never quote");
+- a narrower claim ("detects, never prevents", "never cancel");
+- ordinary English ("read first", "first bad seq", "the approver never resolves flags", "repro … never anchored").
+
+Two hits need a note:
+- **Console `live proof: ks verify RUN --head ANCHOR`** (`src/ks/console/model.py:459`, shown in every console audit beat). "Proof" overclaims an anchored verify. THREAT-MODEL C1 calls it a check of tamper evidence up to the last witnessed head. Finding K7.
+- **demo-sim "A juror edits any line; verify with --head … catches it"**. This is true for the seed-2 run: the last witnessed seq is 223 and so is the last record, so 0 records are unwitnessed. The same sentence also states the boundary in THREAT-MODEL wording. [Our view] It is acceptable on stage only for a run whose console shows no "[unwitnessed]" records. Do not repeat it for a run that has them.
+
+The THREAT-MODEL phrase "tamper-evident up to the last witnessed head" appears verbatim in the README, demo-sim and the console audit beat.
+
+## Findings (open; none changes a value)
+
+| # | Where | Finding | Fix (proposed) | Owner |
+|---|---|---|---|---|
+| K1 | README.md line 98–100 | The F2+x sentence gives only the **before** row: R 1/5 and 29 held. It has no "before resolver" label, no C (21/254), and no after-row (R 0, C 0, 3 held, after 5 releases; resolver ww_rebase/1 on, opt-in). This breaks D-18 (both rows), ALLOWED §3 (R, C and held together) and D-19 (label). A juror reading only the README sees F2+x as unsolved, or, if told otherwise orally, sees a hidden row | Replace with the two O5/O6 rows from FACT-CARD, each with its label, and add "medians over 20 seeds" | ishaan (README, S4-02) |
+| K2 | README.md "What each demo beat means" | `make demo` runs with `--resolver ww_rebase/1` by default (`scripts/demo.sh` line 15). The README never says so, and never says the resolver is opt-in. The values are unaffected: hero F2+ score.json is identical off and on (BENCH-S3 §S4-13 "Hero F2+"). But the console banner reads `resolver: ww_rebase/1 (on)` and the README does not explain it | Add one line: resolver on by default in the demo (`RESOLVER=off` to compare); hero results identical off/on | ishaan |
+| K3 | README.md beat table, row "score.json" | "R n=0, C n=0" does not repeat the D-17 clause. The release count is one row up. Minor | Add "(after the 9 releases above)" | ishaan |
+| K4 | abstract/FACT-CARD.md O1–O4 header | No T is stated. Seed 0 values (R 0/1, releases 1+0, stall 0/389, tti 0) trace to no BENCH-S3 row: bench seeds are 1..20. No seed-0 score.json exists in `runs/` at HEAD, so I could not re-check them. Seeds 1 and 2 match bench-b3-33 | Add "T=40" to the header. Name the seed-0 run dir, or mark seed 0 "B3-27 run, not in BENCH-S3" | anaya (Kit) |
+| K5 | Console (`src/ks/console/html.py`) | Fault, seed, T (ticks) and H are in the model (`M.config`) but are never rendered, and the scorecard has no T. The page alone does not state T=40. The container is implicit (`isolation=per_agent_uid`) | Render one config line above the scorecard: fault, seed, `T=<ticks>`, `H=<hold_window_ticks>`, isolation | ishaan (console, S4-19) |
+| K6 | abstract/JURY-QA.md Q8 "Evidence (us tuning it)" | "BENCH-S3 F2+ H=0 system: R 0, irreversible released 0" has no D-17 clause. N16 carries it: after operator releases 2 [1..2] (0 honest) | Append N16's release clause | anaya (Kit) |
+| K7 | Console audit beat (`src/ks/console/model.py:459`) | "live proof: ks verify RUN --head ANCHOR": wrong word ("proof") | "live check:" (one word) | ishaan (console, S4-19) |
+| K8 | abstract/JURY-QA.md Q13 last trap | Stale: "The console scorecard does not yet show release counts (S4-19)". It does now: "operator released 9 held item(s): 7 honest, 2 tainted (recovery re-holds); honest actions held: 7", seen on both rendered runs | Delete the trap, or point to the console line | anaya (Kit) |
+
+Minor, no action required [Our view]:
+- **ALLOWED header.** It says the source of every value is `runs/bench-b3-33/`. N18 comes from `runs/bench-s4-13-ctr/`, and §3b says so.
+- **demo-sim scorecard.** Baseline cells give the median without the range (e.g. snapshot C "34/263"), while the note says "Medians [min..max]". The ranges are in the SRC comment and in BENCH-S3.
+- **Console lanes, F2+x run.** Triage is listed as "independent" and "kept: none", although step 1 rebased its S-22 edit. The resolve step is shown with its undo command, so nothing is hidden. The lane wording could mislead.
+
+## Acceptance (S4-23)
+
+| Criterion | Status |
+|---|---|
+| Every number traces to a BENCH-S3 row (or a cited score.json) with T=40 and container stated | All values trace, except FACT-CARD seed 0 (K4). T or container is missing in the console (K5) and in the FACT-CARD O header (K4). README and demo-sim container wording fixed in place |
+| Every R = 0 has the D-17 operator-release clause | Yes in demo-sim, console, ALLOWED, FACT-CARD, Q10 and Q13. Missing in JURY-QA Q8 (K6); README beat row is minor (K3) |
+| Resolver numbers say opt-in ww_rebase/1 | Yes in ALLOWED, FACT-CARD, JURY-QA and the console banner. README omits both the after-row and the demo's resolver default (K1, K2) |
+| Overclaim grep finds no unrefuted use | Yes. One wrong word in the console ("live proof", K7) |
+| Report in REDTEAM-S4.md | This section |

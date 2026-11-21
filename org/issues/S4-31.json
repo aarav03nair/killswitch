@@ -1,0 +1,68 @@
+{
+  "id": "S4-31",
+  "title": "ks blame names a culprit on a VOID (degraded) run and never says not anchored",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "ishaan",
+  "reviewer": "panel",
+  "model": "sonnet",
+  "created_by": "panel",
+  "status": "done",
+  "outcome": "blame never presents attribution stronger than the threat model allows",
+  "acceptance": [
+    "Degraded-isolation run: blame prints the VOID line (THREAT-MODEL Live setup wording) and exits non-zero or labels candidates VOID; blame takes --head ANCHOR and without it says 'consistent, not anchored'; tests for both"
+  ],
+  "depends": [
+    "S4-29"
+  ],
+  "deliverable": "src/ks/cli/__init__.py",
+  "summary": "ks blame now runs verify (VerifyReport fields: isolation, anchored, unanchored_reason, last_witnessed_seq) and prints that first; takes --head ANCHOR; unanchored says 'consistent, not anchored (reason)'; VOID (isolation degraded) prints the attribution-VOID line and labels candidates/suspect 'unattributed: isolation degraded' (exit stays OK). Tests: VOID, unanchored hero, anchored hero (hero tests present report as per_agent_uid since sandbox is non-root). tests/cli 38 pass.",
+  "review": "[panel · changes] Attack re-run live (non-root sandbox, so both runs degraded): VOID run (--shared-uid) and plain run both print verify first, VOID line, candidates and suspect labelled 'unattributed: isolation degraded'; no head -> 'consistent, not anchored (no_anchor)'; valid --head -> 'anchored'; garbage --head -> exit 64; foreign run's anchor -> UNVERIFIED keyring_mismatch exit 3. Good. ONE BLOCKER vs outcome 'never presents attribution stronger than TM allows': on VOID the taint line still prints 'agents with tainted actions: billing, comms, compliance, crm, ...' unlabelled, i.e. per-agent attribution by agent_id on a run where agent_id is void (RT3b). Fix: label that list '(unattributed: isolation degraded)' under void, and extend test_blame_void_run_does_not_attribute to assert it. Minor: non-VOID unanchored path is tested only via monkeypatched isolation; acceptable.\n\n[panel · done] Re-checked live on the --shared-uid VOID run: verify line first, VOID line, root candidates, suspect and the 'agents with tainted actions' list all carry '[unattributed: isolation degraded]'; exit 0. Earlier attack results still hold (no head -> consistent, not anchored; valid --head -> anchored; bad --head 64; foreign anchor -> UNVERIFIED exit 3). tests/cli 39 passed, 1 skipped. Acceptance and outcome met.",
+  "log": [
+    {
+      "t": "21 Nov 07:08",
+      "who": "panel",
+      "msg": "opened"
+    },
+    {
+      "t": "21 Nov 09:30",
+      "who": "ishaan",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "21 Nov 10:02",
+      "who": "ishaan",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 10:02",
+      "who": "ishaan",
+      "msg": "→ in_review: ready for panel"
+    },
+    {
+      "t": "21 Nov 10:05",
+      "who": "panel",
+      "msg": "review: changes"
+    },
+    {
+      "t": "21 Nov 10:05",
+      "who": "panel",
+      "msg": "→ changes: panel: one-line fix on VOID taint agents line"
+    },
+    {
+      "t": "21 Nov 10:07",
+      "who": "ishaan",
+      "msg": "→ in_review: taint/suspect lines labelled under VOID"
+    },
+    {
+      "t": "21 Nov 10:09",
+      "who": "panel",
+      "msg": "review: done"
+    },
+    {
+      "t": "21 Nov 10:09",
+      "who": "panel",
+      "msg": "→ done: panel review: done"
+    }
+  ]
+}

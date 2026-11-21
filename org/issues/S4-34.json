@@ -1,0 +1,33 @@
+{
+  "id": "S4-34",
+  "title": "Resolver 'undoable' false live: F2+x unresolve blocked at the first pause after apply (billing reads rebased S-22 in the apply tick)",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "vikram",
+  "reviewer": "maya",
+  "model": "opus",
+  "created_by": "panel",
+  "status": "in_progress",
+  "outcome": "the undo claim matches what an operator can actually do",
+  "acceptance": [
+    "Either the run pauses after an apply containing a resolve, before agents act, and a live F2+x seed 2 --unresolve succeeds (test); or ALLOWED-NUMBERS N18(d), FACT-CARD, JURY-QA say the undo is blocked once any agent reads the rebased version (zoya/anaya, before Aarav cites N18 on 22 Nov)"
+  ],
+  "depends": [
+    "S4-13"
+  ],
+  "deliverable": "src/ks/runtime/recover.py",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "21 Nov 07:08",
+      "who": "panel",
+      "msg": "opened"
+    },
+    {
+      "t": "21 Nov 10:21",
+      "who": "vikram",
+      "msg": "→ in_progress: option (a): undo reverts every dependent (later honest reads included), re-holds their items; blocked only once a dependent item is released/dispatched"
+    }
+  ]
+}

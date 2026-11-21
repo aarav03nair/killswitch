@@ -7,7 +7,7 @@
   "reviewer": "panel",
   "model": "opus",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "done",
   "outcome": "No overclaim survives to the finale",
   "acceptance": [
     "Every number traces to a BENCH-S3 row; every R=0 has the operator-release clause; grep for never/proof/first/guarantee finds no unrefuted use; report in REDTEAM-S4.md"
@@ -16,13 +16,48 @@
     "S4-10"
   ],
   "deliverable": "org/reports/",
-  "summary": "",
-  "review": "",
+  "summary": "Claim audit in org/reports/REDTEAM-S4.md §S4-23. Traced every own number in README, demo-sim, console (rendered real container runs finale-hero/finale-f2x s2, resolver on), ALLOWED-NUMBERS, FACT-CARD, JURY-QA to BENCH-S3 or a named score.json: all match except FACT-CARD seed 0 (no BENCH row/run dir). Word grep: no unrefuted overclaim. Fixed in place: 'container' added to README bench sentence and demo-sim banner. Open K1-K8: README F2+x lacks before-label/C/after-row (K1) and demo resolver default (K2), README beat row D-17 (K3), FACT-CARD O header no T + seed 0 untraceable (K4), console shows no T/fault/seed/H (K5), JURY-QA Q8 H=0 R 0 lacks D-17 (K6), console 'live proof' -> 'live check' (K7), JURY-QA Q13 stale console trap (K8). Owners ishaan (README/console), anaya (Kit).",
+  "review": "[panel · done] All K1-K8 verified fixed in place. K1: README F2+x now has labelled before row (R 1/5, C 21/254, 29 held, RCO 27) and after row (ww_rebase/1 opt-in, R 0, C 0, 3 held, after 5 releases); matches BENCH-S3 S4-13 table cell for cell. K2: demo resolver default + RESOLVER=off stated; matches scripts/demo.sh:15; hero off/on identity cites BENCH-S3 S4-13. K3: D-17 clause on score.json row. K4: FACT-CARD O header states H=6 T=40 container + score.json paths; seed 0 removed. K5: console cfgline renders fault/seed/T/H/resolver/isolation from M.config (keys present in real config.json); test is string-level only (weak but acceptable). K6: Q8 H=0 line carries N16 release clause 2 [1..2] (0 honest), T=40. K7: 'live check'. K8: Q13 trap replaced with console scorecard line. FLAG (out of scope, S4-34): FACT-CARD O6 row label still reads bare 'undoable' (line 64); line 90 flags it pending vikram, but the row itself must change when S4-34 lands.",
   "log": [
     {
       "t": "20 Nov 17:06",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "21 Nov 06:47",
+      "who": "kabir",
+      "msg": "→ in_progress: Starting claim audit"
+    },
+    {
+      "t": "21 Nov 06:55",
+      "who": "kabir",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 07:01",
+      "who": "kabir",
+      "msg": "→ in_review: Audit in REDTEAM-S4 §S4-23; 2 one-word fixes (container) in README/demo-sim; K1-K8 open for ishaan/anaya; pytest 1141 passed, 14 skipped. Not committed."
+    },
+    {
+      "t": "21 Nov 07:03",
+      "who": "anaya",
+      "msg": "→ in_review: K4 K6 K8 fixed: K4 FACT-CARD O header now states F2+ system H=6 T=40 container, sources runs/bench-b3-33/F2p/h6/system/s{1,2}/score.json; seed-0 values removed from O1-O4 (no seed-0 score.json at HEAD), seeds 1/2 re-checked against score.json. K6 JURY-QA Q8 BENCH-S3 F2+ H=0 line now carries N16's D-17 clause (after operator releases 2 [1..2], 0 honest) and T=40. K8 JURY-QA Q13 stale trap replaced with the console scorecard line (S4-19, src/ks/console/model.py); Q13 FACT-CARD pointer relabelled bench seed 2."
+    },
+    {
+      "t": "21 Nov 07:03",
+      "who": "ishaan",
+      "msg": "→ in_review: K1 K2 K3 K5 K7 fixed: README F2+x before/after rows (BENCH-S3 checked), resolver opt-in line, D-17 clause, console config line + test, 'live check'; console tests 26 pass"
+    },
+    {
+      "t": "21 Nov 10:05",
+      "who": "panel",
+      "msg": "review: done"
+    },
+    {
+      "t": "21 Nov 10:05",
+      "who": "panel",
+      "msg": "→ done: panel review: done"
     }
   ]
 }

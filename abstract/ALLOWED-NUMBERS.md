@@ -28,7 +28,7 @@ All rows: BENCH-S3 §"F2+, H=6, T=40", column `system`, 20/20 seeds.
 | N2 | TTI-attribute **0 [0..0]** | `tti_attribute` | attribution is a lookup on signed records (F5); not an accuracy claim (X20) |
 | N3 | TTC **1 [1..1]** | `ttc` | ticks; alert → first denied culprit envelope |
 | N4 | residual damage R **0 [0..0]** | `R` | **D-17, mandatory in the same sentence or the next:** holds *after the operator released* a median **5** held items **[1..9]** (`fp_cost.operator_unholds.total`), of which **3 [0..7]** honest (`…honest`) and **2 [1..2]** tainted-lineage (`…tainted`). The tainted-lineage ones are payments recovery re-ran and re-held; they leave with clean payloads (scripts/demo.sh line 5). Never a bare R = 0 |
-| N5 | collateral loss C **0 [0..0]**; culprit-window loss **0 [0..0]** | `C`, `c_culprit_window` | Hero F2+ only. Holds because crm writes nothing else between fault and suspension (per-seed precondition, GUARDRAILS L8). Never "C = 0" as unconditional. Do not extend to F2+c (⚑ S4-24, §5) |
+| N5 | collateral loss C **0 [0..0]**; culprit-window loss **0 [0..0]** | `C`, `c_culprit_window` | Hero F2+ only. Holds because crm writes nothing else between fault and suspension (per-seed precondition, GUARDRAILS L8). Never "C = 0" as unconditional. Do not extend to F2+c: F2+c does not exercise honest in-window writes; C not quoted (D-20, §5) |
 | N6 | post-alert tainted effects **0 [0..0]** | `post_alert_tainted_effects` | counted from the ledger, not from our taint graph |
 | N7 | irreversible tainted effects released **0 [0..0]** | `irreversible_tainted_released` | at H=6 with the lineage hold on; see N17 for what the hold adds |
 | N8 | re-emitted effects **0 [0..0]** | `reemitted` | pairs with "re-runs count as redo" (X27) |
@@ -63,7 +63,7 @@ BENCH-S3 §"F2+x, H=6, T=40", column `system`, plus Reading notes bullet 1; iden
 | N15 | honest items held **29 [0..35]** | `fp_cost.held_honest_actions` |
 | N15 | operator releases **3 [1..7]** (3 [0..7] honest, 0 [0..1] tainted-lineage) | `fp_cost.operator_unholds.*` |
 
-### 3b. With resolver ww_rebase/1 (opt-in; every resolution signed, verified, undoable) [Fact]
+### 3b. With resolver ww_rebase/1 (opt-in; every resolution signed and verified; undo ⚑ S4-34, see (d)) [Fact]
 
 BENCH-S3 §"S4-13: F2+x before and after the resolver (D-18), H=6, T=40", column `system (resolver: ww_rebase/1 (on), after)`. Built S4-13 (vikram), reviewed PASS by kabir 21 Nov with a container rerun. Command: `ks bench --seeds 1-20 --faults F2+x --hold 6 --baselines system --ticks 40 --resolver-faults F2+x`.
 
@@ -81,7 +81,8 @@ BENCH-S3 §"S4-13: F2+x before and after the resolver (D-18), H=6, T=40", column
 - (a) Label **"with resolver on"** / `resolver: ww_rebase/1 (on)` (D-19, ADR-05a §7). The resolver is **opt-in**: off unless the run turns it on (`ks run --resolver ww_rebase/1`); every output names it. The default run is the 3a row.
 - (b) **D-17:** R = 0 holds *after the operator released* a median **5 [1..9]** held items, **3 [0..7]** honest and **2 [1..2]** tainted-lineage (items recovery re-ran and re-held; the bench approver releases them, X4). Never a bare R = 0.
 - (c) G1, G2, G3, G9: T = 40, 20 seeds, H = 6, container (`killswitch:kabir`, `--network none`, per-agent uids). Vikram's native macOS run gave the same table, but the allowed source is the container run.
-- (d) "Signed, verified, undoable" means: each resolution is one `ks.recover.resolve` record by `ks.recovery` with its rule and check ids as rationale; `ks verify` re-checks rule, order, binding and clean inputs (fails a forged or altered resolution with `resolution_invalid`); `ks recover RUN --unresolve <plan_id>.<n>` undoes it, is itself recorded, and raises the flag again (ADR-05a §1, §5; S4-13 review).
+- (d) ⚑ **pending S4-34 (vikram): "undoable" is not unconditional.** `ks recover --unresolve` is refused (`unresolve_blocked`) once any agent has touched the rebased row after the resolution; on live F2+x (seed 2, `--pause-on-alert`) billing reads rebased `suppliers:S-22` in the apply tick, so the undo is blocked at the first operator pause (PANEL-JURY-02 M8). Until S4-34 lands: do not write "undoable" without that condition; safe fact: an undo is offered and is refused, with the reason recorded, if a later action touched the row.
+  "Signed, verified" (and the undo, with the condition above) means: each resolution is one `ks.recover.resolve` record by `ks.recovery` with its rule and check ids as rationale; `ks verify` re-checks rule, order, binding and clean inputs (fails a forged or altered resolution with `resolution_invalid`); `ks recover RUN --unresolve <plan_id>.<n>` undoes it, is itself recorded, and raises the flag again (ADR-05a §1, §5; S4-13 review), **only if no later action touched the row**; otherwise `unresolve_blocked` (PANEL-JURY-02 M8, ⚑ S4-34).
 - (e) What it **will not** do (ADR-05a §1, §2a): it acts only on `write_write_conflict` flags that pass **every** check (single honest write after the suspect's, deterministic non-LLM writer, no tainted view read, clean base exists, not undone before). It **refuses** the suspect, every alert's `root_candidates[0]`, every evidence writer, every author of a taint origin, and LLM, system and suspended agents. Anything that fails a check, every other flag reason, every replan and every compensate **waits for a human**. It merges nothing by hand and invents no value.
 - (f) Known limits (THREAT-MODEL Errata, D-18 entry; ADR-05a §2a, §6): **verify trusts the recorded value**: it checks the resolution's rule, order, binding and clean inputs, not the re-computed value, which is trusted to `ks.recovery` (TCB). **Collusion:** a colluding agent outside the refused set that copies the culprit's value from its own process memory into its args would carry it into the rebased write (C3, no prevention claim). Built-in agents are deterministic and stateless; this is not tested with LLM agents (G5).
 - (g) Not on the list from this table: `collateral_stall`, `kept_without_redo`, `revert_precision`, `revert_recall` (same reasons as §1).
@@ -97,7 +98,7 @@ BENCH-S3 §"S4-13: F2+x before and after the resolver (D-18), H=6, T=40", column
 
 | Item | Why | Owner |
 |---|---|---|
-| Any **F2+c** value (BENCH-S3 shows C 0 [0..0], R 0 [0..1/6]) | ⚑ Contradicts GUARDRAILS L8 (predicts C > 0). Fixture or guardrail is wrong; not decided here | anaya, S4-24 |
+| Any **F2+c** value (C, `c_culprit_window`, R or any other row) | **D-20:** F2+c as built does not exercise honest in-window writes; C not quoted. Its C = 0 is by construction (GUARDRAILS L8), not evidence. Do not claim the C > 0 case is measured. Fixture fix after the finale | tara, S4-30 |
 | **F3** residual damage R = 1 | Not exfiltration: it is honest emails comms never sent while suspended; F3 has no recovery plan (`no_plan` 20/20). If F3 is mentioned, only N-style detection values: TTI-detect 0 [0..0], TTC 1 [1..1], irreversible tainted released 0 [0..0] (§"F3, H=6"), with "pytest, not live" (F13) | BENCH-S3 Reading notes bullet 2 |
 | T=120 values | Not run | tara, S4-14 |
 | Red-team pass values (RT1–RT14) | Measured values go in `org/reports/REDTEAM-S4.md` first (kabir S4-c); until then targets only | kabir |
@@ -107,10 +108,15 @@ BENCH-S3 §"S4-13: F2+x before and after the resolver (D-18), H=6, T=40", column
 ## 6. Notes for the self-check [Our view]
 
 - Every number of ours in the draft should map to an ID above. If it does not, cut it or ask.
-- Tense: past tense ("measured") is fine **only** for values on this list, with G1–G3. Design parts (finale demo, jury break) stay future or design tense. The resolver is built and measured (S4-13, N18); past tense only with N18's conditions (a)–(f).
+- Tense: past tense ("measured") is fine **only** for values on this list, with G1–G3. Design parts (finale demo, jury break) stay future or design tense. The resolver is built and measured (S4-13, N18); past tense only with N18's conditions (a)–(f); no unconditional "undoable" (⚑ S4-34).
 - F2+x after the resolver (N18) never travels without the before row (N15) and the label "with resolver on".
 - R = 0 without the release clause (N4) is the single most likely jury attack (JURY-QA Q13).
 
 ## Changes (S4-11, anaya, 21 Nov)
 
 - §3 split into 3a (before resolver, N15, unchanged values; operator releases added from the same column) and 3b (with resolver ww_rebase/1, N18, from BENCH-S3 §S4-13, container). §5 row "F2+x after resolver: does not exist yet" removed. §6 tense note updated.
+
+## Changes (S4-24, anaya, 21 Nov; D-20)
+
+- §5 F2+c row: D-20 label "does not exercise honest in-window writes; C not quoted"; no F2+c value is allowed. N5 note updated. No allowed number relied on F2+c's C (N5 is hero F2+), so none removed.
+- §3b heading and N18 (d): "undoable" ⚑ pending S4-34 (PANEL-JURY-02 M8): unresolve is blocked once a later action touched the rebased row, which happens live in the apply tick. §6 tense note updated.

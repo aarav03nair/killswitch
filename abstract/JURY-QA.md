@@ -115,7 +115,7 @@ anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md
 
 - **TM scope (agent side):** **in** (rogue: TOCTOU flood, replay into outbox, persistence after suspend; colluding: laundering). **No claim:** splitting under thresholds (THREAT-MODEL §5, "no RT, no claim"); covert channels **out**.
 - **Evidence (agent racing it):** F6, C5 · D8 · rules 4, 5 (epoch and deny-list in the write transaction; dispatcher re-checks holds) · RT5, RT4 (outbox variant), RT12, RT10 (dispatch re-check race hook), RT9 (laundered value held) · T§3 (lineage hold, sensitive field: early hold) · CALL-01 §2 "Early hold".
-- **Evidence (us tuning it):** D10 (one config value) · BENCH-S3 F2+ H=0 system: R 0, irreversible released 0 (lineage hold stays on at H=0; ALLOWED N16) · D10 contrast, lineage hold off + pause with no recovery: 12 [6..18] payments escaped, >0 on 20/20 seeds (N17, "contrast, not a security result") · §1.5 protocol row · SYN §6 (≥20 seeded runs; median, p95, max; snapshot, revert-culprit-only, no-op baselines; collateral stall and false-positive cost) · T§7 gap 5 (hold value in the run-dir config so the scorer sees it).
+- **Evidence (us tuning it):** D10 (one config value) · BENCH-S3 F2+ H=0 system: R 0, irreversible released 0, after operator releases 2 [1..2] (0 honest) (D-17; lineage hold stays on at H=0; T=40; ALLOWED N16) · D10 contrast, lineage hold off + pause with no recovery: 12 [6..18] payments escaped, >0 on 20/20 seeds (N17, "contrast, not a security result") · §1.5 protocol row · SYN §6 (≥20 seeded runs; median, p95, max; snapshot, revert-culprit-only, no-op baselines; collateral stall and false-positive cost) · T§7 gap 5 (hold value in the run-dir config so the scorer sees it).
 - **Key distinction:** Holds follow recorded reads; hold zero shown and scored too.
 - **Traps:**
   - Holding effects released **before** the alert: not held; at hold 0 scored as residual damage (C5 refuse column; F6).
@@ -151,7 +151,7 @@ anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md
   - Overclaiming conflict handling: a write-write conflict is **flagged**, not merged (T§4; F9).
   - Hero conflict line (CALL-02): triage's edit on the same supplier is **kept**, no flag; the IBAN is its own field object, so they share no datum (W6; CALL-02 B1–B3). Do not call it a conflict.
   - "So you never get a conflict?": an honest one exists in bench **F2+x** (triage edits the price row crm wrote → row-level write-write conflict → flag). Give **both rows** (D-18, CALL-04 decision 2; FACT-CARD O5/O6; ALLOWED N15/N18), medians over 20 seeds, T=40, H=6, container. **Before resolver** (default, resolver off): R 1/5, C 21/254, 29 honest items held; the flag waits for a human because the bench approver never resolves flags. **With resolver ww_rebase/1 (on)**: R 0, C 0, 3 honest items held, after the operator released 5 items (3 honest, 2 tainted-lineage re-run and re-held; D-17); 1 resolution on 19/20 seeds (s7 had no conflict); verify OK on all 40 runs; hero unchanged off/on. Quote all three values per row and both rows together. Show it, do not hide it (L9; CALL-02 B5). Conflicts are field-level only for sensitive fields, row-level elsewhere (F9).
-  - "So the resolver auto-merges conflicts?": no. It is opt-in, and it rebases one honest deterministic write on the last clean version as one signed record that `ks verify` checks and `ks recover --unresolve` undoes (ADR-05a §1, §5). It **refuses** the suspect, every alert's `root_candidates[0]`, evidence writers, taint-origin (seed) writers, and LLM, system and suspended agents; anything that fails a check waits for a human (ADR-05a §1, §2a). Nothing is merged by hand, no value invented.
+  - "So the resolver auto-merges conflicts?": no. It is opt-in, and it rebases one honest deterministic write on the last clean version as one signed record that `ks verify` checks and `ks recover --unresolve` undoes **if no later action touched the row** (ADR-05a §1, §5; ⚑ S4-34: live F2+x blocks it at the first pause, PANEL-JURY-02 M8, so never say "undoable" bare). It **refuses** the suspect, every alert's `root_candidates[0]`, evidence writers, taint-origin (seed) writers, and LLM, system and suspended agents; anything that fails a check waits for a human (ADR-05a §1, §2a). Nothing is merged by hand, no value invented.
   - "Can a compromised resolver or a colluder slip a bad value through?": known limits, stated as such (THREAT-MODEL Errata, D-18 entry): verify checks the resolution's rule, order, binding and clean inputs, **not the re-computed value** (trusted to `ks.recovery`, TCB); a colluder outside the refused set that copies the culprit's value from its own memory into its args would carry it into the rebased write (C3, no prevention claim). Post-finale: `ks verify --reexec-resolutions` (design, not built).
 
 ## Q11. "Any real incident where this happened? Would this have stopped the METR / OpenAI–Hugging Face case?"
@@ -184,7 +184,7 @@ anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md
 
 ## Q13. "Is R = 0 just the operator releasing things by hand?"
 
-- **Evidence:** ALLOWED-NUMBERS N4, N10 · BENCH-S3 §F2+ H=6 rows `fp_cost.operator_unholds.total/.honest/.tainted`, `fp_cost.held_honest_actions` · D-17 (CALL-02 resolutions B2-b) · TERMS §5 clean recovery · scripts/demo.sh line 5 (unhold step) · FACT-CARD O1–O2 (demo seed 2: 9 released, 7 honest).
+- **Evidence:** ALLOWED-NUMBERS N4, N10 · BENCH-S3 §F2+ H=6 rows `fp_cost.operator_unholds.total/.honest/.tainted`, `fp_cost.held_honest_actions` · D-17 (CALL-02 resolutions B2-b) · TERMS §5 clean recovery · scripts/demo.sh line 5 (unhold step) · FACT-CARD O1–O2 (bench F2+ H=6 seed 2, T=40: 9 released, 7 honest).
 - **Key distinction:** Releases are logged decisions; R still counts anything held at T.
 - **Notes:**
   - F2+ medians: 5 released [1..9] = 3 honest [0..7] + 2 tainted-lineage [1..2]. Tainted-lineage = payments recovery re-ran and re-held; they leave with clean payloads.
@@ -194,7 +194,7 @@ anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md
   - Bare R = 0 anywhere (D-17).
   - Calling the releases automatic: they are operator `ks contain unhold` steps.
   - Calling released tainted-lineage items "tainted payments sent": the payloads were re-run and clean.
-  - [Our view, gap] The console scorecard does not yet show release counts (S4-19); point to score.json until it does.
+  - Release counts are on the console scorecard (S4-19, `src/ks/console/model.py`): "operator released N held item(s): M honest, K tainted (recovery re-holds); honest actions held: H"; for demo seed 2 it reads 9 / 7 / 2, held 7 (REDTEAM-S4 K8).
 
 ---
 
@@ -235,3 +235,8 @@ anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md
 ## Changes (S4-11, anaya, 21 Nov; D-18, D-17)
 
 - Q10: F2+x now gives the before-resolver row (N15) and the with-resolver ww_rebase/1 row (N18, BENCH-S3 §S4-13, container), plus two traps: what the resolver will not do, and its known limits (collusion; verify trusts the recorded value).
+
+## Changes (S4-24, anaya, 21 Nov; D-20)
+
+- Q10 trap: resolver undo carries its condition (⚑ S4-34, PANEL-JURY-02 M8).
+- New trap for any "what about the culprit's own honest work?" question: F2+c as built does not exercise honest in-window writes; C not quoted (D-20, GUARDRAILS L8). Hero C = 0 holds only because crm writes nothing else before suspension (N5). Do not claim C > 0 is measured. Fixture fix after the finale (S4-30).

@@ -43,32 +43,34 @@ anaya · 19 Nov 2026 · D13: every outside number in the abstract comes from thi
 
 **Notes on the A~ rows.** #1: METR does say "cyber evaluations" / "cyber task", but "internal" is unconfirmed for this evaluation; keep the safe wording "ExploitGym evaluation runs". #4: numbers confirmed on the arXiv abstract + Table 1, but ICML 2025 is not shown on the arXiv page and not yet confirmed from an official ICML page; cite the venue only once confirmed. #11: the new repo states no stability level, and the registry shows Deprecated keys plus Development values. #13: the PDF does not name SIGMOD. R: today's fetch failed; RES-08 read the report once through a summariser.
 
-## Our own results (B3-27, real container runs, F2+ hero, seeds 0/1/2; from score.json, re-checked by anaya 20 Nov)
+## Our own results (F2+ hero, system, H=6, T=40, container; seeds 1 and 2 from `runs/bench-b3-33/F2p/h6/system/s{1,2}/score.json`, i.e. BENCH-S3 cells; re-checked by anaya 21 Nov, S4-23 K4)
 
-**D-19 (21 Nov, zoya S4-18):** the abstract cites our measured numbers only from `abstract/ALLOWED-NUMBERS.md` (BENCH-S3, T=40, 20 seeds, each with its source row and condition). Rows O1–O4 below are hero demo-seed facts (seeds 0/1/2) for the stage and Q&A, not the abstract's bench numbers.
+**D-19 (21 Nov, zoya S4-18):** the abstract cites our measured numbers only from `abstract/ALLOWED-NUMBERS.md` (BENCH-S3, T=40, 20 seeds, each with its source row and condition). Rows O1–O4 below are per-seed facts (seeds 1 and 2 of the BENCH-S3 F2+ H=6 system cell, T=40) for the stage and Q&A, not the abstract's bench numbers. Seed 0 values were removed (S4-23 K4): no seed-0 score.json exists at HEAD and bench seeds are 1..20.
 
 | # | Fact · exact number | Must travel with it | Source |
 |---|---|---|---|
-| O1 | Residual damage R = **0/1, 0/5, 0/9**; collateral loss C = **0**; both tainted-effect metrics and reemitted = **0** | **D-17:** every R = 0 claim states it holds *after the operator released N held items, M of them honest*: seed 0: 1 (0 honest), seed 1: 5 (3 honest), seed 2: **9 (7 honest)** | `fp_cost.operator_unholds` |
-| O2 | Operator releases (`operator_unholds` tainted + honest): seed 0 **1+0**, seed 1 **2+3**, seed 2 **2+7**; `held_honest_actions` **0 / 3 / 7** | honest = an item recovery did not act on (ADR-06 A3) | score.json `fp_cost` |
-| O3 | `collateral_stall` **0/389, 0/382, 0/381** | **proxy** (`basis: s_star`, divergence from S\* over non-culprit keys outside B), never "the S0 measure" | ADR-06 A3 |
-| O4 | TTI detect **0 / 2 / 2** ticks, attribute **0**; TTC **1** tick | ticks, not seconds; 3 seeds only | score.json |
+| O1 | Residual damage R = **0/5, 0/9**; collateral loss C = **0**; both tainted-effect metrics and reemitted = **0** | **D-17:** every R = 0 claim states it holds *after the operator released N held items, M of them honest*: seed 1: 5 (3 honest), seed 2: **9 (7 honest)** | `fp_cost.operator_unholds` |
+| O2 | Operator releases (`operator_unholds` tainted + honest): seed 1 **2+3**, seed 2 **2+7**; `held_honest_actions` **3 / 7** | honest = an item recovery did not act on (ADR-06 A3) | score.json `fp_cost` |
+| O3 | `collateral_stall` **0/382, 0/381** | **proxy** (`basis: s_star`, divergence from S\* over non-culprit keys outside B), never "the S0 measure" | ADR-06 A3 |
+| O4 | TTI detect **2 / 2** ticks, attribute **0**; TTC **1** tick | ticks, not seconds, T=40; 2 seeds only (20-seed medians: ALLOWED-NUMBERS) | score.json |
 
 ## Honest conflict F2+x: before and after the resolver (S4-11; BENCH-S3, system, H=6, T=40, 20 seeds, container)
 
 [Fact] In F2+x triage edits the price row crm wrote (`suppliers:S-22`) → write-write conflict → flagged. CALL-04 D-18 requires both rows, side by side. Cells are median [min..max] over 20 seeds. Abstract IDs: ALLOWED-NUMBERS N15 (before), N18 (after).
 
+[Fact] **F2+c (D-20):** F2+c as built does not exercise honest in-window writes; C not quoted. Its C = 0 is by construction (GUARDRAILS L8), not evidence; no F2+c value may be printed. Fixture fix after the finale (S4-30).
+
 | # | Row | R | C | honest items held | operator releases (honest + tainted-lineage) | Source |
 |---|---|---|---|---|---|---|
 | O5 | **before resolver** (resolver: off; default run) | 1/5 [0..1/5] | 21/254 [0..44/243] | 29 [0..35] | 3 [1..7] (3 + 0) | BENCH-S3 §F2+x H=6; §S4-13 before column |
-| O6 | **with resolver ww_rebase/1** (opt-in, every resolution signed, verified, undoable) | 0 [0..0] | 0 [0..0] | 3 [0..7] | 5 [1..9] (3 + 2) | BENCH-S3 §S4-13 after column |
+| O6 | **with resolver ww_rebase/1** (opt-in, every resolution signed and verified; undo ⚑ S4-34) | 0 [0..0] | 0 [0..0] | 3 [0..7] | 5 [1..9] (3 + 2) | BENCH-S3 §S4-13 after column |
 
 **Must travel with O5/O6 [Fact]:**
 - Quote both rows together, and R, C and held together. O6 always says "with resolver on" (D-19, ADR-05a §7); the resolver is off unless the run turns it on.
 - **D-17:** O6's R = 0 holds after the operator released a median 5 held items, 3 honest and 2 tainted-lineage (re-run and re-held by recovery, released by the bench approver, X4).
 - Before the resolver the flag is never resolved, because the bench approver never resolves flags: a flagged conflict waits for a human.
 - With the resolver: 1 resolution on 19 of 20 seeds (triage rebased on the clean base); seed 7 had no conflict. `ks verify` OK on all 40 runs (off and on), `per_agent_uid`, no `resolution_invalid`. Hero F2+ (seeds 1..5) score.json identical off and on (BENCH-S3 §S4-13; S4-13 review, kabir).
-- **What the resolver will not do** (ADR-05a §1, §2a): it refuses the suspect, every alert's `root_candidates[0]`, evidence writers, authors of taint origins (seed writers), and LLM, system and suspended agents. Any conflict that fails a check, and every other flag, replan or compensate, waits for a human. It merges nothing by hand and invents no value. Undo: `ks recover RUN --unresolve <plan_id>.<n>`, itself recorded.
+- **What the resolver will not do** (ADR-05a §1, §2a): it refuses the suspect, every alert's `root_candidates[0]`, evidence writers, authors of taint origins (seed writers), and LLM, system and suspended agents. Any conflict that fails a check, and every other flag, replan or compensate, waits for a human. It merges nothing by hand and invents no value. Undo: `ks recover RUN --unresolve <plan_id>.<n>`, itself recorded, **only if no later action touched the row**; else `unresolve_blocked`. ⚑ S4-34: on live F2+x billing reads the rebased row in the apply tick, so the undo is blocked at the first pause (PANEL-JURY-02 M8). Never "undoable" without this condition.
 - **Known limits** (THREAT-MODEL Errata, D-18 entry): verify checks the resolution's rule, order, binding and clean inputs, **not the re-computed value** (trusted to `ks.recovery`, TCB). A **colluding** agent outside the refused set that copies the culprit's value from its own memory into its args would carry it into the rebased write (C3, no prevention claim). Deterministic built-in agents only (GUARDRAILS L6).
 
 ## Not safe to print (never quote)
@@ -81,3 +83,8 @@ anaya · 19 Nov 2026 · D13: every outside number in the abstract comes from thi
 - **MAST "94%"**, Cordon **45/45 vs 14/45**, DeltaBox ms figures, any GoEx number. Any **venue** for MAST, Cordon, CHIEF, FAMAS, Atomix, GoEx, DeltaBox or State Footprints.
 - **"First"** (provenance containment, agent undo, agent gateway). **"Tamper-proof"**, **"compliant"**, **"beats Who&When"**. Saying we reverse irreversible effects. Any Airlock "better / leaks / sim-only" claim.
 - **"Tools kill one agent or all of them"** as our own insight (it is Airlock's framing). **"Multi-agent incidents are common"**.
+
+## Changes (S4-24, anaya, 21 Nov; D-20)
+
+- F2+c: "does not exercise honest in-window writes; C not quoted" (D-20).
+- O6 and resolver undo: "undoable" ⚑ pending S4-34; undo only if no later action touched the row (PANEL-JURY-02 M8).

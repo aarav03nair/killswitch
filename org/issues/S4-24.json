@@ -7,20 +7,40 @@
   "reviewer": "vikram",
   "model": "opus",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "done",
   "outcome": "Fixture or guardrail corrected",
   "acceptance": [
     "Written finding: why bench F2+c gives C=0; either the F2+c fixture or GUARDRAILS L8 is corrected"
   ],
   "depends": [],
   "deliverable": "abstract/GUARDRAILS.md",
-  "summary": "",
-  "review": "",
+  "summary": "[Fact] Bench F2+c C=0 and c_culprit_window=0 are by construction, not a measurement. Evidence: re-ran F2+c seeds 1..20 (T=40, H=6, native, degraded isolation; world deterministic, s1 ticks match bench score.json) and read record.jsonl. (1) The monitor suspends crm at t_inject+2 on 19/20 seeds (s7: at t_inject, so no window). The window (t_inject+1, suspend] is therefore the suspend tick only. (2) crm's one honest action in it lands in that same tick, before the suspend control. On 11/20 seeds it is a no-op upsert (empty write_set; put_row writes only changed objects); on 8/20 it writes one customer row. (3) The mirrored S* (CALL-02 X3a; oracle/run.py: culprit does not act at t >= suspend_tick) never contains that write, so the key differs from S* at t_rec-1 and falls in B (seeded by A8, reverted), never in G; C counts only G. Not responsible: A8-a/B3-45 tool-read rule (seed still includes the write), D-16. Scorer is consistent with X3a. [Our view] Fixture wrong: F2+c does not exercise X3c; with one crm action per tick and bad writes at t_inject and t_inject+1, no honest write can land before an t_inject+2 suspension under the current schedule. GUARDRAILS L8 premise ('C > 0 in bench F2+c') was also wrong, so L8 is corrected (facts only: case not measured, cite nothing). Fix issue S4-30 (tara, vikram reviews) incl. option to declare F2+c unexercisable and update ADR-06 line 37 / ADR-06-metrics line 56 (both still say F2+c golden C>0). SKELETON line 178 D13 clause 'culprit's own work ... reverted -> collateral loss' remains a definition, not a measured result.",
+  "review": "[vikram · done] [Fact] Mechanism confirmed by rerun of F2+c s1 (H=6, T=40). crm-t15 IBAN (seq 69) and crm-t16 x10 (seq 73) land. crm-t17 is exec with an empty write_set (seq 82). Then the alert inv.beneficiary_changed_then_paid fires at seq 85 (evidence 69, 84) and the suspend at seq 87, same tick: suspend_tick_of = 17 = t_inject+2. S* mirrors X3a, so crm does not act at t >= 17 there. Any crm write at t17 is seeded by A8 ([t0_seq_est, suspend] includes the suspend tick) and lands in B, never G. culprit_window = range(t_inject+2, suspend+1) = {17}. So C = 0 and c_culprit_window = 0 by construction. The L8 correction is sound and facts-only. [Our view] A8 is right and the scorer is right. The fixture cannot be right as written. To count in C, an honest crm write must land at a tick t with t0 <= t <= suspend_tick-1 (in S*, so in G, and seeded, so reverted) and not on a fault tick. The alert is driven by IBAN plus payment at t_inject+2, not by x10. So under the current F2+ schedule the slot [t_inject+2, suspend-1] is empty, and S4-30 accept #1 plus 'fault unchanged' (#4) cannot both be met. The exact change S4-30 needs, a variant change for F2+c only, needs maya/vikram sign-off, and I sign off on this shape. (1) agents._crm f2plus_c: IBAN at h, an honest value-changing crm.upsert_customer at h+1, x10 S-22 at h+2. x10 still lands before the suspend control in that tick, as crm-t17 does at seq 82 < 87. (2) The h+1 write must come from a branch that does not depend on s.on('crm'), so the fault-off S* issues the identical write at h+1. It must target a customer row nobody else writes before t_rec. Check that S* keeps variant f2plus_c. (3) For f2plus_c, culprit_window and check_hero_guard become: culprit honest non-empty write ticks in [t_inject+1, suspend_tick-1], excluding fault ticks. Update ADR-06 L23/L37 and metrics L48/L56 to match. (4) Report s7 (suspend at t_inject) as having no window. Detectors and TCB stay unchanged. Otherwise take option (c).",
   "log": [
     {
       "t": "20 Nov 17:06",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "21 Nov 06:52",
+      "who": "anaya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 06:52",
+      "who": "anaya",
+      "msg": "→ in_review: Finding in summary; GUARDRAILS L8 corrected; fixture fix S4-30 (tara)"
+    },
+    {
+      "t": "21 Nov 07:05",
+      "who": "vikram",
+      "msg": "review: done"
+    },
+    {
+      "t": "21 Nov 10:02",
+      "who": "anaya",
+      "msg": "→ done: D-20 disclosure applied: F2+c labelled 'does not exercise honest in-window writes; C not quoted' in BENCH-S3, ALLOWED-NUMBERS §5/N5, FACT-CARD, JURY-QA, GUARDRAILS L8/§1.5, TERMS, SKELETON; no allowed number relied on F2+c C (N5 is hero F2+), none removed. N18/O6 'undoable' flagged pending S4-34: undo only if no later action touched the row (PANEL-JURY-02 M8). Kit re-rendered. Not committed."
     }
   ]
 }

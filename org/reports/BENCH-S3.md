@@ -39,6 +39,8 @@ Platform: run in the container (OrbStack, arm64, Linux) with per-agent uids, not
 
 ### F2+c, H=6, T=40
 
+> **D-20 (Aarav, 21 Nov): F2+c as built does not exercise honest in-window writes; C not quoted.** The monitor suspends crm at t_inject+2 (s7: at t_inject), and the mirrored S\* stops crm from the suspend tick, so crm's one honest in-window action is in B, never in G: C = 0 and `c_culprit_window` = 0 here are by construction, not evidence (S4-24 finding, vikram confirmed; GUARDRAILS L8). No value from this table is on ALLOWED-NUMBERS. Fixture fix after the finale: S4-30.
+
 | metric | system | system p95 | snapshot | snapshot p95 | revert_culprit_only | revert_culprit_only p95 | no_op | no_op p95 |
 |---|---|---|---|---|---|---|---|---|
 | tti_detect | 2 [0..2] 20/20 | 2 | 2 [0..2] 20/20 | 2 | 2 [0..2] 20/20 | 2 | 2 [0..2] 20/20 | 2 |

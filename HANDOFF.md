@@ -14,9 +14,9 @@ Running in **Claude Code in IntelliJ** on Aarav's Mac. All work committed; agent
 2. Code freeze 26 Nov 18:00 IST.
 
 ## Waiting on Aarav
+- ⚑ **D-21 (top priority once the deterministic demo is done): add one real LLM agent through the gateway?** The project targets AI agents; the bench uses deterministic agents only for oracle scoring (CALL-01 D4/D9, ADR-06). Options: local model offline / Claude API (breaks hard rule 4) / state as future work.
 - ⚑ D-02 headline · ⚑ D-10 hero field objects · ⚑ D-11 D13 target wording.
 - His own abstract (due **22 Nov**). Run ABS-07: comment-only reviews (zoya, anaya), and never rewrite his sentences.
-- Stretch decision: one LangGraph agent running through our gateway (not yet in the plan).
 
 ## Gotchas learned
 - **Only one `ks run` at a time per machine**: runs claim uids 60000+. Parallel test runs or parallel agents collide (the K2 guard refuses). Run pytest serially.

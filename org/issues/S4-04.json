@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "pmo",
-  "status": "in_review",
+  "status": "done",
   "outcome": "Every jury-visible break found before the finale",
   "acceptance": [
     "org/reports/PANEL-JURY-01.md: >=15 attacks from the README alone (tamper, forge, replay, rogue agent, claims vs THREAT-MODEL wording, numbers vs BENCH-S3), each with result + severity; every Must becomes an issue",
@@ -32,6 +32,11 @@
       "t": "21 Nov 00:52",
       "who": "panel",
       "msg": "→ in_review: Musts: M1 S4-26 HEAD red, make demo fails at ks score (score.py:35-38 RunConfig.resolver); M2 S4-27 make-demo bind mount ignores perms, rogue writes state.db/record.jsonl; M3 S4-28 gateway crash on off-gateway state edit; M4 S4-29 ks blame unimplemented. Report org/reports/PANEL-JURY-01.md"
+    },
+    {
+      "t": "21 Nov 06:47",
+      "who": "pmo",
+      "msg": "→ done: Report delivered (org/reports/PANEL-JURY-01.md); all 4 Musts (S4-26..29) fixed and reviewed done. Re-attack is S4-09."
     }
   ]
 }

@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "in_review",
   "outcome": "Every dry-run #1 Must is closed or a stated known limit",
   "acceptance": [
     "Every #1 Must re-tried and closed or written as a known limitation"
@@ -16,13 +16,23 @@
     "S4-04"
   ],
   "deliverable": "org/reports/PANEL-JURY-02.md",
-  "summary": "",
+  "summary": "Dry run #2 on fresh clone of 1b9a743 (killswitch:panel). #1 Musts M1-M4 closed: make demo OK and matches README; container 1152 passed/3 skipped; rogue cannot list /work/runs; live state edit -> reconcile alert, run anchored; blame matches demo-sim. make finale passes. All README/demo-sim/ALLOWED numbers match BENCH-S3. New Musts: M5 S4-31 blame on VOID/unanchored runs; M6 S4-32 verify says 'consistent'/'no_anchor' on TAMPER with --head (#1 S-a escalated); M7 S4-33 score re-scored via state.db history on an anchored-OK run (R 0/9 -> 2/11); M8 S4-34 resolver undo blocked live, so N18 'undoable' is false. 10 Shoulds incl. console 'clean recovery: unavailable', validity from unwitnessed timing.jsonl, make demo prints demo OK on degraded. Report org/reports/PANEL-JURY-02.md",
   "review": "",
   "log": [
     {
       "t": "20 Nov 17:06",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "21 Nov 07:08",
+      "who": "panel",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 07:08",
+      "who": "panel",
+      "msg": "→ in_review: Must list: S4-31 (blame VOID), S4-32 (verify wording), S4-33 (score via state.db history), S4-34 (resolver undo live). #1 M1-M4 closed."
     }
   ]
 }
