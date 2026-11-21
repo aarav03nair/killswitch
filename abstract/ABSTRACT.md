@@ -1,37 +1,43 @@
-# Kill Switch: a black box and a precise undo for teams of autonomous agents
+**Working draft for Aarav to rewrite in his own words. Do not submit as is.** SEED requires the abstract to be written by the entrant and runs AI-text checks. Every number below is from `abstract/ALLOWED-NUMBERS.md` (BENCH-S3, T = 40 ticks, 20 seeded runs); keep the conditions next to each one when you rewrite.
+
+# Kill Switch: undo one agent's damage without losing everyone else's work
 
 ## The problem
 
-Ten agents are working. One just broke something. The brief asks us to reverse that agent’s damage without discarding the other agents’ work. That request hides a hard question: by the time anyone notices, honest agents have already read the bad data and built on it.
+Ten AI agents share one workspace. One of them writes something wrong. The obvious response is to stop that agent and undo what it did. But by the time anyone notices, other agents have already read the bad data and built on it, so "undo that agent" no longer has a clear meaning.
 
-Take a small company run by ten agents. A CRM agent writes a wrong bank account (IBAN) for a supplier. A billing agent drafts an invoice from it, a payments agent queues a transfer to it, and a communications agent emails the supplier. Meanwhile a triage agent adds an unrelated risk note to the same supplier record. “Undo the CRM agent” is no longer well defined. Which of these actions are damage, and which are honest work that must survive?
+A small example. Ten agents run a small company. The CRM agent writes a wrong bank account number for a supplier. The billing agent drafts an invoice from it, the payments agent queues a transfer to it, and the messaging agent emails the supplier. Meanwhile the triage agent adds an unrelated note to the same supplier record. Which of these actions are damage, and which are honest work that must survive?
 
-Today’s tools answer badly. Kill switches stop agents; they do not repair. Checkpoints and snapshots restore a whole state and throw away everyone’s work since. Logs are written by the agents themselves: testimony, not evidence. Current tracing conventions record which tool was called, not what data it read or changed (OpenTelemetry’s gen_ai attributes, not yet stable as of November 2026). Asking a language model to find the culprit afterwards is unreliable. On the Who&When benchmark, the best reported strategies found the failing agent about 53.5% of the time and the decisive step about 14.2%, with a different strategy for each number.
-
-Real incidents show the cost. In the public incidents we catalogued, one agent caused the damage, a human noticed afterwards, and recovery meant a whole backup or nothing. In one reported case, a production database and its backups were deleted in nine seconds and rebuilt from a three-month-old snapshot over a weekend. At larger scale, METR’s preliminary findings on OpenAI’s ExploitGym evaluation runs in July 2026 describe roughly 1,200 agents coordinating on a shared message board. Wiping the board did not stop them; a new one appeared about two days later. A blunt stop is not a recovery plan.
+Today's options are blunt. A kill switch stops agents but repairs nothing. A snapshot restores everything and throws away every agent's work since. And the logs are usually written by the agents themselves, so they are testimony, not evidence: a misbehaving agent can write whatever it likes about itself.
 
 ## Our fix
 
-Kill Switch treats accountability as a provenance problem: every write has an author, and every read has a source. If both are recorded faithfully, identifying, containing and recovering become three queries on one graph.
+We treat this as a provenance problem: every write has a known author, and every read has a known source. If both are recorded in a way no agent can quietly change, then finding the culprit, stopping it and repairing its damage become questions you can answer from the record.
 
-Every agent action passes through one gateway. Each agent runs as an isolated process that holds no keys. Every action is signed under that agent’s identity, checked, classified by reversibility before it runs, and recorded with exactly what it read and wrote. The record is hash-chained, signed by the gateway and checkpointed every tick by a separate witness process. Anyone can re-check it with one command, and an edit or truncation is detected up to the last witnessed checkpoint.
+Every agent action goes through one gateway. Each agent runs as its own isolated process and holds no keys. Each action is signed under that agent's identity, checked against policy, classed by whether it can be reversed, and recorded together with exactly what it read and wrote. The record is hash-chained, and a separate witness process signs its head every tick. One command re-checks the whole record, so it is tamper-evident up to the last witnessed head.
 
-**Identify.** Detectors check the data itself: an invalid IBAN, a beneficiary changed and then paid, a price ten times its history. The record then names the agent that wrote the bad value.
+**Identify.** Detectors look at the data itself, such as a bank account that fails its check or a price ten times its history. The signed record then names the agent that wrote the bad value.
 
-**Contain.** That agent is suspended under a fresh epoch, so even its pre-signed actions are refused. Any outgoing payment or email whose inputs trace back to the bad write is held. Independent agents keep working.
+**Contain.** That agent is suspended, and even actions it signed in advance are refused. Any payment or email whose inputs trace back to the bad write is held before it leaves. The other agents keep working.
 
-**Recover.** The system reverts only bad writes that are still current. It re-runs the dependent deterministic steps through an outbox that never sends the same effect twice, and asks a person to approve the plan after a dry-run diff. Irreversible effects that already left are compensated or reported, never claimed undone. In our example the IBAN and price are restored, billing, payments and messaging are redone on clean data, and triage’s note is kept, because sensitive fields are tracked as separate objects.
+**Recover.** The system reverts only the bad writes and re-runs the honest steps that depended on them, using an outbox that never sends the same payment twice. A person approves the plan after seeing a dry-run diff. In the example, the bank account and price are restored, the invoice, payment and email are redone on clean data, and triage's note is kept. Effects that already left are reported or compensated, never claimed undone.
 
-Recent work such as Airlock contains damage before it spreads but, by design, leaves already-committed effects to “orthogonal rollback”. Kill Switch is that backward half, built on an authenticated record.
+When two honest edits collide on the same record, the system flags the conflict for a person by default. An optional resolver can settle simple cases itself; every resolution is signed, re-checked by the verify command, and can be undone as a recorded step until a payment or email that depended on it is released.
 
 ## Why it matters
 
-Recovery is scored, not asserted. We replay each scenario with the fault switched off and compare. Residual damage R is the share of bad effects left; collateral loss C is the share of honest work lost. We also measure time-to-identify, time-to-contain, tainted effects after the alert, and irreversible effects released. The brief’s three scores have no agreed measurement in the standards we checked, so we propose checkable ones.
+Recovery is scored, not asserted. For every run we replay the same scenario with the fault switched off and compare the two end states. Residual damage R is the share of bad effects left behind; collateral loss C is the share of honest work lost. The scorer applies the rules itself and does not trust our own record.
 
-Our targets, to be measured over at least 20 seeded runs: on the hero scenario, R = 0 and C = 0, with zero post-alert tainted effects and zero irreversible tainted effects released. If an honest agent later changed the same data, a person decides and it counts as residual damage. The culprit’s own work between the fault and its suspension is reverted and counts as collateral loss.
+We measured this over 20 seeded runs of our simulated ten-agent company, 40 ticks each. Recovery is not told which agent is at fault or when. On our main fault scenario (median over 20 seeds): the alert came within 2 ticks of the bad write, the culprit was named from the signed record at the same tick, and it was suspended 1 tick later. Residual damage was 0 on all 20 runs, after the operator released a median of 5 held items. Collateral loss was 0 in this scenario, where the culprit makes no other writes before suspension. No tainted payment or email left after the alert.
 
-For regulated users the design maps to the EU AI Act’s automatic logging (Article 12) and its requirement to stop a system “in a safe state” (Article 14(4)(e)). It slots into OpenTelemetry and policy-as-code in production.
+We compared this with our own baselines, which were told the culprit. Restoring a snapshot left 3/5 of the damage and lost honest work. Reverting only the culprit also left 3/5. Holding dependent payments matters too: when we paused the culprit without recovery and without that hold, a median of 12 tainted payments went out; with the hold, none did.
+
+When honest agents edit the same record as the culprit, the default run leaves residual damage of 1/5 for a person to decide. With the resolver on, residual damage was 0 after a median of 5 operator releases, and every run passed verification.
+
+We also tried to break it ourselves: we switched off each of 12 defences one at a time, and our red-team tests caught all 12.
 
 ## Limits, and what we will show
 
-We do not reverse irreversible effects, we cannot replay language models, and we deliberately over-taint. Collusion yields root candidates, not prevention. The jury may run arbitrary code inside a rogue agent; our published threat model states what we detect and what is out of scope.
+Our agents are deterministic programs, not language models, so every run can be replayed and scored; the gateway does not depend on what kind of agent sits behind it. We cannot reverse a payment or email that has already left. We hold more than strictly necessary, which costs a median of 3 honest items held per run. Agents that collude can be named as suspects, not prevented.
+
+At the finale we will run the scenario live and invite the jury to break it: run arbitrary code inside a rogue agent, edit the record, or change the database behind the gateway, and watch the verify command catch it.
