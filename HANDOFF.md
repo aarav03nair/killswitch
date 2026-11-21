@@ -4,10 +4,10 @@ Running in **Claude Code in IntelliJ** on Aarav's Mac. All work committed; agent
 
 ## Status (21 Nov)
 - **Sprint 3 complete.** Sprint 4 (harden, prove, rehearse) in progress; code freeze **26 Nov 18:00 IST**.
-- **Sprint 4 done:** S4-01, S4-02, S4-04, S4-09, S4-10..13, S4-15, S4-18..24, S4-26..29, S4-31..34. Two Panel jury dry runs: every Must fixed (reports org/reports/PANEL-JURY-01.md, -02.md). Mutation gate 12/12 (REDTEAM-S4.md).
+- **Sprint 4 done:** S4-01, S4-02, S4-04, S4-09, S4-10..13, S4-15, S4-18..24, S4-26..29, S4-31..38. S4-14: T=120 confirming bench, 140/140 valid; T=40 stays headline (A4); BENCH-S4-T120.md. S4-35..38: T=120 late-inject R=1/6 was an oracle artefact; S* now applies I2 approval itself and real-only/wrong-payload dispatches score as irreversible escapes (ADR-06-metrics A6, approved). T=40 numbers unchanged. Optional: rerun T=120 (2.8 h) to refresh its footnoted R/cstall. Two Panel jury dry runs: every Must fixed (reports org/reports/PANEL-JURY-01.md, -02.md). Mutation gate 12/12 (REDTEAM-S4.md).
 - **D-18 resolver built** (opt-in `--resolver ww_rebase/1`, signed/verified/undoable): F2+x R 1/5→0, C 21/254→0, held honest 29→3 (container, 20 seeds). Contracts 1.8.0.
 - **Kit for the abstract is final:** abstract/ALLOWED-NUMBERS.md (D-19), F2+c disclosed (D-20).
-- **Open:** S4-03 Docker Desktop check · S4-14 T=120 rerun (run overnight, quiet host) · S4-16 freeze tag + reproducer (26 Nov) · S4-17 rehearsals (28 Nov, 1 Dec) · S4-25 ABS-07 comment-only review once Aarav shares his abstract · S4-30 F2+c fixture (after finale, D-20).
+- **Open:** S4-03 Docker Desktop check · S4-16 freeze tag + reproducer (26 Nov) · S4-17 rehearsals (28 Nov, 1 Dec) · S4-25 ABS-07 comment-only review once Aarav shares his abstract · S4-30 F2+c fixture (after finale, D-20).
 - Run the finale with `make finale` on a quiet machine (host load causes deadline misses; the preflight refuses).
 
 ## Waiting on Aarav
