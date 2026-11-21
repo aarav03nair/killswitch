@@ -13,8 +13,9 @@ from ks.contracts.hashing import args_hash
 from ks.contracts.rundir import SCORE, sidestore_relpath
 from ks.inject import InjectSpec, culprit_window
 from ks.oracle import b_set, equal, fold, g_set, outbox_key, real_ledger, t0_of
+from ks.validity import VALIDITY_KEY, score_entry  # S4-22: ``run_validity`` key
 
-__all__ = ["SCORE_KEYS", "CONTRAST_KEY", "RESOLVER_KEYS", "resolver_summary", "item_tainted", "CONTAINMENT_REASONS", "score_run", "suspend_tick_of", "write_score"]
+__all__ = ["SCORE_KEYS", "CONTRAST_KEY", "RESOLVER_KEYS", "VALIDITY_KEY", "resolver_summary", "item_tainted", "CONTAINMENT_REASONS", "score_run", "suspend_tick_of", "write_score"]
 
 CONTAINMENT_REASONS = frozenset({"suspended", "revoked", "revoked_ancestor", "stale_epoch"})
 SCORE_KEYS = ("seed", "fault", "hold", "baseline", "baseline_oracle_assisted", "t_inject", "t_rec", "t0", "t_alert",
@@ -412,6 +413,8 @@ def score_run(run_dir: str | Path, spec: InjectSpec, star: list[dict[str, Any]],
         assert tuple(out) == SCORE_KEYS
     if _resolver(run) != "off":  # S4-13: additive keys, only for resolver-on runs (resolver-off bytes unchanged)
         out.update(resolver_summary(run, recs))
+    if (v := score_entry(run)) is not None:  # S4-22: VOID / DEGRADED runs say so; OK runs unchanged
+        out[VALIDITY_KEY] = v
     return out
 
 

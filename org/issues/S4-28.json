@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "panel",
-  "status": "todo",
+  "status": "done",
   "outcome": "An unmediated state write is flagged within 1 tick and the run ends anchored",
   "acceptance": [
     "Live test: a state value edited off-gateway mid-run gives a reconcile alert naming nobody, suspends nobody, run completes with a RunAnchor",
@@ -15,13 +15,53 @@
   ],
   "depends": [],
   "deliverable": "src/ks/gateway",
-  "summary": "",
-  "review": "",
+  "summary": "Kabir blocker fixed: Store.get verifies head value vs hash and raises StateCorrupt (ValueError); tool reads become recorded tool_error denies (no effect), build_view skips; outbox provenance uses verify=False so its own unrecorded_item hold still works. RT1c now also asserts no EVIL in side store/record/other objects (5 tool_error denies seen). Container tests redteam+integration+bench+gateway+state: 207 passed; native gateway/state/world/monitor/runtime green. Not done: SPEC note that verify ends OK once an honest write overwrites the edited head (alert is the only evidence).",
+  "review": "[kabir · changes] Crash fixed, and the suites are green: native 1132 passed/14 skipped, container killswitch:kabir2 1145 passed/1 skipped. A/B bench with and without the AlertTaint lines (F2+,F2+c,F3,F4, seeds 1-20, H=6, T=40, system): bench.md identical between the two; all 66 shared system cells match BENCH-S3. Hero test passes. AlertTaint is needed and stays. Concern 1: skipping view entries is OK. The skipped object does not appear in that read_set, the reconcile alert names it, and a rogue needs off-gateway write access to cause a skip, which raises a hard alert. BLOCKER, found with Panel's exact attack (root docker exec, live run, seed 2 F2+, IBAN of S-17 edited at seq 4): the reconcile alert came at tick 2 and the run ended anchored. But TOOL reads (StateTxn.read -> Store.get, src/ks/state/store.py:296-375) never check the value against its hash. billing/comms/payments/crm read the edited value 'DE00EVIL000001' from tick 13 to 24 (seq 61,68,72,116,122,124), and the record logged the honest hash 751189.. for those reads. So the record misstates what the agent consumed. The edited value went into 3 held outbox payloads (PAY-0014, EM-0014, EM-0024; the AlertTaint change held them) and was laundered into state as invoices:INV-0013 remit_iban, authored by honest billing with a valid hash. There was no suspect and no plan, so nothing recovers it. Before this change the run crashed (fail closed). Now tool reads fail open. Fix: Store.get (head path) raises a typed StateCorrupt when value_hash(value) != head_hash. The gateway turns that into a deny (or not_found), and build_view keeps skipping. Extend RT1c to assert that no side-store payload and no state write contains the edited value after the edit. Minor: verify ends OK, not RECONCILE, once an honest gateway write overwrites the edited head (crm v2 in my run). That is expected, but the alert is the only evidence, so say so in SPEC.\n\n[kabir · done] Blocker fixed. Live root attack (killswitch:kabir2, seed 2 F2+, S-17 IBAN edited while paused before tick 2): hard reconcile alert at tick 2 naming nobody, nobody suspended, run anchored, verify RECONCILE. 6 tool_error denies. DE00EVIL appears nowhere except the edited head: not in the record, side store or any other object. The F2+ fault never fires because its read is denied. score shows 8 irreversible effects that differ from the fault-off oracle; none carries the edited value (a scoring artefact). Hero bisect, demo.sh seed 2 in the container: HEAD 5449aae, HEAD+S4-28 only, HEAD+resolver only (resolver off/ww_rebase/1) and the full tree (off/on) all give R 0/9, C 0/265, ttc 1, anchored. I could NOT reproduce C=3/144. S4-28 does not move C. Suites: native 1137 passed/14 skipped, container 1149 passed/2 skipped. Gap ruling: the reconcile alert is a chained, witnessed ks.alert (verify cross-checks it against alerts.jsonl), so it is tamper-evident evidence. But verify checks only the final state: once a blind gateway put replaces the edited head, verify ends OK, and score does not count reconcile alerts in ttc. I stated this limit in the THREAT-MODEL RT1 row and a new SPEC RT1c row. Not committed.",
   "log": [
     {
       "t": "21 Nov 00:52",
       "who": "panel",
       "msg": "opened"
+    },
+    {
+      "t": "21 Nov 01:01",
+      "who": "nisha",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "21 Nov 01:09",
+      "who": "nisha",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 01:09",
+      "who": "nisha",
+      "msg": "→ in_review: ready"
+    },
+    {
+      "t": "21 Nov 05:01",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "21 Nov 05:02",
+      "who": "nisha",
+      "msg": "→ in_progress: kabir blocker"
+    },
+    {
+      "t": "21 Nov 05:16",
+      "who": "nisha",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 05:16",
+      "who": "nisha",
+      "msg": "→ in_review: kabir blocker fixed"
+    },
+    {
+      "t": "21 Nov 05:36",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

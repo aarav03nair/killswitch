@@ -434,216 +434,6 @@
   ],
   "activity": [
     {
-      "t": "19 Nov 21:32",
-      "who": "kabir",
-      "msg": "reviewed B3-23: changes"
-    },
-    {
-      "t": "19 Nov 21:33",
-      "who": "anaya",
-      "msg": "reviewed B3-22: done"
-    },
-    {
-      "t": "19 Nov 21:33",
-      "who": "vikram",
-      "msg": "moved B3-24 to in_review"
-    },
-    {
-      "t": "19 Nov 21:33",
-      "who": "vikram",
-      "msg": "moved B3-21 to in_review"
-    },
-    {
-      "t": "19 Nov 21:33",
-      "who": "pmo",
-      "msg": "moved B3-30 to todo"
-    },
-    {
-      "t": "19 Nov 21:36",
-      "who": "tara",
-      "msg": "moved B3-26 to in_review"
-    },
-    {
-      "t": "19 Nov 21:36",
-      "who": "nisha",
-      "msg": "moved B3-23 to in_review"
-    },
-    {
-      "t": "19 Nov 21:37",
-      "who": "kabir",
-      "msg": "reviewed B3-46: done"
-    },
-    {
-      "t": "19 Nov 21:38",
-      "who": "maya",
-      "msg": "reviewed B3-21: done"
-    },
-    {
-      "t": "19 Nov 21:38",
-      "who": "maya",
-      "msg": "reviewed B3-24: changes"
-    },
-    {
-      "t": "19 Nov 21:38",
-      "who": "maya",
-      "msg": "moved B3-24 to changes"
-    },
-    {
-      "t": "19 Nov 21:38",
-      "who": "anaya",
-      "msg": "reviewed B3-26: changes"
-    },
-    {
-      "t": "19 Nov 21:38",
-      "who": "pmo",
-      "msg": "moved B3-31 to todo"
-    },
-    {
-      "t": "19 Nov 21:38",
-      "who": "pmo",
-      "msg": "moved B3-26 to changes"
-    },
-    {
-      "t": "19 Nov 21:39",
-      "who": "tara",
-      "msg": "moved B3-26 to in_review"
-    },
-    {
-      "t": "19 Nov 21:40",
-      "who": "anaya",
-      "msg": "reviewed B3-26: done"
-    },
-    {
-      "t": "19 Nov 21:40",
-      "who": "pmo",
-      "msg": "moved B3-33 to todo"
-    },
-    {
-      "t": "19 Nov 21:41",
-      "who": "kabir",
-      "msg": "reviewed B3-23: changes"
-    },
-    {
-      "t": "19 Nov 21:41",
-      "who": "kabir",
-      "msg": "moved B3-23 to changes"
-    },
-    {
-      "t": "19 Nov 21:41",
-      "who": "pmo",
-      "msg": "moved B3-30 to todo"
-    },
-    {
-      "t": "19 Nov 21:45",
-      "who": "ishaan",
-      "msg": "moved B3-28 to in_review"
-    },
-    {
-      "t": "20 Nov 05:35",
-      "who": "vikram",
-      "msg": "moved B3-24 to in_review"
-    },
-    {
-      "t": "20 Nov 05:37",
-      "who": "nisha",
-      "msg": "moved B3-23 to in_review"
-    },
-    {
-      "t": "20 Nov 05:39",
-      "who": "pmo",
-      "msg": "moved B3-23 to in_review"
-    },
-    {
-      "t": "20 Nov 05:40",
-      "who": "maya",
-      "msg": "reviewed B3-24: changes"
-    },
-    {
-      "t": "20 Nov 05:42",
-      "who": "maya",
-      "msg": "moved B3-13 to in_review"
-    },
-    {
-      "t": "20 Nov 05:42",
-      "who": "maya",
-      "msg": "reviewed B3-28: changes"
-    },
-    {
-      "t": "20 Nov 05:43",
-      "who": "kabir",
-      "msg": "reviewed B3-23: changes"
-    },
-    {
-      "t": "20 Nov 05:43",
-      "who": "pmo",
-      "msg": "moved B3-30 to todo"
-    },
-    {
-      "t": "20 Nov 05:49",
-      "who": "kabir",
-      "msg": "reviewed B3-13: done"
-    },
-    {
-      "t": "20 Nov 05:49",
-      "who": "pmo",
-      "msg": "moved B3-19 to todo"
-    },
-    {
-      "t": "20 Nov 05:49",
-      "who": "pmo",
-      "msg": "moved B3-35 to todo"
-    },
-    {
-      "t": "20 Nov 05:49",
-      "who": "ishaan",
-      "msg": "moved B3-28 to in_review"
-    },
-    {
-      "t": "20 Nov 05:50",
-      "who": "nisha",
-      "msg": "moved B3-23 to in_review"
-    },
-    {
-      "t": "20 Nov 05:53",
-      "who": "kabir",
-      "msg": "reviewed B3-23: done"
-    },
-    {
-      "t": "20 Nov 05:54",
-      "who": "nisha",
-      "msg": "moved B3-19 to in_progress"
-    },
-    {
-      "t": "20 Nov 05:54",
-      "who": "vikram",
-      "msg": "moved B3-24 to in_review"
-    },
-    {
-      "t": "20 Nov 05:57",
-      "who": "maya",
-      "msg": "reviewed B3-28: done"
-    },
-    {
-      "t": "20 Nov 05:57",
-      "who": "arjun",
-      "msg": "moved B3-20 to in_progress"
-    },
-    {
-      "t": "20 Nov 05:57",
-      "who": "arjun",
-      "msg": "moved B3-20 to in_review"
-    },
-    {
-      "t": "20 Nov 05:57",
-      "who": "arjun",
-      "msg": "moved B3-31 to in_progress"
-    },
-    {
-      "t": "20 Nov 05:58",
-      "who": "maya",
-      "msg": "reviewed B3-24: done"
-    },
-    {
       "t": "20 Nov 05:59",
       "who": "pmo",
       "msg": "moved B3-34 to todo"
@@ -1432,6 +1222,216 @@
       "t": "21 Nov 00:25",
       "who": "anaya",
       "msg": "reviewed S4-18: done"
+    },
+    {
+      "t": "21 Nov 00:36",
+      "who": "panel",
+      "msg": "reviewed S4-01: done"
+    },
+    {
+      "t": "21 Nov 00:36",
+      "who": "panel",
+      "msg": "moved S4-01 to done"
+    },
+    {
+      "t": "21 Nov 00:36",
+      "who": "pmo",
+      "msg": "moved S4-21 to todo"
+    },
+    {
+      "t": "21 Nov 00:36",
+      "who": "kabir",
+      "msg": "moved S4-21 to in_progress"
+    },
+    {
+      "t": "21 Nov 00:52",
+      "who": "panel",
+      "msg": "moved S4-04 to in_review"
+    },
+    {
+      "t": "21 Nov 00:52",
+      "who": "panel",
+      "msg": "opened S4-26 — HEAD red: score.py reads RunConfig.resolver that HEAD lacks; make demo fails at ks score"
+    },
+    {
+      "t": "21 Nov 00:52",
+      "who": "panel",
+      "msg": "opened S4-27 — make demo bind mount (virtiofs) ignores perms: rogue uid writes state.db/record/heads and reads all side stores"
+    },
+    {
+      "t": "21 Nov 00:52",
+      "who": "panel",
+      "msg": "opened S4-28 — Off-gateway mid-run state edit crashes the gateway (ViewEntry) instead of a class-U alert"
+    },
+    {
+      "t": "21 Nov 00:52",
+      "who": "panel",
+      "msg": "opened S4-29 — ks blame advertised in ks --help and demo-sim but prints 'not yet implemented'"
+    },
+    {
+      "t": "21 Nov 01:01",
+      "who": "pmo",
+      "msg": "moved S4-26 to in_review"
+    },
+    {
+      "t": "21 Nov 01:01",
+      "who": "nisha",
+      "msg": "moved S4-28 to in_progress"
+    },
+    {
+      "t": "21 Nov 01:01",
+      "who": "ishaan",
+      "msg": "moved S4-27 to in_progress"
+    },
+    {
+      "t": "21 Nov 01:01",
+      "who": "ishaan",
+      "msg": "moved S4-29 to in_progress"
+    },
+    {
+      "t": "21 Nov 01:05",
+      "who": "vikram",
+      "msg": "moved S4-13 to in_review"
+    },
+    {
+      "t": "21 Nov 01:09",
+      "who": "nisha",
+      "msg": "moved S4-28 to in_review"
+    },
+    {
+      "t": "21 Nov 01:17",
+      "who": "ishaan",
+      "msg": "moved S4-27 to in_review"
+    },
+    {
+      "t": "21 Nov 01:17",
+      "who": "ishaan",
+      "msg": "moved S4-29 to in_review"
+    },
+    {
+      "t": "21 Nov 01:21",
+      "who": "panel",
+      "msg": "reviewed S4-27: changes"
+    },
+    {
+      "t": "21 Nov 01:21",
+      "who": "panel",
+      "msg": "reviewed S4-29: changes"
+    },
+    {
+      "t": "21 Nov 01:24",
+      "who": "ishaan",
+      "msg": "moved S4-27 to in_review"
+    },
+    {
+      "t": "21 Nov 01:24",
+      "who": "ishaan",
+      "msg": "moved S4-29 to in_review"
+    },
+    {
+      "t": "21 Nov 01:32",
+      "who": "kabir",
+      "msg": "moved S4-21 to in_review"
+    },
+    {
+      "t": "21 Nov 05:01",
+      "who": "kabir",
+      "msg": "reviewed S4-28: changes"
+    },
+    {
+      "t": "21 Nov 05:01",
+      "who": "panel",
+      "msg": "reviewed S4-27: done"
+    },
+    {
+      "t": "21 Nov 05:01",
+      "who": "panel",
+      "msg": "reviewed S4-29: done"
+    },
+    {
+      "t": "21 Nov 05:01",
+      "who": "panel",
+      "msg": "moved S4-27 to done"
+    },
+    {
+      "t": "21 Nov 05:01",
+      "who": "panel",
+      "msg": "moved S4-29 to done"
+    },
+    {
+      "t": "21 Nov 05:02",
+      "who": "nisha",
+      "msg": "moved S4-28 to in_progress"
+    },
+    {
+      "t": "21 Nov 05:08",
+      "who": "maya",
+      "msg": "moved S4-13 to in_review"
+    },
+    {
+      "t": "21 Nov 05:16",
+      "who": "nisha",
+      "msg": "moved S4-28 to in_review"
+    },
+    {
+      "t": "21 Nov 05:17",
+      "who": "panel",
+      "msg": "reviewed S4-21: done"
+    },
+    {
+      "t": "21 Nov 05:17",
+      "who": "panel",
+      "msg": "moved S4-21 to done"
+    },
+    {
+      "t": "21 Nov 05:36",
+      "who": "kabir",
+      "msg": "reviewed S4-28: done"
+    },
+    {
+      "t": "21 Nov 05:36",
+      "who": "vikram",
+      "msg": "moved S4-13 to in_review"
+    },
+    {
+      "t": "21 Nov 05:37",
+      "who": "panel",
+      "msg": "moved S4-26 to in_review"
+    },
+    {
+      "t": "21 Nov 05:37",
+      "who": "pmo",
+      "msg": "moved S4-22 to todo"
+    },
+    {
+      "t": "21 Nov 06:08",
+      "who": "kabir",
+      "msg": "reviewed S4-13: done"
+    },
+    {
+      "t": "21 Nov 06:10",
+      "who": "anaya",
+      "msg": "moved S4-11 to in_review"
+    },
+    {
+      "t": "21 Nov 06:15",
+      "who": "maya",
+      "msg": "moved S4-22 to in_progress"
+    },
+    {
+      "t": "21 Nov 06:23",
+      "who": "zoya",
+      "msg": "reviewed S4-11: done"
+    },
+    {
+      "t": "21 Nov 06:27",
+      "who": "maya",
+      "msg": "moved S4-22 to in_review"
+    },
+    {
+      "t": "21 Nov 06:43",
+      "who": "kabir",
+      "msg": "reviewed S4-22: done"
     }
   ]
 }

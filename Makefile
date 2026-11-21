@@ -1,6 +1,6 @@
 IMAGE ?= killswitch:dev
 
-.PHONY: image demo test shell smoke mutation-gate
+.PHONY: image demo test shell smoke mutation-gate finale
 image:
 	docker build -t $(IMAGE) .
 
@@ -30,3 +30,8 @@ smoke: image
 # container; every mutant must make >=1 red-team test fail. Table: org/reports/REDTEAM-S4.md.
 mutation-gate:
 	IMAGE=killswitch:kabir python3 tests/redteam/mutation_gate.py
+
+# S4-22: finale preflight. Refuses a busy host, then make smoke must give isolation=per_agent_uid, anchored=true,
+# key_mode=fresh; then the hero (F2+) and F2+x (resolver: ww_rebase/1 (on), D-18). Any VOID or deadline miss = exit 3.
+finale:
+	KS_IMAGE=$(IMAGE) ./scripts/finale.sh

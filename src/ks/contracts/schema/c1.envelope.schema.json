@@ -26,7 +26,7 @@
     },
     "JsonValue": {}
   },
-  "$id": "https://killswitch.local/schema/1.6.0/c1.envelope.schema.json",
+  "$id": "https://killswitch.local/schema/1.7.0/c1.envelope.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "What travels on the socket: the header fields plus the raw ``args``.",

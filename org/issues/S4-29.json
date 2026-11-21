@@ -7,7 +7,7 @@
   "reviewer": "panel",
   "model": "sonnet",
   "created_by": "panel",
-  "status": "todo",
+  "status": "done",
   "outcome": "Every command a juror can see either works or is not shown",
   "acceptance": [
     "ks blame RUN [--alert ID] prints ranked root candidates from the signed alert records (or the command and the demo-sim beat are removed)",
@@ -15,13 +15,53 @@
   ],
   "depends": [],
   "deliverable": "src/ks/cli/__init__.py",
-  "summary": "",
-  "review": "",
+  "summary": "Review fixes: blame runs verify first and refuses (UNVERIFIED RECORD, verify exit code) on failure; hero test (crm first) and tampered-copy test added; demo-sim beat now shows real blame output.",
+  "review": "[panel · changes] Hero run (seed 2, resolver on, copy of current tree): ks blame RUN and --alert a-000001 print 1. crm 2. intake 3. triage plus taint (suspect crm, t0 45, suspended 66, 6 versions, 6 actions, 2 outbox), exit 0; unknown alert exits IO. Read-only confirmed: audit hook shows only record.jsonl and one side-store file opened; file hashes and ls unchanged; no keys.json, state.db or socket. CHANGES: (1) MUST, framing attack: on a copy I changed agent_id crm->intake at seq 45 (verify: TAMPER hash_mismatch first_bad 45, exit 2). ks blame on that copy prints '1. intake 2. crm', exit 0, no warning. It recomputes from an unverified record and ignores the signed alert's root_candidates. Run verify first and refuse or print a VOID/TAMPER banner on non-OK, or at least print the alert's recorded root_candidates and flag any mismatch. (2) Acceptance 2 unmet: tests/cli covers only the not-a-run-dir path; add a hero-run test asserting crm first and a tampered copy failing. (3) demo-sim Identify beat does not match real output: it shows 'culprit hit in top 3: true', 'readers reached: billing, payments, comms (never auto-suspended)' and a time-to-identify line, which blame does not print; real output lists crm among 'agents with tainted actions'. Fix one side.\n\n[panel · done] Re-review after fixes. On the copied demo run (seed 2, resolver on) ks blame prints alert, 1. crm 2. intake 3. triage, suspect crm t0 45 suspended 66, taint line; exit 0. Framing attack repeated (agent_id crm->intake at seq 9): 'UNVERIFIED RECORD: verify hash_mismatch at seq 9', exit 2, no candidates. Tail truncation (30 lines dropped): UNVERIFIED RECORD truncated at seq 165, exit 3. Tests: hero crm-first and tampered-copy refusal added; tests/cli 36 passed. demo-sim Identify beat now matches real blame output line for line and says blame verifies first. Nit: blame checks consistency, not --head anchoring (no --head option); fine for the claim as worded, do not describe blame as anchored. Full-suite container failure (tests/bench baselines) is not in S4-29 files; see S4-27 review.",
   "log": [
     {
       "t": "21 Nov 00:52",
       "who": "panel",
       "msg": "opened"
+    },
+    {
+      "t": "21 Nov 01:01",
+      "who": "ishaan",
+      "msg": "→ in_progress: start"
+    },
+    {
+      "t": "21 Nov 01:17",
+      "who": "ishaan",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 01:17",
+      "who": "ishaan",
+      "msg": "→ in_review: done"
+    },
+    {
+      "t": "21 Nov 01:21",
+      "who": "panel",
+      "msg": "review: changes"
+    },
+    {
+      "t": "21 Nov 01:24",
+      "who": "ishaan",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 01:24",
+      "who": "ishaan",
+      "msg": "→ in_review: fixes"
+    },
+    {
+      "t": "21 Nov 05:01",
+      "who": "panel",
+      "msg": "review: done"
+    },
+    {
+      "t": "21 Nov 05:01",
+      "who": "panel",
+      "msg": "→ done: panel gate passed"
     }
   ]
 }

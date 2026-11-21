@@ -247,6 +247,106 @@
       "title": "RerunStep",
       "type": "object"
     },
+    "ResolveStep": {
+      "additionalProperties": false,
+      "description": "v1.7 (D-18, ADR-05a §3): resolve one ``flag(write_write_conflict)`` by rule ``rule``/``rule_version``\n(``ww_rebase`` v1): restore ``obj`` to ``to`` (the last clean version), re-run the honest action ``rebased`` on\nthat state, and land the result as **one** new version (author ``ks.recovery``) whose hash is\n``rebased_hash``, in one gateway transaction. ``expect`` (the honest head) must still be the head (M8). The\nsuspect's edit (``culprit_ver``) is gone; the honest edit is recomputed on clean inputs. A resolution never\nreleases an outbox item: ``unblocked`` lists the held items whose re-run steps it makes possible (they are\nre-held ``rerun_reheld``; release stays approval-only, X4). ``rationale`` = the check ids that passed, in the\nrule's table order. B6 as amended (B5-a): restoring over a head that is not the suspect's is allowed only here.",
+      "properties": {
+        "culprit_ver": {
+          "$ref": "#/$defs/VersionRef",
+          "description": "The suspect's seed version on ``obj`` (the highest seed version)."
+        },
+        "expect": {
+          "$ref": "#/$defs/VersionRef",
+          "description": "The honest head the resolution replaces; must still be the head at apply (else ``hold/stale_plan``)."
+        },
+        "n": {
+          "description": "Position in ``steps`` (0-based); steps run in this order.",
+          "minimum": 0,
+          "title": "N",
+          "type": "integer"
+        },
+        "obj": {
+          "description": "The conflicted object (a row object for ``ww_rebase`` v1).",
+          "pattern": "^[a-z][a-z0-9_]{0,31}:[A-Za-z0-9_.-]{1,128}$",
+          "title": "Obj",
+          "type": "string"
+        },
+        "op": {
+          "const": "resolve",
+          "default": "resolve",
+          "description": "Step kind.",
+          "title": "Op",
+          "type": "string"
+        },
+        "rationale": {
+          "description": "Check ids that passed, in the rule's table order.",
+          "items": {
+            "pattern": "^[a-z][a-z0-9_.-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Rationale",
+          "type": "array"
+        },
+        "reason": {
+          "description": "Short code, e.g. ``tainted_write``, ``tainted_read``, ``write_write_conflict``.",
+          "pattern": "^[a-z][a-z0-9_.-]{0,63}$",
+          "title": "Reason",
+          "type": "string"
+        },
+        "rebased": {
+          "$ref": "#/$defs/ActionRef",
+          "description": "The honest action (writer of ``expect``) that is re-run."
+        },
+        "rebased_hash": {
+          "description": "Value hash of the rebased version, from the dry-run's simulated re-run (``sim_clean``).",
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Rebased Hash",
+          "type": "string"
+        },
+        "rule": {
+          "description": "Resolver rule id, e.g. ``ww_rebase``.",
+          "pattern": "^[a-z][a-z0-9_.-]{0,63}$",
+          "title": "Rule",
+          "type": "string"
+        },
+        "rule_version": {
+          "description": "Version of ``rule``.",
+          "minimum": 1,
+          "title": "Rule Version",
+          "type": "integer"
+        },
+        "to": {
+          "$ref": "#/$defs/VersionRef",
+          "description": "Last untainted version before ``culprit_ver``: the clean base the honest action is re-run on."
+        },
+        "unblocked": {
+          "description": "Outbox items of this plan's re-runs that the resolution unblocks, sorted (re-held, never released here).",
+          "items": {
+            "pattern": "^ob-[0-9]{6,16}$",
+            "type": "string"
+          },
+          "title": "Unblocked",
+          "type": "array"
+        }
+      },
+      "required": [
+        "culprit_ver",
+        "expect",
+        "n",
+        "obj",
+        "op",
+        "rationale",
+        "reason",
+        "rebased",
+        "rebased_hash",
+        "rule",
+        "rule_version",
+        "to",
+        "unblocked"
+      ],
+      "title": "ResolveStep",
+      "type": "object"
+    },
     "RestoreStep": {
       "additionalProperties": false,
       "description": "Taint-scoped revert of one object: write a new version equal to ``to`` (class R).",
@@ -303,6 +403,106 @@
       "title": "RestoreStep",
       "type": "object"
     },
+    "RevertEntry": {
+      "additionalProperties": false,
+      "description": "v1.7 (ADR-05a §5): one object an ``unresolve`` puts back: ``expect`` must be the head, ``to`` is the version\nwhose value is re-written (as a new version).",
+      "properties": {
+        "expect": {
+          "$ref": "#/$defs/VersionRef",
+          "description": "Head the revert replaces (the resolution's or a dependent re-run's version)."
+        },
+        "obj": {
+          "description": "Object reverted.",
+          "pattern": "^[a-z][a-z0-9_]{0,31}:[A-Za-z0-9_.-]{1,128}$",
+          "title": "Obj",
+          "type": "string"
+        },
+        "to": {
+          "$ref": "#/$defs/VersionRef",
+          "description": "Version whose value is written back."
+        }
+      },
+      "required": [
+        "expect",
+        "obj",
+        "to"
+      ],
+      "title": "RevertEntry",
+      "type": "object"
+    },
+    "UnresolveStep": {
+      "additionalProperties": false,
+      "description": "v1.7 (D-18, ADR-05a §5): undo one executed ``ks.recover.resolve`` (``resolution``): ``reverts[0]`` puts the\nresolved object back to the honest head the resolution replaced; the other entries put back what the plan's\ndependent re-runs wrote. ``reheld`` items get a ``ks.control`` hold with reason ``resolution_reverted``. The\nflag is back afterwards and the rule never resolves that (obj, action) again; undoing an undo is a person's job.",
+      "properties": {
+        "n": {
+          "description": "Position in ``steps`` (0-based); steps run in this order.",
+          "minimum": 0,
+          "title": "N",
+          "type": "integer"
+        },
+        "op": {
+          "const": "unresolve",
+          "default": "unresolve",
+          "description": "Step kind.",
+          "title": "Op",
+          "type": "string"
+        },
+        "rationale": {
+          "description": "Check ids that passed (e.g. ``resolution_executed``, ``no_foreign_touch``, ``reheld_not_released``).",
+          "items": {
+            "pattern": "^[a-z][a-z0-9_.-]{0,63}$",
+            "type": "string"
+          },
+          "title": "Rationale",
+          "type": "array"
+        },
+        "reason": {
+          "description": "Short code, e.g. ``tainted_write``, ``tainted_read``, ``write_write_conflict``.",
+          "pattern": "^[a-z][a-z0-9_.-]{0,63}$",
+          "title": "Reason",
+          "type": "string"
+        },
+        "reheld": {
+          "description": "Items of the reverted re-runs, re-held with reason ``resolution_reverted``, sorted.",
+          "items": {
+            "pattern": "^ob-[0-9]{6,16}$",
+            "type": "string"
+          },
+          "title": "Reheld",
+          "type": "array"
+        },
+        "resolution": {
+          "$ref": "#/$defs/ActionRef",
+          "description": "The executed ``ks.recover.resolve`` record (``ks.recovery``, action id ``<plan_id>.<n>``)."
+        },
+        "resolution_plan_hash": {
+          "description": "``plan_hash`` of the plan that resolved.",
+          "pattern": "^[0-9a-f]{64}$",
+          "title": "Resolution Plan Hash",
+          "type": "string"
+        },
+        "reverts": {
+          "description": "What is put back; the first entry is the resolved object, the rest are sorted by obj.",
+          "items": {
+            "$ref": "#/$defs/RevertEntry"
+          },
+          "title": "Reverts",
+          "type": "array"
+        }
+      },
+      "required": [
+        "n",
+        "op",
+        "rationale",
+        "reason",
+        "reheld",
+        "resolution",
+        "resolution_plan_hash",
+        "reverts"
+      ],
+      "title": "UnresolveStep",
+      "type": "object"
+    },
     "VersionRef": {
       "additionalProperties": false,
       "description": "A version plus the hash of its value (no raw value).",
@@ -329,7 +529,7 @@
       "type": "object"
     }
   },
-  "$id": "https://killswitch.local/schema/1.6.0/c5.recover_args.schema.json",
+  "$id": "https://killswitch.local/schema/1.7.0/c5.recover_args.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "Args of a ``ks.recover.<op>`` envelope: one step of an approved plan (G6).",
@@ -361,7 +561,9 @@
           "flag": "#/$defs/FlagStep",
           "replan": "#/$defs/ReplanStep",
           "rerun": "#/$defs/RerunStep",
-          "restore": "#/$defs/RestoreStep"
+          "resolve": "#/$defs/ResolveStep",
+          "restore": "#/$defs/RestoreStep",
+          "unresolve": "#/$defs/UnresolveStep"
         },
         "propertyName": "op"
       },
@@ -383,6 +585,12 @@
         },
         {
           "$ref": "#/$defs/FlagStep"
+        },
+        {
+          "$ref": "#/$defs/ResolveStep"
+        },
+        {
+          "$ref": "#/$defs/UnresolveStep"
         }
       ],
       "title": "Step"

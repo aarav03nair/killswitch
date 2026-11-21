@@ -20,6 +20,9 @@ Per step:
   (``ks.recovery`` with action id ``<plan_id>.<n>``, or a re-run's original ``agent_id/action_id``, after
   ``as_of_seq``). ``outbox:*`` objects are the outbox's (dispositions, M14) and are skipped, as in the dry-run;
 * ``cancel_outbox``: the item must still exist and not be dispatched (a cancelled item is a no-op, not stale);
+* ``resolve`` (ADR-05a §4): ``expect`` (the honest head, ver and hash) must still be the head of ``obj``;
+* ``unresolve`` (ADR-05a §5): each revert's ``expect`` must be the head (the gateway also re-checks that nothing
+  outside the resolving plan touched the objects and no re-held item left, ``resolver.unresolve_problems``);
 * ``compensate``, ``replan``, ``flag``: no ``expect`` (``replan`` and ``flag`` create no envelope).
 
 :func:`first_stale` runs :func:`recheck` over the steps in order (pre-flight, or the position an apply would halt).
@@ -31,7 +34,7 @@ from __future__ import annotations
 from typing import Any
 
 from ks.contracts import OutboxStatus
-from ks.contracts.recovery import CancelOutboxStep, RerunStep, RestoreStep
+from ks.contracts.recovery import CancelOutboxStep, RerunStep, ResolveStep, RestoreStep, UnresolveStep
 
 from .dryrun import DryRun, Stale
 from .planner import RECOVERY_AUTHOR, _outbox_status
@@ -49,6 +52,19 @@ def _head(store: Any, obj: str):
 def recheck(store: Any, dry: DryRun, step: Any) -> Stale | None:
     """M8 re-check of approved step ``step`` of ``dry.plan`` against the current ``store`` (see module doc)."""
     plan = dry.plan
+    if isinstance(step, ResolveStep):
+        head = _head(store, step.obj)
+        if head is None or head.ver != step.expect.ver or head.hash != step.expect.hash:
+            now = "absent" if head is None else f"v{head.ver} by {head.author} at seq {head.seq}"
+            return Stale(n=step.n, op="resolve", obj=step.obj,
+                         detail=f"{step.obj}: head is {now}, resolution expected v{step.expect.ver}")
+        return None
+    if isinstance(step, UnresolveStep):
+        for e in step.reverts:
+            head = _head(store, e.obj)
+            if head is None or head.ver != e.expect.ver or head.hash != e.expect.hash:
+                return Stale(n=step.n, op="unresolve", obj=e.obj, detail=f"{e.obj}: head moved from v{e.expect.ver}")
+        return None
     if isinstance(step, RestoreStep):
         head = _head(store, step.obj)
         if head is None or head.ver != step.expect.ver or head.hash != step.expect.hash:

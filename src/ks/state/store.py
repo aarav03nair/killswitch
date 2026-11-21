@@ -124,6 +124,11 @@ class StaleExpect(StateError):
     """Restore ``expect`` is no longer the head (B6/M8: the gateway records ``hold/stale_plan``)."""
 
 
+class StateCorrupt(StateError, ValueError):
+    """A head value does not hash to its recorded head hash: an unmediated edit of state.db (S4-28). Reads refuse it
+    (the gateway records a ``tool_error`` deny, no effect) and the reconcile detector names the object."""
+
+
 class RedactedValue(StateError):
     """The value of that version was erased; only its hash remains."""
 
@@ -352,9 +357,10 @@ class Store:
         return _state_digest(self.heads(visible_to=visible_to))
 
     # --- StateView -------------------------------------------------------------------------------
-    def get(self, obj: str, *, visible_to: int | None = None) -> StateRead | None:
+    def get(self, obj: str, *, visible_to: int | None = None, verify: bool = True) -> StateRead | None:
         """Current ``(value, ver, author)``; a tombstone has ``value=None``. ``None`` if the object never
-        existed. With ``visible_to=r``: the latest version written at seq < r (M11c), or ``None``."""
+        existed. ``verify`` (default) raises :class:`StateCorrupt` if the head value does not hash to its head hash
+        (S4-28); only the gateway's own outbox provenance check passes ``verify=False``. With ``visible_to=r``: the latest version written at seq < r (M11c), or ``None``."""
         split_obj_id(obj)
         head = self.conn.execute("SELECT head_ver, head_hash, head_value, head_redacted FROM objects WHERE obj = ?",
                                  (obj,)).fetchone()
@@ -371,11 +377,37 @@ class Store:
         if ver == head[0]:
             if head[3]:
                 raise RedactedValue(f"{obj} v{ver} is redacted")
-            value = None if head[1] == TOMBSTONE_HASH else _value(head[2])
+            if head[1] == TOMBSTONE_HASH:
+                value = None
+            else:
+                try:
+                    value = _value(head[2])
+                    ok = value_hash(value) == head[1]
+                except Exception:
+                    value, ok = None, False
+                if not ok and verify:
+                    raise StateCorrupt(f"{obj} v{ver}: stored value does not match its hash")
         else:
             value = self.value_at(obj, ver)
         author = self.conn.execute("SELECT author FROM versions WHERE obj = ? AND ver = ?", (obj, ver)).fetchone()[0]
         return StateRead(obj=obj, value=value, ver=ver, author=author, hash=h)
+
+    def corrupt_heads(self) -> tuple[str, ...]:
+        """Objects whose stored head value does not hash to the head hash (an unmediated edit of the value, S4-28).
+        Redacted heads and tombstones carry no checkable value and are skipped."""
+        from ks.contracts import value_hash
+        bad = []
+        for obj, h, v, red in self.conn.execute("SELECT obj, head_hash, head_value, head_redacted FROM objects "
+                                                "ORDER BY obj").fetchall():
+            if red or h == TOMBSTONE_HASH:
+                continue
+            try:
+                ok = value_hash(_value(v)) == h
+            except Exception:
+                ok = False
+            if not ok:
+                bad.append(obj)
+        return tuple(bad)
 
     def history(self, obj: str, *, visible_to: int | None = None) -> tuple[HistoryEntry, ...]:
         """Every version of ``obj``, oldest first (only those written at seq < ``visible_to`` if given)."""

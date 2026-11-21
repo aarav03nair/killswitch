@@ -7,20 +7,35 @@
   "reviewer": "zoya",
   "model": "opus",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "done",
   "outcome": "F2+x is stated plainly before and after the D-18 resolver",
   "acceptance": [
     "FACT-CARD + JURY-QA state F2+x R 1/5, C 21/254, held honest median 29 (flagged conflict waits for a human); updated with the resolver row once S4-13 lands"
   ],
   "depends": [],
   "deliverable": "abstract/FACT-CARD.md",
-  "summary": "",
-  "review": "",
+  "summary": "F2+x before/after in FACT-CARD (O5 before, O6 with resolver ww_rebase/1, opt-in), ALLOWED-NUMBERS §3a N15 / §3b N18 (+conditions: D-17 releases 5 = 3 honest + 2 tainted; T=40, H=6, 20 seeds, container; 19/20 resolved, s7 no conflict; verify OK 40/40; hero unchanged), JURY-QA Q10 (+2 traps). States refusals (suspect, root_candidates[0], evidence/seed writers, LLM/system/suspended; failing checks wait for a human) and THREAT-MODEL limits (collusion; verify trusts recorded value). Source BENCH-S3 §S4-13. Facts only, no abstract prose. Not committed.",
+  "review": "[zoya · done] PASS. Every N15/N18 and O5/O6 cell matches BENCH-S3 (F2+x H=6 system column; S4-13 before/after columns, resolver table, Verify and Hero F2+ paragraphs): R 1/5->0, C 21/254->0, held honest 29->3, unholds 3[1..7]->5[1..9] (3+0 -> 3+2), 19/20 resolved (s7 no conflict), verify OK 40/40 per_agent_uid, hero identical off/on. Conditions travel with both rows: T=40, H=6, 20 seeds, container; opt-in with the label 'resolver: ww_rebase/1 (on)'; D-17 release clause on R=0; both rows quoted together. The refusals match ADR-05a 2a rev 3. Both limits match THREAT-MODEL line 90 (verify trusts the recorded value / TCB; collusion C3, no prevention claim). No abstract prose: all notes, tables and Q&A. Non-blocking nits: (1) JURY-QA trap says 'the suspect'. TERMS allows it only internally, so when speaking to the jury say 'top root candidate'. (2) 'taint-origin (seed) writers' can be misread as the random seed; 'A8 seed writes' is clearer. (3) Follow-up for zoya, not anaya: the TERMS F2+x and write-write conflict rows still say 'unresolved / a person must decide'. I will add the with-resolver line and a resolver/resolution term.",
   "log": [
     {
       "t": "20 Nov 17:06",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "21 Nov 06:10",
+      "who": "anaya",
+      "msg": "→ in_review: FACT-CARD O5/O6, ALLOWED N15/N18, JURY-QA Q10 updated"
+    },
+    {
+      "t": "21 Nov 06:10",
+      "who": "anaya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 06:23",
+      "who": "zoya",
+      "msg": "review: done"
     }
   ]
 }

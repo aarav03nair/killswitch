@@ -28,6 +28,11 @@
       "t": "21 Nov 01:01",
       "who": "pmo",
       "msg": "→ in_review: PMO fix: score.py _resolver uses getattr(config, 'resolver', 'off') so HEAD works without contracts 1.7. Clean HEAD copy: native 1081 passed, make demo OK anchored per_agent_uid. Cause: PMO committed score.py with vikram's S4-13 WIP lines in 752e971."
+    },
+    {
+      "t": "21 Nov 05:37",
+      "who": "panel",
+      "msg": "→ in_review: Panel C 3/144 explained: not a code regression. Command: KS_IMAGE=killswitch:panel RUN_ID=panel-rr-s4 bash scripts/demo.sh (defaults seed 2, ticks 40, F2+, resolver ww_rebase/1). Image built 01:25 from working tree at HEAD 5449aae + ~60 uncommitted files (nisha/vikram WIP, ishaan S4-27/29), not a fresh clone. config.json: scenario world, seed 2, ticks 40, hold_window_ticks 6, lineage_hold absent, resolver ww_rebase/1. That run's log: '10 deadline misses' while the host ran ~4 parallel mutation-gate containers plus 2 full suites; record ended at seq 194 (normal 223). Same image rerun at low load (panel-rr-s4b): 0 deadline misses, seq 223, R 0/9, C 0/265, anchored. RISK [Our view]: the hero outcome depends on timing. Under host load agents miss tick deadlines, the run diverges and the score shows C>0. A juror's loaded laptop could hit this. Suggest: demo.sh/score print the deadline-miss count and label the run degraded when it is >0, or the bench reports C against its own miss count."
     }
   ]
 }

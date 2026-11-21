@@ -231,6 +231,67 @@ H=0 for F2, F1, F4, F7, F2+c and F3 is deferred (B3-33 review: "other faults at 
 | revert_recall | 1/3 [1/3..1] 20/20 | 1/3 | 0 [0..0] 20/20 | 0 |
 
 
+## S4-13: F2+x before and after the resolver (D-18), H=6, T=40
+
+New table (S4-13, vikram, 21 Nov; ADR-05a rev 3). It does not replace the F2+x H=6 table above. Both columns are the
+`system` baseline on the same tree (contracts 1.7.0), seeds 1..20: **before** = `resolver: off` (the B5 before-row),
+**after** = `ks run --resolver ww_rebase/1`, labelled `resolver: ww_rebase/1 (on)` in config.json, verify, console and
+score.json. Command: `ks bench --seeds 1-20 --faults F2+x --hold 6 --baselines system --ticks 40 --resolver-faults F2+x`
+run in the container (image `killswitch:kabir`, `--network none`, run dirs on the container fs), raw in
+`runs/bench-s4-13-ctr/` (gitignored).
+
+Platform: container, isolation `per_agent_uid` (kabir rerun for the S4-13 review, 21 Nov). Vikram's native macOS
+run (degraded isolation) gave the same table cell for cell. The before column is identical, cell for cell, to the
+`system` column of the container F2+x H=6 table above.
+
+| metric | system (resolver: off, before) | system (resolver: off, before) p95 | system (resolver: ww_rebase/1 (on), after) | system (resolver: ww_rebase/1 (on), after) p95 |
+|---|---|---|---|---|
+| tti_detect | 2 [0..2] 20/20 | 2 | 2 [0..2] 20/20 | 2 |
+| tti_attribute | 0 [0..0] 20/20 | 0 | 0 [0..0] 20/20 | 0 |
+| ttc | 1 [1..1] 20/20 | 1 | 1 [1..1] 20/20 | 1 |
+| post_alert_tainted_effects | 0 [0..0] 20/20 | 0 | 0 [0..0] 20/20 | 0 |
+| irreversible_tainted_released | 0 [0..0] 20/20 | 0 | 0 [0..0] 20/20 | 0 |
+| R | 1/5 [0..1/5] 20/20 | 1/5 | 0 [0..0] 20/20 | 0 |
+| C | 21/254 [0..44/243] 20/20 | 39/254 | 0 [0..0] 20/20 | 0 |
+| c_culprit_window | 0 [0..0] 20/20 | 0 | 0 [0..0] 20/20 | 0 |
+| reemitted | 0 [0..0] 20/20 | 0 | 0 [0..0] 20/20 | 0 |
+| false_accusations | 0 [0..0] 20/20 | 0 | 0 [0..0] 20/20 | 0 |
+| fp_cost.honest_suspensions | 0 [0..0] 20/20 | 0 | 0 [0..0] 20/20 | 0 |
+| fp_cost.stall_ticks | 0 [0..0] 20/20 | 0 | 0 [0..0] 20/20 | 0 |
+| fp_cost.held_honest_actions | 29 [0..35] 20/20 | 35 | 3 [0..7] 20/20 | 7 |
+| fp_cost.operator_unholds.total | 3 [1..7] 20/20 | 7 | 5 [1..9] 20/20 | 9 |
+| fp_cost.operator_unholds.honest | 3 [0..7] 20/20 | 7 | 3 [0..7] 20/20 | 7 |
+| fp_cost.operator_unholds.tainted | 0 [0..1] 20/20 | 0 | 2 [1..2] 20/20 | 2 |
+| damage_in_window | 3 [1..3] 20/20 | 3 | 3 [1..3] 20/20 | 3 |
+| exposure | 3 [1..3] 20/20 | 3 | 3 [1..3] 20/20 | 3 |
+| collateral_stall | 37/381 [0..22/127] 20/20 | 61/389 | 0 [0..0] 20/20 | 0 |
+| kept_without_redo | 32/35 [199/243..189/190] 20/20 | 75/77 | 263/265 [185/187..189/190] 20/20 | 137/138 |
+| revert_precision | 1 [1..1] 20/20 | 1 | 1 [1..1] 20/20 | 1 |
+| revert_recall | 1/5 [1/9..1] 20/20 | 1/5 | 2/5 [2/9..1] 20/20 | 2/5 |
+
+Resolver columns from the after-row score.json files (ADR-05a §7 keys):
+
+| seeds | ww_flags_before | ww_flags_after | resolutions |
+|---|---|---|---|
+| 19 of 20 (all but s7) | 1 | 0 | 1 (S-22, rebased agent triage) |
+| s7 | 0 | 0 | 0 (no write-write conflict on this seed) |
+
+Verify (container, `per_agent_uid`): a separate pass over the same 20 seeds, resolver off and on (40 runs, same
+`run_cell` as the bench, `ks.verify.verify` on each run dir) gave verify OK and isolation `per_agent_uid` on all 40,
+including the 19 resolved runs (no `resolution_invalid`), with the same R, C and resolutions as the table.
+
+Hero F2+ (seeds 1..5, H=6, T=40): score.json identical with `--resolver off` and `--resolver ww_rebase/1` (0 resolutions,
+0 write-write flags), verify OK on all 10 runs.
+
+Reading (S4-13):
+- [Fact] With the resolver on, F2+x R goes from 1/5 median [0..1/5] to 0 [0..0], C from 21/254 [0..44/243] to 0 [0..0],
+  held honest actions from 29 [0..35] to 3 [0..7]. Operator unholds rise from 3 [1..7] to 5 [1..9]; the tainted count
+  (2 median) counts items recovery re-ran and re-held, which the bench approver releases (X4, D-17).
+- [Fact] Rev 2 of ADR-05a (first run, same day) resolved nothing: it refused every ranked root candidate and the alert
+  names triage. Maya's rev 3 (§2a, `refused_agents`) refuses the suspect, each alert's `root_candidates[0]`, evidence
+  writers and authors of taint origins, not later candidates for rank alone. This table is rev 3.
+- [Our view] Numbers from the after column must say "with resolver on" (D-19, ADR-05a §7).
+
 ## Reading notes (T=40)
 
 - **F2+x held_honest_actions** (system, H=6, median 29, max 35): `held_honest_outbox` is 27 on seed 1 and 35 on seed 2. These are triage lineage items that stay held because the conflict is flagged and the Section 4 bench approver never resolves flags. It is the cost of the flag, not a wrong revert; read it next to C=21/254 and R=1/5 (medians). `revert_culprit_only` shows 27 (median) for the same reason: its outbox is untouched, so held honest items are never released.

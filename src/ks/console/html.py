@@ -34,7 +34,9 @@ const M=JSON.parse(document.getElementById('m').textContent);
 function E(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==undefined)e.textContent=x;return e}
 const root=document.getElementById('root');
 root.append(E('h1','','Incident console: '+M.run_id));
+if(M.resolver_label)root.append(E('div','banner '+(M.resolver_label==='resolver: off'?'ok':'warn'),M.resolver_label));
 M.banners.forEach(b=>root.append(E('div','banner '+b.kind,b.text)));
+if(M.validity_line)root.append(E('div','banner '+(M.validity.headline?'ok':''),M.validity_line));
 const v=M.verify;
 root.append(E('div','banner '+(v.ok?'ok':''),'verify (build time): '+(v.ok?'OK':'FAILED '+v.reason)+'; tamper-evident up to the last witnessed head (seq '+v.last_witnessed_seq+'); '+(v.anchored?'anchored':'not anchored ('+v.unanchored_reason+')')+'. Stale until rebuilt.'));
 const st=E('div','beats');M.beats.forEach((b,i)=>{const d=E('div','beat '+b.status);d.append(E('b','',(i+1)+'. '+B[i][1]),E('span','',b.status==='pending'?'PENDING (fixture)':b.status==='unverified'?'UNVERIFIED':B[i][2]),E('span','',' '+M.beat_seconds[i]+'s'));st.append(d)});root.append(st);

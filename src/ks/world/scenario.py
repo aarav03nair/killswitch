@@ -72,8 +72,13 @@ def build_view(store: Store, agent_id: str, *, visible_to: int | None = None) ->
         for row in rows:
             objs = [row, *(FIELDS.field_objs_of(row) if with_fields else ())]
             for obj in objs:
-                g = store.get(obj, visible_to=visible_to)
+                try:
+                    g = store.get(obj, visible_to=visible_to)
+                except ValueError:  # S4-28: an off-gateway edit left an unparsable value; reconcile alerts
+                    continue
                 if g is None or g.value is None:
+                    continue
+                if g.hash != value_hash(g.value):  # S4-28: off-gateway edit; never deliver it (reconcile alerts)
                     continue
                 entries.append(ViewEntry(obj=obj, ver=g.ver, hash=g.hash, value=g.value))
     entries.sort(key=lambda e: e.obj)

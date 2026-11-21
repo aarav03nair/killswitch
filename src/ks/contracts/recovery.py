@@ -34,7 +34,7 @@ from .state import ObjId, ObjVer, VersionRef, _sorted_unique
 
 __all__ = [
     "StepOp", "RestoreStep", "RerunStep", "ReplanStep", "CancelOutboxStep", "CompensateStep", "FlagStep",
-    "Step", "ActionRef", "TaintSet", "DiffEntry", "RecoveryPlan", "APPROVE_TOOL", "Approval", "RecoverArgs",
+    "ResolveStep", "RevertEntry", "UnresolveStep", "Step", "ActionRef", "TaintSet", "DiffEntry", "RecoveryPlan", "APPROVE_TOOL", "Approval", "RecoverArgs",
     "recover_tool",
 ]
 
@@ -51,6 +51,10 @@ class StepOp(StrEnum):
     CANCEL_OUTBOX = "cancel_outbox"
     COMPENSATE = "compensate"
     FLAG = "flag"
+    RESOLVE = "resolve"
+    """v1.7 (D-18, ADR-05a): a recorded, rule-checked rebase of one write-write conflict."""
+    UNRESOLVE = "unresolve"
+    """v1.7 (D-18, ADR-05a §5): the recorded undo of one executed ``resolve``."""
 
 
 class ActionRef(Value):
@@ -147,7 +151,94 @@ class FlagStep(_Step):
     """Action concerned, if any."""
 
 
-Step = Annotated[Union[RestoreStep, RerunStep, ReplanStep, CancelOutboxStep, CompensateStep, FlagStep],
+class ResolveStep(_Step):
+    """v1.7 (D-18, ADR-05a §3): resolve one ``flag(write_write_conflict)`` by rule ``rule``/``rule_version``
+    (``ww_rebase`` v1): restore ``obj`` to ``to`` (the last clean version), re-run the honest action ``rebased`` on
+    that state, and land the result as **one** new version (author ``ks.recovery``) whose hash is
+    ``rebased_hash``, in one gateway transaction. ``expect`` (the honest head) must still be the head (M8). The
+    suspect's edit (``culprit_ver``) is gone; the honest edit is recomputed on clean inputs. A resolution never
+    releases an outbox item: ``unblocked`` lists the held items whose re-run steps it makes possible (they are
+    re-held ``rerun_reheld``; release stays approval-only, X4). ``rationale`` = the check ids that passed, in the
+    rule's table order. B6 as amended (B5-a): restoring over a head that is not the suspect's is allowed only here."""
+
+    op: Literal["resolve"] = "resolve"
+    """Step kind."""
+    rule: Token
+    """Resolver rule id, e.g. ``ww_rebase``."""
+    rule_version: Annotated[int, Field(strict=True, ge=1)]
+    """Version of ``rule``."""
+    obj: ObjId
+    """The conflicted object (a row object for ``ww_rebase`` v1)."""
+    culprit_ver: VersionRef
+    """The suspect's seed version on ``obj`` (the highest seed version)."""
+    expect: VersionRef
+    """The honest head the resolution replaces; must still be the head at apply (else ``hold/stale_plan``)."""
+    to: VersionRef
+    """Last untainted version before ``culprit_ver``: the clean base the honest action is re-run on."""
+    rebased: ActionRef
+    """The honest action (writer of ``expect``) that is re-run."""
+    rebased_hash: Hash
+    """Value hash of the rebased version, from the dry-run's simulated re-run (``sim_clean``)."""
+    unblocked: tuple[_OB, ...]
+    """Outbox items of this plan's re-runs that the resolution unblocks, sorted (re-held, never released here)."""
+    rationale: tuple[Token, ...]
+    """Check ids that passed, in the rule's table order."""
+
+    @field_validator("unblocked")
+    @classmethod
+    def _u(cls, v):
+        return _sorted_unique(v, lambda e: e, "unblocked outbox id")
+
+
+class RevertEntry(Value):
+    """v1.7 (ADR-05a §5): one object an ``unresolve`` puts back: ``expect`` must be the head, ``to`` is the version
+    whose value is re-written (as a new version)."""
+
+    obj: ObjId
+    """Object reverted."""
+    expect: VersionRef
+    """Head the revert replaces (the resolution's or a dependent re-run's version)."""
+    to: VersionRef
+    """Version whose value is written back."""
+
+
+class UnresolveStep(_Step):
+    """v1.7 (D-18, ADR-05a §5): undo one executed ``ks.recover.resolve`` (``resolution``): ``reverts[0]`` puts the
+    resolved object back to the honest head the resolution replaced; the other entries put back what the plan's
+    dependent re-runs wrote. ``reheld`` items get a ``ks.control`` hold with reason ``resolution_reverted``. The
+    flag is back afterwards and the rule never resolves that (obj, action) again; undoing an undo is a person's job."""
+
+    op: Literal["unresolve"] = "unresolve"
+    """Step kind."""
+    resolution: ActionRef
+    """The executed ``ks.recover.resolve`` record (``ks.recovery``, action id ``<plan_id>.<n>``)."""
+    resolution_plan_hash: Hash
+    """``plan_hash`` of the plan that resolved."""
+    reverts: tuple[RevertEntry, ...]
+    """What is put back; the first entry is the resolved object, the rest are sorted by obj."""
+    reheld: tuple[_OB, ...]
+    """Items of the reverted re-runs, re-held with reason ``resolution_reverted``, sorted."""
+    rationale: tuple[Token, ...]
+    """Check ids that passed (e.g. ``resolution_executed``, ``no_foreign_touch``, ``reheld_not_released``)."""
+
+    @field_validator("reverts")
+    @classmethod
+    def _r(cls, v):
+        if not v:
+            raise ValueError("an unresolve reverts at least the resolved object")
+        rest = _sorted_unique(v[1:], lambda e: e.obj, "revert obj")
+        if v[0].obj in {e.obj for e in rest}:
+            raise ValueError("duplicate revert obj")
+        return (v[0], *rest)
+
+    @field_validator("reheld")
+    @classmethod
+    def _h(cls, v):
+        return _sorted_unique(v, lambda e: e, "reheld outbox id")
+
+
+Step = Annotated[Union[RestoreStep, RerunStep, ReplanStep, CancelOutboxStep, CompensateStep, FlagStep,
+                       ResolveStep, UnresolveStep],
                  Field(discriminator="op")]
 
 

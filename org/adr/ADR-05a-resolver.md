@@ -1,6 +1,6 @@
 # ADR-05a: Auditable, reversible resolver for write-write conflicts (D-18)
 
-**Owner:** maya · **Builder:** vikram (S4-13) · **Reviewer:** kabir · **Status:** in review (rev 2, kabir's S4-12 changes 1–5 applied) · **Amends:** ADR-05 §6.2, §6.1 (held items), §8; CALL-02 B5, B6 (see CALL-02 amendment note in `org/meetings/CALL-02/resolutions.md`) · **Inputs:** CALL-04 decision 2 (D-18), ADR-05 §6.1/§6.4/M14/B3-30, `src/ks/recovery/{planner,conflict,dryrun}.py`, `src/ks/runtime/recover.py`, `src/ks/world/{agents,tools}.py`
+**Owner:** maya · **Builder:** vikram (S4-13) · **Reviewer:** kabir · **Status:** in review (rev 3: maya's S4-13 ruling on `honest_deterministic`; rev 2: kabir's S4-12 changes 1–5 applied) · **Amends:** ADR-05 §6.2, §6.1 (held items), §8; CALL-02 B5, B6 (see CALL-02 amendment note in `org/meetings/CALL-02/resolutions.md`) · **Inputs:** CALL-04 decision 2 (D-18), ADR-05 §6.1/§6.4/M14/B3-30, `src/ks/recovery/{planner,conflict,dryrun}.py`, `src/ks/runtime/recover.py`, `src/ks/world/{agents,tools}.py`
 
 ## Context
 
@@ -29,7 +29,7 @@ The rule looks only at `flag(write_write_conflict)` steps. For flag `(obj O, act
 |---|---|
 | `row_object` | O is a row object: `split_obj_id(O).field is None`. A conflict on a sensitive field object (e.g. `suppliers:S-17.iban`) always goes to a person |
 | `single_honest_write` | `vH == vC + 1`: exactly one write after the suspect's, by H. Two or more later writers go to a person |
-| `honest_deterministic` | H's agent is not in `llm_agents`, not the suspect, not in `root_candidates`, and not suspended at `as_of_seq` |
+| `honest_deterministic` | H's agent is not in `llm_agents`, not a system principal, not suspended at `as_of_seq`, and not in `refused_agents` (rev 3, §2a): the suspect, any alert's `root_candidates[0]`, any writer of an alert's `evidence_versions`, or any author of a taint origin |
 | `single_object` | H's record is `exec`. Its write set is exactly `{O}` (no other object, no `outbox:*`), it has no `outbox_ids`, and its args are in the side store and not redacted |
 | `no_tainted_view_reads` | H's read set has **no** `source = view` entry of any tainted version (seed or not). Reason (kabir, S4-12 review): the re-run replays H's **original args**. A deterministic agent can copy a value from its view into its args (crm does this with price), and that would carry the suspect's value into the rebased write while every other check passes. Only tool reads are re-done on clean state, so only tool reads of seed versions may be tolerated |
 | `seed_reads_only` | Every tainted `(obj, ver)` in H's read set (tool reads only, after `no_tainted_view_reads`) is a **seed** version on an object this plan restores, or on O itself. A read of any version derived from another agent's tainted work goes to a person |
@@ -39,7 +39,22 @@ The rule looks only at `flag(write_write_conflict)` steps. For flag `(obj O, act
 
 **Always a person, never the resolver:** every `flag` with another reason (`redacted_restore_source`, `no_compensator`, `tainted_i2`, `dispatched_tainted`, and any later reason); every `write_write_conflict` that fails any check above; every `replan` (LLM step); every `compensate`; every held item whose blocker is still a flag or replan after the pass; every blocked undo (`flag(unresolve_blocked)`, §5).
 
-F2+x is expected to pass all checks. [Our view, from the code paths above; S4-13 must confirm it on the landed record]: O = `suppliers:S-22` (row), triage is the only writer after crm, triage is deterministic and outside root candidates, and `set_risk_note` writes only S-22. Its args come from the seed and the scenario (`_triage`: target and `review-NN` note), not from its view. Its only tainted read should be crm's seed v2 on S-22 through the **tool**. Triage's view scope is tickets only (`scenario.py`), so it should have no tainted view read. **Vikram must assert this in `test_f2x_resolved` (no view-source tainted read in triage's h+2 record).** If the assertion fails, F2+x stays flagged and we say so.
+### 2a. Who `honest_deterministic` refuses (rev 3, maya ruling on S4-13, 21 Nov)
+
+[Fact] S4-13 found that the real alert on F2+x names `root_candidates = (crm, intake, triage)`. Rev 2 refused every ranked candidate, so triage was refused on 19/19 conflict seeds and the resolver resolved nothing. Vikram's scratch run that checked only `[0]` gave R=0 on 20 seeds, but verify (which still checked the full list) then failed those runs with `resolution_invalid`.
+
+[Our view] Rev 2 was over-broad. ADR-05 §5 (H1, H2) says `root_candidates[0]` is the sole writer of the evidence. Agents after `[0]` are reached only because the root **read** their writes, and they are never auto-suspended. Refusing them treats an upstream data source as a suspect. That is not what the check protects against. The check exists so that a rogue's write is never rebased and re-landed under `ks.recovery`. So the rule refuses anyone the record ties to the bad write itself, not anyone the walk passed through:
+
+1. the plan's suspect (`Taint.suspect` = `RecoveryPlan.culprit`, which a person may have chosen from any rank);
+2. every alert's `root_candidates[0]`, even when the person chose another suspect;
+3. every writer of any alert's `evidence_versions` (covers alerts with no sole writer, where `root_candidates = ()`);
+4. every author of a **taint origin**: a tainted version (seq <= `as_of_seq`) whose writing record read no tainted version. That is a write that sits in the taint set without being derived from it (the A8 seed, or a sticky agent). A rogue at `root_candidates[1]` with seed writes is refused here.
+
+LLM, system and suspended agents stay refused as before. One function, `ks.recovery.resolver.refused_agents(ix, as_of, suspect, taint, alerts)`, computes the set. The planner (alerts given by `ks.runtime.recover`) and `ks.verify.recovery.resolution_pass` (chained `ks.alert` records <= the plan's `as_of_seq`) both pass alerts to `Context.alerts` and call `eligible`, so they cannot disagree. The set is record-only and never reads `fault`/`culprit`/`fault_tick` (A3).
+
+[Our view] Residual risk, stated honestly: a rogue that is only `root_candidates[k>0]`, wrote nothing in the taint set, and also wrote the conflicting head could have that write rebased on the clean base. Its write then lands with exactly the args it chose itself, so it gains nothing it did not already do. The resolution names it (`rebased.agent_id`), and a person can undo it (§5). The rule version stays `ww_rebase/1`, because no resolution has landed under rev 2. Tests: `test_real_alert_root_candidates_resolve`, `test_refuse_candidate1_with_seed_writes`, `test_refuse_suspect_choice_and_evidence_writer`.
+
+F2+x is expected to pass all checks. [Our view, from the code paths above; S4-13 must confirm it on the landed record]: O = `suppliers:S-22` (row), triage is the only writer after crm, triage is deterministic and not in `refused_agents` (rev 3: it is `root_candidates[2]`, not `[0]`), and `set_risk_note` writes only S-22. Its args come from the seed and the scenario (`_triage`: target and `review-NN` note), not from its view. Its only tainted read should be crm's seed v2 on S-22 through the **tool**. Triage's view scope is tickets only (`scenario.py`), so it should have no tainted view read. **Vikram must assert this in `test_f2x_resolved` (no view-source tainted read in triage's h+2 record).** If the assertion fails, F2+x stays flagged and we say so.
 
 ### 3. Plan shape (contracts 1.7.0, additive)
 
@@ -127,3 +142,17 @@ Day 2
 - The honest edit is recomputed, not kept byte-for-byte. Its version is authored by `ks.recovery`, and the record names H as `rebased`. A person sees both.
 - Conservative scope: only one-object, one-writer, deterministic, seed-only conflicts on rows. Everything else still counts in R, and the score shows it per check.
 - New TCB code: the resolver and `resolution_pass`. The rebased value is trusted to `ks.recovery` (§6 residual). Kabir adds an RT row (forged resolution, S4-01).
+
+## S4-13 build notes (vikram, 21 Nov)
+
+[Fact] Built as designed: `src/ks/recovery/resolver.py` (rule, checks, `rebase`, undo planner), planner/dry-run/apply/verify/score/console wiring, contracts 1.7.0, `ks run --resolver`, `ks recover --unresolve`, tests `tests/recovery/test_resolver.py`, `tests/contracts/test_contracts_17.py`.
+
+[Fact] Check before building: no verify pass rejects a read entry at a non-head version. The resolve record lists O at `vT` (`source = tool`) and the applied F2+x run verifies OK.
+
+[Fact] **The §2 premise "triage is outside root candidates" is false on the landed record.** The runtime alert on F2+x names `root_candidates = (crm, intake, triage)` (ADR-05 §5 backward walk: crm read tickets that triage wrote). So `honest_deterministic` refuses the S-22 conflict on every real run and it stays a flag (`flag write_write_conflict suppliers:S-22 (resolver: honest_deterministic failed)`). The view-read assertion maya asked for holds (triage's only tainted read is crm's S-22 v2 via the tool). The in-process test world's alert carries no root candidates, so there the rule resolves S-22 and the result equals S\*. Test: `test_real_alert_root_candidates_refuse_triage`. Changing the check is a design decision (maya / kabir; Aarav for D-18), not a build choice; nothing was changed. **Resolved by rev 3 (§2a):** only the suspect, `root_candidates[0]`, evidence writers and taint-origin authors are refused; the test is now `test_real_alert_root_candidates_resolve`.
+
+[Fact] Undo scope (§5): only re-runs whose **landed** record read the rebased version (transitively) are reverted and re-held `resolution_reverted`. Re-runs of agents that read S-22 only through their tick view re-run without it (tool reads only, B3-24 lineage note), so their items are not part of the undo. In the in-process F2+x world the undo reverts S-22 plus 8 re-run objects and re-holds 6 of the 10 `unblocked` items.
+
+[Fact] Taint closure: `ks.recover.unresolve` records propagate taint (they copy the pre-resolution tainted versions back); every other `ks.recovery` record is still a repair that does not propagate. This is what brings the flag back after an undo.
+
+[Fact] Verify reports a replayed resolve/unresolve step as `resolution_invalid` (the "applied twice" check in `recovery_pass` skips those two tools so the resolution pass names it).

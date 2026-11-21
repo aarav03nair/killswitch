@@ -1,4 +1,4 @@
-# ks.contracts: C1–C6 reference (CON-01 → CON-02 → B3-01 → B3-43 → B3-46 → B3-47 → B3-51, contracts **1.6.0**, frozen 22 Nov)
+# ks.contracts: C1–C6 reference (CON-01 → CON-02 → B3-01 → B3-43 → B3-46 → B3-47 → B3-51 → S4-13, contracts **1.7.0**, frozen 22 Nov)
 
 Import from `ks.contracts`, never from submodules. Every type is a frozen pydantic model that rejects unknown
 fields. Each one has `to_canonical()` / `from_canonical()` (strict: the bytes must already be canonical) and
@@ -12,8 +12,8 @@ fields. Each one has `to_canonical()` / `from_canonical()` (strict: the bytes mu
 | C2 Record | `Record` (+`reexec_of`), `WitnessCheckpoint` (+`count`), `Decision` exec/deny/hold, `Reason`, `ActionClass` R/C/I1/I2/U; `determinism_view()`, `witness_chain_problems()` | `record.jsonl`, `witness.jsonl` |
 | C3 State | `StateView`/`StateWriter`/`SideStore` protocols; `ObjVer`, `VersionRef`, `ReadEntry` (+`source` view|tool), `ViewEntry`, `WriteEntry`, `StateRead`, `HistoryEntry`, `OutboxItem`, `SideEntry`; `make_obj_id`/`field_obj_id`/`row_obj_id`/`split_obj_id`; `idempotency_key()`; `check_read_set()`, `merge_read_set()` | `sidestore/xx/<hash>.json` |
 | C4 | `Alert` (`root_candidates` ranked; no `suspect`; H3 hard table), `Control` (target `agent:`/`conn:`/`action:`/`outbox:`), `EpochFold` | `alerts.jsonl` (copy); Alerts and Controls inside records |
-| C5 | `RecoveryPlan` (`t0_seq_est`, `t0_seq_est_literal`), `TaintSet`, steps `restore`/`rerun`/`replan`/`cancel_outbox`/`compensate`/`flag`, `DiffEntry`; `Approval`, `RecoverArgs` | `plans/<plan_id>.json` |
-| C6 | `RunConfig` (seed, `fault_tick`, `key_mode`, `decision_latency_ticks`, `hold_window_ticks`, `sensitive_fields`, agents, `isolation`, `decisions_from`, `lineage_hold`; `tcb_view()`), `Keyring`, `RunAnchor`, `RunDir`, `Exit`, `VerifyReport` (+`anchored`, `isolation`, `lineage_hold`) | `config.json`, `keys.json` |
+| C5 | `RecoveryPlan` (`t0_seq_est`, `t0_seq_est_literal`), `TaintSet`, steps `restore`/`rerun`/`replan`/`cancel_outbox`/`compensate`/`flag`/`resolve`/`unresolve` (+`RevertEntry`), `DiffEntry`; `Approval`, `RecoverArgs` | `plans/<plan_id>.json` |
+| C6 | `RunConfig` (seed, `fault_tick`, `key_mode`, `decision_latency_ticks`, `hold_window_ticks`, `sensitive_fields`, agents, `isolation`, `decisions_from`, `lineage_hold`, `resolver`; `tcb_view()`, `resolver_label`), `Keyring`, `RunAnchor`, `RunDir`, `Exit`, `VerifyReport` (+`anchored`, `isolation`, `lineage_hold`) | `config.json`, `keys.json` |
 | Transport | `TickFrame` (+`epoch`, `view`), `SubmitFrame`, `NoopFrame`, `ReplyFrame`, `SignRequest`, `SignReply`, `SignRefusal`; witness link `WitnessInit/Pub/Files/Ready/Head/Close` (`decode_witness_frame`); `MAX_VIEW_ENTRIES`, `MAX_SIGN_PER_TICK`, `SIGN_REFUSAL_REASONS`, `signer_refusal()` | JSON lines over Unix sockets |
 
 ## One serializer
@@ -120,6 +120,28 @@ Each is a recorded envelope on `c-0`. Every outbox status change carries a `writ
 Metric and score keys and the `effects.jsonl` schema (tara, ADR-06); policy rule ids (nisha, ADR-03); the store implementation (vikram, ADR-05); side-store and verify internals (arjun, ADR-02).
 
 ## Changelog
+
+### 1.7.0 (S4-13, 21 Nov; D-18, ADR-05a, CALL-02 amendment B5-a approved by Aarav 21 Nov) — additive only
+Nothing renamed or removed; no field changed. Tests: `tests/contracts/test_contracts_17.py`,
+`tests/recovery/test_resolver.py`.
+
+- **C5:** `StepOp.RESOLVE` / `StepOp.UNRESOLVE`; `ResolveStep` (`rule`, `rule_version`, `obj`, `culprit_ver`, `expect`,
+  `to`, `rebased`, `rebased_hash`, `unblocked`, `rationale`), `UnresolveStep` (`resolution`, `resolution_plan_hash`,
+  `reverts: RevertEntry[]`, `reheld`, `rationale`), `RevertEntry` (`obj`, `expect`, `to`). Both run as
+  `ks.recover.resolve` / `ks.recover.unresolve` signed by `ks.recovery` on c-0 (the existing `system_tool_signers`
+  rule). Plans without them parse and hash as before. Step order: cancel_outbox, restore, resolve, rerun, compensate,
+  replan, flag. `needs_approval` unchanged (a resolve is approved with the plan, like a restore).
+- **C6:** `RunConfig.resolver: "off" | "ww_rebase/1" = "off"` (additive: omitted at `off`, so 1.1–1.6 configs keep their
+  bytes and hashes). Set by `ks run --resolver ww_rebase/1`; covered by `config_hash`; not scorer-only. `resolver_label()`
+  gives the one label text (`resolver: off` / `resolver: ww_rebase/1 (on)`).
+- **C6:** verify reason `resolution_invalid` → TAMPER: an executed resolve/unresolve the rule does not support (unknown
+  rule, a failing check, fields the record does not imply, a landed write that is not `rebased_hash` over `expect`, a
+  replay, a resolve after an undo of the same (obj, action), out of order, a bad or second undo). Logic:
+  `ks.verify.recovery.resolution_pass`. A replayed resolve/unresolve step is reported here, not as `recovery_unbound`.
+- **Schemas:** regenerated (version string; new step types; `resolver` in run_config, not required).
+- **Fixture:** `tests/contracts/fixtures/run-1.6-world-s0` (1.6.0 world run); 1.3–1.6 runs verify under 1.7.
+
+**Golden hashes.** Only `doc:run_config` moved (`contracts_version` = 1.7.0).
 
 ### 1.6.0 (B3-51, 20 Nov; kabir's B3-51 ruling, ADR-04 §7 amended) — additive only
 Nothing renamed or removed; no field changed. Tests: `tests/contracts/test_contracts_16.py`,

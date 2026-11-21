@@ -156,8 +156,9 @@ def reconcile(ctx: Context) -> list[Finding]:
         for w in r.write_set:
             fold[w.obj] = (w.after.ver, w.after.hash)
     live = ctx.state.heads()
-    bad = sorted(o for o in set(fold) | set(live)
-                 if (o in fold) != (o in live) or (o in fold and fold[o] != (live[o].ver, live[o].hash)))
+    off = set(getattr(ctx.state, "corrupt_heads", lambda: ())())  # S4-28: value edited, hash kept
+    bad = sorted(off | {o for o in set(fold) | set(live)
+                        if (o in fold) != (o in live) or (o in fold and fold[o] != (live[o].ver, live[o].hash))})
     if not bad:
         return []
     vers = tuple(ObjVer(obj=o, ver=live[o].ver) for o in bad if o in live)

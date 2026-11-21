@@ -40,7 +40,7 @@
       "type": "object"
     }
   },
-  "$id": "https://killswitch.local/schema/1.6.0/c4.alert.schema.json",
+  "$id": "https://killswitch.local/schema/1.7.0/c4.alert.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "C4 Alert, appended to ``alerts.jsonl`` in the run dir.",

@@ -17,9 +17,10 @@ from .ids import (RECOVER_TOOL_PREFIX, SEED_TOOL, SYSTEM_CONN, SYSTEM_PRINCIPALS
 from .record import (REASONS_FOR, ActionClass, Decision, Reason, Record, WitnessCheckpoint, determinism_view,
                      witness_chain_problems)
 from .recovery import (APPROVE_TOOL, ActionRef, Approval, CancelOutboxStep, CompensateStep, DiffEntry, FlagStep,
-                       RecoverArgs, RecoveryPlan, ReplanStep, RerunStep, RestoreStep, StepOp, TaintSet, recover_tool)
+                       RecoverArgs, RecoveryPlan, ReplanStep, RerunStep, ResolveStep, RestoreStep, RevertEntry, StepOp,
+                       TaintSet, UnresolveStep, recover_tool)
 from .rundir import (BASELINES_DIR, DETERMINISTIC_FILES, NO_LINEAGE_HOLD_BANNER, PROJECTED_FILES, SCORER_ONLY_FIELDS, VERIFY_REASONS,
-                     WITNESS_HEADS_DIR, Exit, Isolation, KeyEntry, Keyring, RunAnchor, RunConfig, RunDir,
+                     WITNESS_HEADS_DIR, Exit, Isolation, resolver_label, KeyEntry, Keyring, RunAnchor, RunConfig, RunDir,
                      VerifyReport, anchor_status, sidestore_relpath)
 from .state import (READ_SOURCES, HistoryEntry, ObjVer, OutboxItem, OutboxStatus, ReadEntry, ReadSource, SideDomain,
                     SideEntry, SideStore, StateRead, StateView, StateWriter, VersionRef, ViewEntry, WriteEntry,
@@ -30,13 +31,14 @@ from .transport import (MAX_FRAME_BYTES, MAX_SIGN_PER_TICK, MAX_VIEW_ENTRIES, SI
                         TickFrame, WitnessClose, WitnessFiles, WitnessHead, WitnessInit, WitnessPub, WitnessReady,
                         decode_frame, decode_witness_frame, encode_frame, signer_refusal)
 
-CONTRACTS_VERSION = "1.6.0"
+CONTRACTS_VERSION = "1.7.0"
 """Contract version. 1.1.0 = CON-02 design freeze (CALL-02); 1.2.0 = B3-01, additive (witness link frames,
 SignRefusal, RunConfig.isolation/decisions_from, VerifyReport.isolation, reexec_invalid); 1.3.0 = B3-43, additive
 (``ks.seed`` system tool per D-15, deny reason ``tool_error``, verify reason ``seed_invalid``); 1.4.0 = B3-46,
 additive (``ReadEntry.source`` view|tool, read_set keyed by (obj, ver), ``RestoreStep.to`` may be ``None``,
 ``RecoveryPlan.t0_seq_est_literal``); 1.5.0 = B3-47, additive (verify reason ``replay_mismatch``); 1.6.0 = B3-51,
-additive (``RunConfig.lineage_hold``, ``VerifyReport.lineage_hold``: the D10 no-lineage-hold contrast run); see README
+additive (``RunConfig.lineage_hold``, ``VerifyReport.lineage_hold``: the D10 no-lineage-hold contrast run); 1.7.0 = S4-13
+(D-18, ADR-05a), additive (``resolve``/``unresolve`` steps, ``RunConfig.resolver``, verify reason ``resolution_invalid``); see README
 changelog. Any change to fields, patterns, canonical rules or domain tags bumps it, regenerates ``schema/``
 and re-pins golden hashes."""
 
@@ -74,11 +76,12 @@ __all__ = [
     "TargetKind", "make_target", "parse_target", "CONTROL_TOOL", "EpochFold",
     # C5
     "RecoveryPlan", "TaintSet", "ActionRef", "DiffEntry", "StepOp", "RestoreStep", "RerunStep", "ReplanStep",
-    "CancelOutboxStep", "CompensateStep", "FlagStep", "APPROVE_TOOL", "Approval", "RecoverArgs", "recover_tool",
+    "CancelOutboxStep", "CompensateStep", "FlagStep", "ResolveStep", "RevertEntry", "UnresolveStep", "APPROVE_TOOL",
+    "Approval", "RecoverArgs", "recover_tool",
     # C6
     "RunConfig", "Keyring", "KeyEntry", "RunDir", "Exit", "VerifyReport", "VERIFY_REASONS", "RunAnchor", "Isolation",
     "anchor_status", "DETERMINISTIC_FILES", "PROJECTED_FILES", "SCORER_ONLY_FIELDS", "WITNESS_HEADS_DIR",
-    "NO_LINEAGE_HOLD_BANNER",
+    "NO_LINEAGE_HOLD_BANNER", "resolver_label",
     "BASELINES_DIR", "sidestore_relpath",
     # transport
     "TickFrame", "SubmitFrame", "NoopFrame", "ReplyFrame", "SignRequest", "SignReply", "encode_frame",

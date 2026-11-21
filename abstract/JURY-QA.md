@@ -150,7 +150,9 @@ anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md
   - Dolt performance numbers: RES-06 never ran Dolt (F4/§4 caveat). The git run is one toy example, not a benchmark (RES-06 §5).
   - Overclaiming conflict handling: a write-write conflict is **flagged**, not merged (T§4; F9).
   - Hero conflict line (CALL-02): triage's edit on the same supplier is **kept**, no flag; the IBAN is its own field object, so they share no datum (W6; CALL-02 B1–B3). Do not call it a conflict.
-  - "So you never get a conflict?": an honest one exists in bench **F2+x** (triage edits the price row crm wrote → row-level write-write conflict → flag, unresolved because the bench approver never resolves flags). Measured **before resolver** (D-18): R 1/5, C 21/254, 29 honest items held (medians; ALLOWED N15); quote all three. Show it, do not hide it (L9; CALL-02 B5). Conflicts are field-level only for sensitive fields, row-level elsewhere (F9).
+  - "So you never get a conflict?": an honest one exists in bench **F2+x** (triage edits the price row crm wrote → row-level write-write conflict → flag). Give **both rows** (D-18, CALL-04 decision 2; FACT-CARD O5/O6; ALLOWED N15/N18), medians over 20 seeds, T=40, H=6, container. **Before resolver** (default, resolver off): R 1/5, C 21/254, 29 honest items held; the flag waits for a human because the bench approver never resolves flags. **With resolver ww_rebase/1 (on)**: R 0, C 0, 3 honest items held, after the operator released 5 items (3 honest, 2 tainted-lineage re-run and re-held; D-17); 1 resolution on 19/20 seeds (s7 had no conflict); verify OK on all 40 runs; hero unchanged off/on. Quote all three values per row and both rows together. Show it, do not hide it (L9; CALL-02 B5). Conflicts are field-level only for sensitive fields, row-level elsewhere (F9).
+  - "So the resolver auto-merges conflicts?": no. It is opt-in, and it rebases one honest deterministic write on the last clean version as one signed record that `ks verify` checks and `ks recover --unresolve` undoes (ADR-05a §1, §5). It **refuses** the suspect, every alert's `root_candidates[0]`, evidence writers, taint-origin (seed) writers, and LLM, system and suspended agents; anything that fails a check waits for a human (ADR-05a §1, §2a). Nothing is merged by hand, no value invented.
+  - "Can a compromised resolver or a colluder slip a bad value through?": known limits, stated as such (THREAT-MODEL Errata, D-18 entry): verify checks the resolution's rule, order, binding and clean inputs, **not the re-computed value** (trusted to `ks.recovery`, TCB); a colluder outside the refused set that copies the culprit's value from its own memory into its args would carry it into the rebased write (C3, no prevention claim). Post-finale: `ks verify --reexec-resolutions` (design, not built).
 
 ## Q11. "Any real incident where this happened? Would this have stopped the METR / OpenAI–Hugging Face case?"
 
@@ -229,3 +231,7 @@ anaya · 19 Nov 2026 · Reviewer: kabir (security scope) · Inputs: FACT-CARD.md
 - Q9: hero has no cancel (B2-a, operator unhold); hold-0 trap rewritten to the labelled contrast.
 - Q10: F2+x measured values, "before resolver" (D-18).
 - New Q13: operator releases and R = 0 (D-17).
+
+## Changes (S4-11, anaya, 21 Nov; D-18, D-17)
+
+- Q10: F2+x now gives the before-resolver row (N15) and the with-resolver ww_rebase/1 row (N18, BENCH-S3 §S4-13, container), plus two traps: what the resolver will not do, and its known limits (collusion; verify trusts the recorded value).

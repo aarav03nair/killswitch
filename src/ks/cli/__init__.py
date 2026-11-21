@@ -8,9 +8,10 @@ from __future__ import annotations
 
 import argparse
 import os
+from pathlib import Path
 import sys
 
-from ks.contracts import NO_LINEAGE_HOLD_BANNER, CanonicalError, Exit, RunAnchor
+from ks.contracts import NO_LINEAGE_HOLD_BANNER, CanonicalError, Exit, RunAnchor, RunDir, resolver_label
 
 __all__ = ["main"]
 
@@ -43,6 +44,8 @@ def _parser() -> argparse.ArgumentParser:
     r.add_argument("--hold", type=int, help="lineage hold window in ticks")
     r.add_argument("--no-lineage-hold", action="store_true",
                    help="D10 contrast, needs --hold 0: also drop the taint hold so a tainted payment dispatches")
+    r.add_argument("--resolver", choices=("off", "ww_rebase/1"), default="off",
+                   help="write-write conflict resolver (D-18, ADR-05a); recorded in config.json and labelled")
     r.add_argument("--rogue", metavar="FILE", help="jury Python run in place of --slot")
     r.add_argument("--slot", help="agent replaced by --rogue (default docs)")
     r.add_argument("--decisions", metavar="RUN", help="replay operator decisions of an anchored run")
@@ -76,6 +79,8 @@ def _parser() -> argparse.ArgumentParser:
     g = rc.add_mutually_exclusive_group(required=True)
     g.add_argument("--dry-run", action="store_true")
     g.add_argument("--apply", metavar="PLAN_ID")
+    g.add_argument("--unresolve", metavar="PLAN_ID.N",
+                   help="plan the undo of an executed resolution (ADR-05a §5); apply it with --apply")
     rc.add_argument("--approve", nargs="+", metavar="ITEM", default=[])
     sc = sub.add_parser("score", help="write score.json for a run")
     sc.add_argument("run")
@@ -92,6 +97,8 @@ def _parser() -> argparse.ArgumentParser:
     bn.add_argument("--out", default="runs/bench")
     bn.add_argument("--keep-runs", action="store_true")
     bn.add_argument("--contrast", default="", help="csv of faults: add a system H=0 --no-lineage-hold row (D10 contrast)")
+    bn.add_argument("--resolver-faults", default="",
+                    help="csv of faults: add a system column run with --resolver ww_rebase/1 (D-18 after-row)")
     co = sub.add_parser("console", help="incident console: static HTML or live terminal view")
     co.add_argument("run")
     cg = co.add_mutually_exclusive_group(required=True)
@@ -177,7 +184,7 @@ def _run(args) -> int:
             return _usage("run", f"--rogue file not found: {args.rogue}")
         kw.update(rogue=args.rogue, slot=args.slot or "docs")
     opts, err = _options("run", args, fault=args.fault or None, hold=args.hold, step=args.step,
-                         no_lineage_hold=args.no_lineage_hold,
+                         no_lineage_hold=args.no_lineage_hold, resolver=args.resolver,
                          monitor=bool(args.fault or args.rogue),  # B3-27/B3-35: fault and rogue runs are monitored
                          pause_on_alert=args.pause_on_alert,
                          decisions=args.decisions, decisions_head=args.decisions_head, **kw)
@@ -220,6 +227,10 @@ def _verify(args) -> int:
         scope = "anchored" if rep.anchored else f"consistent, not anchored ({rep.unanchored_reason})"
         verdict = "OK" if rep.ok else f"{Exit(rep.exit).name} {rep.reason}{where}"
         print(f"verify: {verdict}; last witnessed seq {rep.last_witnessed_seq}; {scope}")
+        try:  # ADR-05a §7 label (config.json; verify itself checked it above when readable)
+            print(resolver_label(RunDir(args.run).config().resolver))
+        except Exception:  # noqa: BLE001 - unreadable config: the verdict line already says so
+            pass
         if not rep.lineage_hold:
             print(f"!! {NO_LINEAGE_HOLD_BANNER}")
     print(rep.to_canonical().decode())
@@ -266,7 +277,48 @@ def _need_run(cmd: str, run: str) -> int | None:
 
 
 def _blame(args) -> int:
-    return _need_run("blame", args.run) or _not_yet("blame", "needs monitor alerts, B3-14")
+    """S4-29: read-only. Chained alerts -> ranked root_candidates and the forward taint summary (ks.taint)."""
+    if (err := _need_run("blame", args.run)) is not None:
+        return err
+    from ks.contracts import RunDir
+    from ks.runtime.recover import _alerts
+    from ks.taint import RecordIndex, root_candidates, taint_from_alerts
+    from ks.verify import verify
+    rep = verify(args.run, log=lambda s: None)  # blame recomputes from the record: refuse on an unverified one
+    if not rep.ok:
+        where = f" at seq {rep.first_bad}" if rep.first_bad is not None else ""
+        print(f"ks blame: UNVERIFIED RECORD: verify {rep.reason}{where}. Refusing to name a culprit from a record "
+              f"that does not verify (run `ks verify {args.run}`).", file=sys.stderr)
+        return rep.exit if rep.exit else Exit.IO
+    try:
+        records = list(RunDir(args.run).records())
+        alerts = _alerts(Path(args.run), records)
+    except (OSError, ValueError, KeyError) as e:
+        print(f"ks blame: not a readable run dir: {e}", file=sys.stderr)
+        return Exit.IO
+    if args.alert:
+        alerts = [a for a in alerts if a.alert_id == args.alert]
+    if not alerts:
+        print("ks blame: no chained ks.alert in the record" + (f" with id {args.alert}" if args.alert else ""),
+              file=sys.stderr)
+        return Exit.IO
+    ix = RecordIndex.of(records)
+    for a in alerts:
+        print(f"alert {a.alert_id}: {a.detector}")
+        rc = root_candidates(ix, a.evidence_versions)
+        print("root candidates (ranked):")
+        for i, c in enumerate(rc, 1):
+            print(f"  {i}. {c}")
+        if not rc:
+            print("  (none)")
+    t = taint_from_alerts(ix, alerts)
+    if t is None:
+        print("taint: none (no suspended suspect, so no seed)")
+    else:
+        print(f"suspect {t.suspect}: t0 seq {t.t0_seq_est}, suspended at seq {t.suspend_seq}")
+        print(f"taint: {len(t.versions)} versions, {len(t.actions)} actions, {len(t.outbox_ids)} outbox items; "
+              f"agents with tainted actions: {', '.join(t.agents) or 'none'}")
+    return Exit.OK
 
 
 def _contain(args) -> int:
@@ -314,6 +366,21 @@ def _recover(args) -> int:
     if why is not None:
         print(f"ks recover: FROZEN: {why} (M12: no recovery for the rest of this run)", file=sys.stderr)
         return Exit.FROZEN
+    if args.unresolve:
+        if args.approve:
+            return _usage("recover", "--approve goes with --apply")
+        try:
+            res = R.cli_unresolve(args.run, args.unresolve)
+        except (ValueError, OSError) as e:
+            print(f"ks recover: {e}", file=sys.stderr)
+            return Exit.IO
+        sys.stdout.write(res.text)
+        print(f"plan written: {res.path}")
+        if res.plan.steps[0].op == "flag":
+            print("ks recover: unresolve_blocked: a person decides (the resolution stays)", file=sys.stderr)
+            return Exit.IO
+        print(f"apply: ks recover {args.run} --apply {res.plan.plan_id}")
+        return Exit.OK
     if args.dry_run:
         if args.approve:
             return _usage("recover", "--approve goes with --apply")
@@ -376,7 +443,6 @@ def _score(args) -> int:
     hold) in ``RUN/oracle/s-star`` (reused if already there), then ``ks.score.score_run`` and ``write_score``."""
     if (err := _need_run("score", args.run)) is not None:
         return err
-    from pathlib import Path
     from ks.contracts import RunDir, canonical
     from ks.inject import make_spec, world_fault
     from ks.oracle import run_s_star
@@ -417,6 +483,9 @@ def _score(args) -> int:
         return Exit.OK
     if not cfg.lineage_hold:  # contracts 1.6 (B3-51): score.json keeps its schema; config.json carries the switch
         print(f"!! {NO_LINEAGE_HOLD_BANNER}")
+    from ks.validity import run_validity, validity_line
+    if (vl := validity_line(v := run_validity(run))) is not None:  # S4-22: VOID / DEGRADED is never the headline
+        print(("!! " if v["verdict"] != "OK" else "") + vl)
     for k in ("tti_detect", "tti_attribute", "ttc", "R", "C", "post_alert_tainted_effects",
               "irreversible_tainted_released", "reemitted", "kept_without_redo", "false_accusations"):
         print(f"{k:32} {canonical.dumps(s[k]).decode()}")
@@ -437,7 +506,6 @@ def _ranges(text: str, flag: str) -> list[int]:
 
 def _bench(args) -> int:
     """B3-33: seeds x faults x hold x baselines over the real command path; per-seed score.json, bench.json, bench.md."""
-    from pathlib import Path
     from ks.bench import BASELINES, bench
     from ks.bench.runner import DEFAULT_FAULTS
     try:
@@ -453,7 +521,8 @@ def _bench(args) -> int:
     if out.exists() and any(out.iterdir()):
         return _usage("bench", f"--out {out} exists and is not empty")
     s = bench(seeds, faults, holds, bases, args.ticks, out, keep_runs=args.keep_runs,
-              contrast_faults=[x for x in args.contrast.split(",") if x], log=lambda m: print(m, flush=True))
+              contrast_faults=[x for x in args.contrast.split(",") if x], log=lambda m: print(m, flush=True),
+              resolver_faults=[x for x in args.resolver_faults.split(",") if x])
     print((out / "bench.md").read_text())
     print(f"bench written: {out}/bench.json, bench.md, timings.json")
     return Exit.IO if s["failures"] else Exit.OK

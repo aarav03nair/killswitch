@@ -24,7 +24,7 @@ section{scroll-margin-top:120px}
 code{font-size:.9em;background:var(--pan);padding:1px 4px;overflow-wrap:anywhere}pre{overflow-x:auto;background:var(--pan);padding:10px}
 a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid var(--rule);color:var(--mut)}
 </style></head><body>
-<header><div class="brand"><b>Kill Switch</b>Abstract Kit · updated 21 Nov 2026, 00:16 IST</div><nav role="tablist"><button role="tab" id="t-start" aria-controls="start" aria-selected="true">Start here</button><button role="tab" id="t-facts" aria-controls="facts" aria-selected="false">Fact card</button><button role="tab" id="t-allowed" aria-controls="allowed" aria-selected="false">Allowed numbers</button><button role="tab" id="t-skeleton" aria-controls="skeleton" aria-selected="false">Skeleton</button><button role="tab" id="t-guard" aria-controls="guard" aria-selected="false">Guardrails</button><button role="tab" id="t-terms" aria-controls="terms" aria-selected="false">Terms</button><button role="tab" id="t-jury" aria-controls="jury" aria-selected="false">Jury Q&amp;A</button></nav></header>
+<header><div class="brand"><b>Kill Switch</b>Abstract Kit · updated 21 Nov 2026, 06:20 IST</div><nav role="tablist"><button role="tab" id="t-start" aria-controls="start" aria-selected="true">Start here</button><button role="tab" id="t-facts" aria-controls="facts" aria-selected="false">Fact card</button><button role="tab" id="t-allowed" aria-controls="allowed" aria-selected="false">Allowed numbers</button><button role="tab" id="t-skeleton" aria-controls="skeleton" aria-selected="false">Skeleton</button><button role="tab" id="t-guard" aria-controls="guard" aria-selected="false">Guardrails</button><button role="tab" id="t-terms" aria-controls="terms" aria-selected="false">Terms</button><button role="tab" id="t-jury" aria-controls="jury" aria-selected="false">Jury Q&amp;A</button></nav></header>
 <main><section id="start" role="tabpanel" >
 <h1>Abstract Kit</h1>
 <p class="lede">Everything you need to write the SEED abstract yourself: facts you may quote, how to phrase them safely, a notes-only skeleton, and the questions the jury will throw at you. Due <b>22 Nov 2026</b>, under 1,000 words, problem → fix → why it matters.</p>
@@ -257,6 +257,48 @@ a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid va
 </tr>
 </tbody>
 </table>
+<h2>Honest conflict F2+x: before and after the resolver (S4-11; BENCH-S3, system, H=6, T=40, 20 seeds, container)</h2>
+<p>[Fact] In F2+x triage edits the price row crm wrote (<code>suppliers:S-22</code>) → write-write conflict → flagged. CALL-04 D-18 requires both rows, side by side. Cells are median [min..max] over 20 seeds. Abstract IDs: ALLOWED-NUMBERS N15 (before), N18 (after).</p>
+<table>
+<thead>
+<tr>
+<th>#</th>
+<th>Row</th>
+<th>R</th>
+<th>C</th>
+<th>honest items held</th>
+<th>operator releases (honest + tainted-lineage)</th>
+<th>Source</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>O5</td>
+<td><strong>before resolver</strong> (resolver: off; default run)</td>
+<td>1/5 [0..1/5]</td>
+<td>21/254 [0..44/243]</td>
+<td>29 [0..35]</td>
+<td>3 [1..7] (3 + 0)</td>
+<td>BENCH-S3 §F2+x H=6; §S4-13 before column</td>
+</tr>
+<tr>
+<td>O6</td>
+<td><strong>with resolver ww_rebase/1</strong> (opt-in, every resolution signed, verified, undoable)</td>
+<td>0 [0..0]</td>
+<td>0 [0..0]</td>
+<td>3 [0..7]</td>
+<td>5 [1..9] (3 + 2)</td>
+<td>BENCH-S3 §S4-13 after column</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Must travel with O5/O6 [Fact]:</strong>
+- Quote both rows together, and R, C and held together. O6 always says "with resolver on" (D-19, ADR-05a §7); the resolver is off unless the run turns it on.
+- <strong>D-17:</strong> O6's R = 0 holds after the operator released a median 5 held items, 3 honest and 2 tainted-lineage (re-run and re-held by recovery, released by the bench approver, X4).
+- Before the resolver the flag is never resolved, because the bench approver never resolves flags: a flagged conflict waits for a human.
+- With the resolver: 1 resolution on 19 of 20 seeds (triage rebased on the clean base); seed 7 had no conflict. <code>ks verify</code> OK on all 40 runs (off and on), <code>per_agent_uid</code>, no <code>resolution_invalid</code>. Hero F2+ (seeds 1..5) score.json identical off and on (BENCH-S3 §S4-13; S4-13 review, kabir).
+- <strong>What the resolver will not do</strong> (ADR-05a §1, §2a): it refuses the suspect, every alert's <code>root_candidates[0]</code>, evidence writers, authors of taint origins (seed writers), and LLM, system and suspended agents. Any conflict that fails a check, and every other flag, replan or compensate, waits for a human. It merges nothing by hand and invents no value. Undo: <code>ks recover RUN --unresolve &lt;plan_id&gt;.&lt;n&gt;</code>, itself recorded.
+- <strong>Known limits</strong> (THREAT-MODEL Errata, D-18 entry): verify checks the resolution's rule, order, binding and clean inputs, <strong>not the re-computed value</strong> (trusted to <code>ks.recovery</code>, TCB). A <strong>colluding</strong> agent outside the refused set that copies the culprit's value from its own memory into its args would carry it into the rebased write (C3, no prevention claim). Deterministic built-in agents only (GUARDRAILS L6).</p>
 <h2>Not safe to print (never quote)</h2>
 <ul>
 <li><strong>Exact HF/METR dates or times</strong> (6, 8, 11, 13, 19, 21 Jul; 23:00 UTC). The outlets disagree. Say "July 2026" and "about two days later".</li>
@@ -436,8 +478,10 @@ a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid va
 </tr>
 </tbody>
 </table>
-<h2>3. Honest conflict variant F2+x (system, H=6, T=40): disclose, "before resolver" [Fact]</h2>
-<p>BENCH-S3 §"F2+x, H=6, T=40", column <code>system</code>, plus Reading notes bullet 1. <strong>Must travel with it:</strong> (a) triage edits the price row crm wrote → write-write conflict → flagged, and the bench approver never resolves flags; (b) label <strong>"before resolver"</strong>: D-18's auditable resolver (S4-12 design, S4-13 build) is not built yet, so these values may change; CALL-04 decision 2 requires F2+x reported before and after; (c) quote all three values together, never R alone.</p>
+<h2>3. Honest conflict variant F2+x (system, H=6, T=40): disclose before and after the resolver [Fact]</h2>
+<p>CALL-04 decision 2 (D-18) requires F2+x reported <strong>before and after</strong>. Quote both rows together, and quote R, C and honest items held together, never R alone. <strong>Must travel with both rows:</strong> triage edits the price row crm wrote (<code>suppliers:S-22</code>, row-level) → write-write conflict → flagged.</p>
+<h3>3a. Before resolver (resolver: off) [Fact]</h3>
+<p>BENCH-S3 §"F2+x, H=6, T=40", column <code>system</code>, plus Reading notes bullet 1; identical cell for cell to the before column of §"S4-13". <strong>Must travel with it:</strong> label <strong>"before resolver"</strong>; the flag is unresolved because the bench approver never resolves flags, so the flagged conflict waits for a human.</p>
 <table>
 <thead>
 <tr>
@@ -462,8 +506,69 @@ a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid va
 <td>honest items held <strong>29 [0..35]</strong></td>
 <td><code>fp_cost.held_honest_actions</code></td>
 </tr>
+<tr>
+<td>N15</td>
+<td>operator releases <strong>3 [1..7]</strong> (3 [0..7] honest, 0 [0..1] tainted-lineage)</td>
+<td><code>fp_cost.operator_unholds.*</code></td>
+</tr>
 </tbody>
 </table>
+<h3>3b. With resolver ww_rebase/1 (opt-in; every resolution signed, verified, undoable) [Fact]</h3>
+<p>BENCH-S3 §"S4-13: F2+x before and after the resolver (D-18), H=6, T=40", column <code>system (resolver: ww_rebase/1 (on), after)</code>. Built S4-13 (vikram), reviewed PASS by kabir 21 Nov with a container rerun. Command: <code>ks bench --seeds 1-20 --faults F2+x --hold 6 --baselines system --ticks 40 --resolver-faults F2+x</code>.</p>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Value</th>
+<th>Metric row</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>N18</td>
+<td>residual damage R <strong>0 [0..0]</strong></td>
+<td><code>R</code></td>
+</tr>
+<tr>
+<td>N18</td>
+<td>collateral loss C <strong>0 [0..0]</strong></td>
+<td><code>C</code></td>
+</tr>
+<tr>
+<td>N18</td>
+<td>honest items held <strong>3 [0..7]</strong></td>
+<td><code>fp_cost.held_honest_actions</code></td>
+</tr>
+<tr>
+<td>N18</td>
+<td>operator releases <strong>5 [1..9]</strong>: <strong>3 [0..7]</strong> honest, <strong>2 [1..2]</strong> tainted-lineage</td>
+<td><code>fp_cost.operator_unholds.*</code></td>
+</tr>
+<tr>
+<td>N18</td>
+<td>resolutions: <strong>1 on 19 of 20 seeds</strong> (rebased agent triage, <code>suppliers:S-22</code>); seed 7 had no write-write conflict, so 0</td>
+<td>S4-13 resolver table (<code>ww_flags_before/after</code>, <code>resolutions</code>)</td>
+</tr>
+<tr>
+<td>N18</td>
+<td><code>ks verify</code> OK on <strong>all 40 runs</strong> (20 off, 20 on), isolation <code>per_agent_uid</code>, no <code>resolution_invalid</code></td>
+<td>S4-13 "Verify" paragraph</td>
+</tr>
+<tr>
+<td>N18</td>
+<td>hero F2+ (seeds 1..5) score.json <strong>identical</strong> with resolver off and on (0 resolutions, 0 flags); verify OK on all 10 runs</td>
+<td>S4-13 "Hero F2+" paragraph</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Must travel with N18:</strong>
+- (a) Label <strong>"with resolver on"</strong> / <code>resolver: ww_rebase/1 (on)</code> (D-19, ADR-05a §7). The resolver is <strong>opt-in</strong>: off unless the run turns it on (<code>ks run --resolver ww_rebase/1</code>); every output names it. The default run is the 3a row.
+- (b) <strong>D-17:</strong> R = 0 holds <em>after the operator released</em> a median <strong>5 [1..9]</strong> held items, <strong>3 [0..7]</strong> honest and <strong>2 [1..2]</strong> tainted-lineage (items recovery re-ran and re-held; the bench approver releases them, X4). Never a bare R = 0.
+- (c) G1, G2, G3, G9: T = 40, 20 seeds, H = 6, container (<code>killswitch:kabir</code>, <code>--network none</code>, per-agent uids). Vikram's native macOS run gave the same table, but the allowed source is the container run.
+- (d) "Signed, verified, undoable" means: each resolution is one <code>ks.recover.resolve</code> record by <code>ks.recovery</code> with its rule and check ids as rationale; <code>ks verify</code> re-checks rule, order, binding and clean inputs (fails a forged or altered resolution with <code>resolution_invalid</code>); <code>ks recover RUN --unresolve &lt;plan_id&gt;.&lt;n&gt;</code> undoes it, is itself recorded, and raises the flag again (ADR-05a §1, §5; S4-13 review).
+- (e) What it <strong>will not</strong> do (ADR-05a §1, §2a): it acts only on <code>write_write_conflict</code> flags that pass <strong>every</strong> check (single honest write after the suspect's, deterministic non-LLM writer, no tainted view read, clean base exists, not undone before). It <strong>refuses</strong> the suspect, every alert's <code>root_candidates[0]</code>, every evidence writer, every author of a taint origin, and LLM, system and suspended agents. Anything that fails a check, every other flag reason, every replan and every compensate <strong>waits for a human</strong>. It merges nothing by hand and invents no value.
+- (f) Known limits (THREAT-MODEL Errata, D-18 entry; ADR-05a §2a, §6): <strong>verify trusts the recorded value</strong>: it checks the resolution's rule, order, binding and clean inputs, not the re-computed value, which is trusted to <code>ks.recovery</code> (TCB). <strong>Collusion:</strong> a colluding agent outside the refused set that copies the culprit's value from its own process memory into its args would carry it into the rebased write (C3, no prevention claim). Built-in agents are deterministic and stateless; this is not tested with LLM agents (G5).
+- (g) Not on the list from this table: <code>collateral_stall</code>, <code>kept_without_redo</code>, <code>revert_precision</code>, <code>revert_recall</code> (same reasons as §1).</p>
 <h2>4. Hold window and the D10 contrast (T=40) [Fact]</h2>
 <table>
 <thead>
@@ -510,11 +615,6 @@ a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid va
 <td>BENCH-S3 Reading notes bullet 2</td>
 </tr>
 <tr>
-<td>F2+x after resolver</td>
-<td>Does not exist yet</td>
-<td>vikram, S4-13</td>
-</tr>
-<tr>
 <td>T=120 values</td>
 <td>Not run</td>
 <td>tara, S4-14</td>
@@ -539,8 +639,13 @@ a{color:var(--sl)}blockquote{margin:0;padding-left:12px;border-left:3px solid va
 <h2>6. Notes for the self-check [Our view]</h2>
 <ul>
 <li>Every number of ours in the draft should map to an ID above. If it does not, cut it or ask.</li>
-<li>Tense: past tense ("measured") is fine <strong>only</strong> for values on this list, with G1–G3. Design parts (finale demo, jury break, resolver) stay future or design tense.</li>
+<li>Tense: past tense ("measured") is fine <strong>only</strong> for values on this list, with G1–G3. Design parts (finale demo, jury break) stay future or design tense. The resolver is built and measured (S4-13, N18); past tense only with N18's conditions (a)–(f).</li>
+<li>F2+x after the resolver (N18) never travels without the before row (N15) and the label "with resolver on".</li>
 <li>R = 0 without the release clause (N4) is the single most likely jury attack (JURY-QA Q13).</li>
+</ul>
+<h2>Changes (S4-11, anaya, 21 Nov)</h2>
+<ul>
+<li>§3 split into 3a (before resolver, N15, unchanged values; operator releases added from the same column) and 3b (with resolver ww_rebase/1, N18, from BENCH-S3 §S4-13, container). §5 row "F2+x after resolver: does not exist yet" removed. §6 tense note updated.</li>
 </ul></section><section id="skeleton" role="tabpanel" hidden><h1>SKELETON: abstract outline for Aarav to fill in (ABS-06)</h1>
 <p>zoya · 19 Nov 2026 · v3 (CALL-02 freeze) · Inputs: FACT-CARD.md (ABS-01), GUARDRAILS.md v4 (ABS-02), TERMS.md v2 (ABS-04), CALL-01.md D1/D2/D3/D12/D13, CALL-02.md (hero decision, revised D13 meaning, S*), CALL-01/zoya.md §2, research/RES-08.md (headline, ref [19]).</p>
 <p><strong>What this is.</strong> Headings, word budgets and note-form points only. No line here is a sentence to paste; Aarav writes every word (CHARTER).
@@ -2233,7 +2338,9 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <li>Dolt performance numbers: RES-06 never ran Dolt (F4/§4 caveat). The git run is one toy example, not a benchmark (RES-06 §5).</li>
 <li>Overclaiming conflict handling: a write-write conflict is <strong>flagged</strong>, not merged (T§4; F9).</li>
 <li>Hero conflict line (CALL-02): triage's edit on the same supplier is <strong>kept</strong>, no flag; the IBAN is its own field object, so they share no datum (W6; CALL-02 B1–B3). Do not call it a conflict.</li>
-<li>"So you never get a conflict?": an honest one exists in bench <strong>F2+x</strong> (triage edits the price row crm wrote → row-level write-write conflict → flag, unresolved because the bench approver never resolves flags). Measured <strong>before resolver</strong> (D-18): R 1/5, C 21/254, 29 honest items held (medians; ALLOWED N15); quote all three. Show it, do not hide it (L9; CALL-02 B5). Conflicts are field-level only for sensitive fields, row-level elsewhere (F9).</li>
+<li>"So you never get a conflict?": an honest one exists in bench <strong>F2+x</strong> (triage edits the price row crm wrote → row-level write-write conflict → flag). Give <strong>both rows</strong> (D-18, CALL-04 decision 2; FACT-CARD O5/O6; ALLOWED N15/N18), medians over 20 seeds, T=40, H=6, container. <strong>Before resolver</strong> (default, resolver off): R 1/5, C 21/254, 29 honest items held; the flag waits for a human because the bench approver never resolves flags. <strong>With resolver ww_rebase/1 (on)</strong>: R 0, C 0, 3 honest items held, after the operator released 5 items (3 honest, 2 tainted-lineage re-run and re-held; D-17); 1 resolution on 19/20 seeds (s7 had no conflict); verify OK on all 40 runs; hero unchanged off/on. Quote all three values per row and both rows together. Show it, do not hide it (L9; CALL-02 B5). Conflicts are field-level only for sensitive fields, row-level elsewhere (F9).</li>
+<li>"So the resolver auto-merges conflicts?": no. It is opt-in, and it rebases one honest deterministic write on the last clean version as one signed record that <code>ks verify</code> checks and <code>ks recover --unresolve</code> undoes (ADR-05a §1, §5). It <strong>refuses</strong> the suspect, every alert's <code>root_candidates[0]</code>, evidence writers, taint-origin (seed) writers, and LLM, system and suspended agents; anything that fails a check waits for a human (ADR-05a §1, §2a). Nothing is merged by hand, no value invented.</li>
+<li>"Can a compromised resolver or a colluder slip a bad value through?": known limits, stated as such (THREAT-MODEL Errata, D-18 entry): verify checks the resolution's rule, order, binding and clean inputs, <strong>not the re-computed value</strong> (trusted to <code>ks.recovery</code>, TCB); a colluder outside the refused set that copies the culprit's value from its own memory into its args would carry it into the rebased write (C3, no prevention claim). Post-finale: <code>ks verify --reexec-resolutions</code> (design, not built).</li>
 </ul>
 <h2>Q11. "Any real incident where this happened? Would this have stopped the METR / OpenAI–Hugging Face case?"</h2>
 <ul>
@@ -2338,6 +2445,10 @@ Guard: ✗ "same field" · ✗ C = 0 as unconditional · ✗ "culprit removed" f
 <li>Q9: hero has no cancel (B2-a, operator unhold); hold-0 trap rewritten to the labelled contrast.</li>
 <li>Q10: F2+x measured values, "before resolver" (D-18).</li>
 <li>New Q13: operator releases and R = 0 (D-17).</li>
+</ul>
+<h2>Changes (S4-11, anaya, 21 Nov; D-18, D-17)</h2>
+<ul>
+<li>Q10: F2+x now gives the before-resolver row (N15) and the with-resolver ww_rebase/1 row (N18, BENCH-S3 §S4-13, container), plus two traps: what the resolver will not do, and its known limits (collusion; verify trusts the recorded value).</li>
 </ul></section></main>
 <script>{const bs=[...document.querySelectorAll('nav button')];
 function show(id,push){bs.forEach(b=>{const on=b.getAttribute('aria-controls')===id;b.setAttribute('aria-selected',on);document.getElementById(b.getAttribute('aria-controls')).hidden=!on});if(push)history.replaceState(null,'','#'+id);window.scrollTo(0,0)}

@@ -34,7 +34,8 @@ def cells(tmp_path_factory):
 
 def test_baselines_scored_by_same_scorer(cells):
     for b, s in cells.items():
-        assert tuple(s) == SCORE_KEYS and s["baseline"] == b
+        # S4-22: a native (degraded) cell also carries run_validity (VOID); the metric keys are unchanged
+        assert tuple(k for k in s if k != "run_validity") == SCORE_KEYS and s["baseline"] == b
     assert cells["snapshot"]["baseline_oracle_assisted"] and cells["revert_culprit_only"]["baseline_oracle_assisted"]
     assert not cells["system"]["baseline_oracle_assisted"]
     same = ("seed", "fault", "hold", "t_inject", "t_alert", "t_contain", "tti_detect", "ttc", "t_rec")

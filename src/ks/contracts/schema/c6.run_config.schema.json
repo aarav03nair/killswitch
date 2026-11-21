@@ -1,5 +1,5 @@
 {
-  "$id": "https://killswitch.local/schema/1.6.0/c6.run_config.schema.json",
+  "$id": "https://killswitch.local/schema/1.7.0/c6.run_config.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "``config.json``: everything needed to reproduce a seeded run, and what the scorer must know.",
@@ -118,6 +118,16 @@
       "description": "v1.6 (B3-51, kabir's ruling; ADR-04 §7 amended): ``False`` only for the D10 **no-lineage-hold contrast run**\n(``ks run --hold 0 --no-lineage-hold``). The lineage hold (ADR-04 §5) is alert-driven containment and does not\ndepend on H; this is the one switch that turns it off, so the record says so (covered by ``config_hash``).\nRequires ``hold_window_ticks == 0`` (validator). Verify then does not count the taint flag against a dispatch\n(everything else in F4 still applies) and prints the contrast banner. Omitted from the canonical bytes at\nthe default ``True``, so 1.1-1.5 configs keep their bytes and hashes.",
       "title": "Lineage Hold",
       "type": "boolean"
+    },
+    "resolver": {
+      "default": "off",
+      "description": "v1.7 (D-18, ADR-05a): the write-write conflict resolver. ``off`` (default, omitted from the canonical bytes, so\n1.1-1.6 configs keep their bytes and hashes) or ``ww_rebase/1`` (``ks run --resolver ww_rebase/1``). Covered by\n``config_hash``; not scorer-only (``tcb_view`` keeps it: the planner reads it). Verify, console, dry-run and\nscore print ``resolver: ww_rebase/1 (on)`` or ``resolver: off``.",
+      "enum": [
+        "off",
+        "ww_rebase/1"
+      ],
+      "title": "Resolver",
+      "type": "string"
     },
     "run_id": {
       "description": "Run name (directory name by convention).",

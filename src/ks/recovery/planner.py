@@ -38,7 +38,16 @@ irreversible, so it is not spent before a person resolves the flag or approves t
 readable object (record and store disagree, or no ``state`` given) fails closed: ``flag(outbox_missing)``, scored
 in R.
 
-Step order: cancel_outbox (by id), restore (by obj), rerun (by seq), compensate, replan (by seq), flag.
+Resolver (D-18, ADR-05a; ``resolver="ww_rebase/1"``, default ``"off"``): right after the restore loop each
+``flag(write_write_conflict, O, H)`` (obj order) is offered to :func:`ks.recovery.resolver.eligible`. If every
+record-only check passes it becomes a ``resolve`` step (``rebased_hash`` and ``unblocked`` are filled by the
+dry-run), O counts as repaired (the seed version and H's version ``vH``), and H gets no ``rerun`` step (the resolve
+covers it), so H's readers are ordinary re-runs. A refused flag stays and :attr:`Planned.refused` names the first
+failed check. ``no_resolve`` (the dry-run's one re-plan after a failed ``sim_clean``) keeps those objects as flags.
+With ``resolver="off"`` the plan is byte-identical to the pre-1.7 planner.
+
+Step order: cancel_outbox (by id), restore (by obj), resolve (by obj), rerun (by seq), compensate, replan (by seq),
+flag.
 The plan diff is filled by :mod:`ks.recovery.dryrun` (simulation in a rolled-back savepoint, §7).
 """
 
@@ -52,7 +61,7 @@ from ks.contracts import TOMBSTONE_HASH, OutboxItem, OutboxStatus, VersionRef, W
 from ks.contracts.ids import SYSTEM_PRINCIPALS
 from ks.contracts.record import ActionClass, Decision, Record
 from ks.contracts.recovery import (ActionRef, CancelOutboxStep, CompensateStep, DiffEntry, FlagStep, RecoveryPlan,
-                                   ReplanStep, RerunStep, RestoreStep)
+                                   ReplanStep, RerunStep, ResolveStep, RestoreStep)
 from ks.taint import RecordIndex, Taint
 
 __all__ = ["NoPlan", "Kept", "Rider", "Held", "Planned", "plan_recovery", "restores_to_absent", "apply_restore",
@@ -114,6 +123,16 @@ class Planned:
     repaired by then. Cleared only if the simulated re-run's writes equal the landed ones by (obj, after.hash)."""
     held: tuple[Held, ...] = field(default=())
     """Tainted queued/held items with no step (ADR-05 §6.1 amended, B3-48), by outbox id; never cancelled here."""
+    resolver: str = "off"
+    """``RunConfig.resolver`` the plan was built with (ADR-05a)."""
+    resolve_records: Mapping[int, Record] = field(default_factory=dict)
+    """H's landed record per ``resolve`` step, by seq."""
+    refused: Mapping[str, str] = field(default_factory=dict)
+    """obj -> first failed check id, for each write-write flag the resolver refused (rendered on the flag line)."""
+    ww_flags_before: int = 0
+    """Write-write flags before the resolver pass (= resolves + remaining ww flags)."""
+    replan: Any = None
+    """``replan(no_resolve)`` -> :class:`Planned` with the same inputs (the dry-run's one re-plan, ADR-05a §8)."""
 
 
 def action_ref(r: Record) -> ActionRef:
@@ -176,7 +195,9 @@ def _redacted(state: Any, obj: str, ver: int) -> bool:
 
 def plan_recovery(records: RecordIndex | Iterable[Record], taint: Taint | None, *, alert_id: str,
                   plan_id: str | None = None, state: Any = None, llm_agents: Iterable[str] = (),
-                  compensators: Mapping[str, str] | None = None) -> Planned:
+                  compensators: Mapping[str, str] | None = None, resolver: str = "off",
+                  no_resolve: frozenset[str] = frozenset(), alerts: Iterable[Any] = (),
+                  args_of: Any = None) -> Planned:
     """Build the plan (steps, taint set; ``diff=()``) for ``taint``. Pure in records + ``taint`` (+ redaction and
     outbox status read from ``state``), so the same record gives a byte-identical plan.
 
@@ -184,7 +205,17 @@ def plan_recovery(records: RecordIndex | Iterable[Record], taint: Taint | None, 
     items re-held as v+1 of the same ``outbox:<id>`` (no switch: B2 is binding, maya B3-21 review)."""
     if taint is None or taint.suspect is None or taint.t0_seq_est is None or not taint.seed:
         raise NoPlan("no suspended suspect: no seed and no plan")
+    from .resolver import RESOLVERS
+    if resolver not in RESOLVERS:
+        raise ValueError(f"unknown resolver {resolver!r}")
     ix = RecordIndex.of(records)
+    no_resolve = frozenset(no_resolve)
+    alerts = tuple(alerts)
+
+    def again(nr: frozenset[str]) -> Planned:
+        return plan_recovery(ix, taint, alert_id=alert_id, plan_id=plan_id, state=state, llm_agents=llm_agents,
+                             compensators=compensators, resolver=resolver, no_resolve=frozenset(nr) | no_resolve,
+                             alerts=alerts, args_of=args_of)
     as_of = taint.as_of_seq
     culprit = taint.suspect
     t0 = taint.t0_seq_est
@@ -235,8 +266,60 @@ def plan_recovery(records: RecordIndex | Iterable[Record], taint: Taint | None, 
         else:  # pragma: no cover - a seed version above the head means the record does not fold
             raise ValueError(f"{obj}: seed v{cver} above head v{head.ver}")
 
+    # --- resolver pass (ADR-05a §1-2): only flag(write_write_conflict), obj order ---------------------------------
+    resolves: list[ResolveStep] = []
+    resolve_records: dict[int, Record] = {}
+    refused: dict[str, str] = {}
+    resolved_written: set[tuple[str, int]] = set()
+    covered: set[int] = set()
+    ww_before = sum(1 for f in flags if f[0] == "write_write_conflict")
+    if resolver != "off":
+        from .resolver import RECORD_CHECKS, RULE_ID, RULE_VERSION, Context, eligible, undone_pairs
+        tv = frozenset(taint.versions)
+
+        def args_ok(r: Record) -> bool:
+            try:
+                args_of(r)
+            except Exception:
+                return False
+            return True
+
+        def args_value(r: Record) -> Any:
+            return args_of(r)
+
+        ctx = Context(ix=ix, as_of=as_of, suspect=culprit, taint=tv,
+                      restored=frozenset(s.obj for s in restores), alerts=alerts,
+                      llm_agents=frozenset(llm), args_ok=None if args_of is None else args_ok,
+                      redacted=None if state is None else (lambda o, v: _redacted(state, o, v)),
+                      undone=undone_pairs([r for r in ix.records if r.seq <= as_of],
+                                          None if args_of is None else args_value))
+        kept_flags = []
+        for f in sorted(flags, key=lambda f: (f[1] or "", f[0])):
+            reason, obj, act = f
+            if reason != "write_write_conflict" or obj is None:
+                kept_flags.append(f)
+                continue
+            if obj in no_resolve:
+                refused[obj] = "sim_clean"
+                kept_flags.append(f)
+                continue
+            el = eligible(ctx, obj, act)
+            if not el.ok:
+                refused[obj] = el.failed or "-"
+                kept_flags.append(f)
+                continue
+            resolves.append(ResolveStep(n=0, reason="write_write_conflict", rule=RULE_ID, rule_version=RULE_VERSION,
+                                        obj=obj, culprit_ver=el.culprit_ver, expect=el.expect, to=el.to,
+                                        rebased=el.rebased, rebased_hash=el.expect.hash, unblocked=(),
+                                        rationale=RECORD_CHECKS))
+            resolve_records[el.rebased.seq] = ix.by_seq[el.rebased.seq]
+            repaired_objs.add(obj)
+            resolved_written.add((obj, el.expect.ver))
+            covered.add(el.rebased.seq)
+        flags = kept_flags
+
     seed_keys = {(v.obj, v.ver) for v in taint.seed}
-    rerun_written: set[tuple[str, int]] = set()
+    rerun_written: set[tuple[str, int]] = set(resolved_written)
     reruns: list[RerunStep] = []
     rerun_records: dict[int, Record] = {}
     replans: list[ReplanStep] = []
@@ -265,7 +348,7 @@ def plan_recovery(records: RecordIndex | Iterable[Record], taint: Taint | None, 
 
     for r in taint.actions:
         agent = r.attributed_agent
-        if r.seq > as_of or agent == culprit or agent in SYSTEM_PRINCIPALS:
+        if r.seq > as_of or agent == culprit or agent in SYSTEM_PRINCIPALS or r.seq in covered:
             continue
         ref = action_ref(r)
         if agent in llm:
@@ -328,7 +411,7 @@ def plan_recovery(records: RecordIndex | Iterable[Record], taint: Taint | None, 
     flag_steps = [FlagStep(n=0, reason=reason, obj=obj, action=act)
                   for reason, obj, act in sorted(flags, key=lambda f: (f[0], f[1] or "",
                                                                        f[2].seq if f[2] else 0))]
-    ordered = [*cancels, *restores, *reruns, *compensates, *replans, *flag_steps]
+    ordered = [*cancels, *restores, *resolves, *reruns, *compensates, *replans, *flag_steps]
     steps = tuple(s.model_copy(update={"n": i}) for i, s in enumerate(ordered))
 
     # B3 lanes: kept = untainted honest heads written at/after t0 on any row the plan touches
@@ -352,7 +435,8 @@ def plan_recovery(records: RecordIndex | Iterable[Record], taint: Taint | None, 
                         t0_seq_est=t0, t0_seq_est_literal=taint.t0_seq_est_literal, as_of_seq=as_of, taint_set=taint.taint_set(), steps=steps, diff=())
     return Planned(plan=plan, kept=tuple(kept), independent=tuple(independent), riders=tuple(riders),
                    rerun_records=rerun_records, notes=tuple(notes), c_candidates=c_candidates,
-                   held=tuple(held))
+                   held=tuple(held), resolver=resolver, resolve_records=resolve_records, refused=refused,
+                   ww_flags_before=ww_before, replan=again)
 
 
 def with_diff(plan: RecoveryPlan, diff: Iterable[DiffEntry]) -> RecoveryPlan:

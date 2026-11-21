@@ -5,7 +5,7 @@ record pass (parse, seq, prev_hash, hash, gw_sig, agent sig vs sig_ok, D-15 seed
 truncation, heads) -> anchor vs last checkpoint.
 
 After the record pass: dispatch window (F4), alerts.jsonl cross-check (F6), side-store check (B3-31), recovery
-binding (B3-30, ``recovery_unbound``).
+binding (B3-30, ``recovery_unbound``), resolutions (S4-13, ``resolution_invalid``).
 """
 
 from __future__ import annotations
@@ -19,7 +19,7 @@ from ks.contracts import (GENESIS_HASH, NO_LINEAGE_HOLD_BANNER, SEED_TOOL, SYSTE
 from ks.contracts.rundir import CONFIG, KEYS, RECORD, STATE_DB, WITNESS
 from ks.identity import verify_hex
 
-from .recovery import recovery_pass
+from .recovery import recovery_pass, resolution_pass
 from .reexec import reexec_pass
 from .window import Violation, alerts_pass, side_pass, window_pass
 
@@ -80,6 +80,7 @@ def verify(run: str | Path, anchor: RunAnchor | None = None, *, log=lambda s: pr
             alerts_pass(run, recs)
             side_pass(run, recs)
             recovery_pass(run, recs)  # B3-30: ks.recover.* bound to a ks.approve and the plan file
+            resolution_pass(run, recs)  # S4-13 (D-18, ADR-05a §6): resolutions the rule supports
         except Violation as v:
             raise _Fail(v.reason, v.first_bad, v.detail) from None
         last = _witness_pass(run, hashes, keyring, state)

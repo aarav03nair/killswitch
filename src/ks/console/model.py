@@ -1,6 +1,7 @@
 """Console model (ADR-07 §4, B3-28): everything the page and the live terminal view show, read from a run dir.
 
-Read-only: opens record, witness, alerts, plans, score, baselines and config; never imports gateway or signer
+Read-only: opens record, witness, alerts, plans, score, baselines, config and timing.jsonl (S4-22: the
+deadline-miss count only); never imports gateway or signer
 code and never opens the operator socket. Build-time ``verify`` result is embedded; no wall-clock time, so the
 same run dir gives the same model. Owner: ishaan.
 """
@@ -9,7 +10,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from ks.contracts.rundir import NO_LINEAGE_HOLD_BANNER
+from ks.contracts.rundir import NO_LINEAGE_HOLD_BANNER, resolver_label
+from ks.validity import run_validity, validity_line
 
 __all__ = ["BEATS", "BEAT_SECONDS", "HERO_FIXTURE", "LABELS", "build_model", "label"]
 
@@ -117,6 +119,18 @@ def _plan_view(plan: dict, recs: list[dict]) -> dict:
             txt = f"cancel outbox {s['outbox_id']}"
         elif op == "flag":
             txt = "flag for a person: " + (s.get("obj") or (f"action {a.get('action_id')}" if a else "?"))
+        elif op == "resolve":  # S4-13 (D-18, ADR-05a §7)
+            rb = s.get("rebased") or {}
+            txt = (f"resolve {label(s['obj'])} ({s['obj']}, {s.get('rule')}/{s.get('rule_version')}): "
+                   f"v{s['culprit_ver']['ver']} reverted, {rb.get('agent_id')} edit rebased on v{s['to']['ver']} -> "
+                   f"{str(s.get('rebased_hash'))[:8]}; unblocked {', '.join(s.get('unblocked') or []) or '-'}; "
+                   f"checks {','.join(s.get('rationale') or [])}; undo: ks recover RUN --unresolve "
+                   f"{plan.get('plan_id')}.{s['n']}")
+        elif op == "unresolve":
+            r0 = (s.get("reverts") or [{}])[0]
+            txt = (f"unresolve {(s.get('resolution') or {}).get('action_id')}: {r0.get('obj')} back to "
+                   f"v{(r0.get('to') or {}).get('ver')}, flag raised again; re-held "
+                   f"{', '.join(s.get('reheld') or []) or '-'}")
         else:
             txt = f"{op} {a.get('action_id', '')}".strip()
         steps.append({"n": s["n"], "op": op, "reason": s.get("reason"), "text": txt})
@@ -330,6 +344,12 @@ def build_model(run) -> dict:
         banners.append({"kind": "repro", "text": "NOT A SECURITY RUN: repro keys are never anchored; determinism check only"})
     if cfg.get("lineage_hold", True) is False or verify.get("lineage_hold", True) is False:  # contracts 1.6, B3-51
         banners.append({"kind": "contrast", "text": NO_LINEAGE_HOLD_BANNER})
+    validity = run_validity(run)  # S4-22: deadline-miss count from timing.jsonl (a count, never a wall-clock value)
+    if validity is not None and validity["deadline_misses"] != 0:
+        n = validity["deadline_misses"]
+        banners.append({"kind": "deadline", "text": "DEGRADED RUN: " + (
+            "no timing.jsonl, deadline misses unknown" if n is None else f"{n} tick deadline misses (timing.jsonl)")
+            + "; agents no-op'd, so this run is not the headline"})
     if not verify["ok"]:
         banners.append({"kind": "verify", "text": f"VERIFY FAILED: {verify['reason']}"
                         + (f" at seq {verify['first_bad']}" if verify.get("first_bad") is not None else "")})
@@ -340,7 +360,9 @@ def build_model(run) -> dict:
          "approvals": [a["seq"] for a in appr], "score": score, "baselines": base,
          "ticks": [ticks[k] for k in sorted(ticks)], "held": held, "controls": controls,
          "scorecard": _scorecard(score, base, cfg.get("lineage_hold", True)),
-         "beat_seconds": list(BEAT_SECONDS), "hero_line": HERO_LINE, "fixture": HERO_FIXTURE}
+         "beat_seconds": list(BEAT_SECONDS), "hero_line": HERO_LINE, "fixture": HERO_FIXTURE,
+         "resolver_label": resolver_label(cfg.get("resolver", "off")),
+         "validity": validity, "validity_line": validity_line(validity)}  # S4-13 (ADR-05a §7): always shown
     m["beats"] = _beats(m, suspends, held)
     return m
 

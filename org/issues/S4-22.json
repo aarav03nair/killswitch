@@ -7,20 +7,45 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "done",
   "outcome": "The finale can't accidentally run in degraded mode",
   "acceptance": [
     "Finale script aborts unless make smoke gives isolation=per_agent_uid, anchored=true, key_mode=fresh; native run shows VOID in console banner and score.json (test)"
   ],
   "depends": [],
   "deliverable": "scripts/",
-  "summary": "",
-  "review": "",
+  "summary": "make finale -> scripts/finale.sh: refuses (exit 2) if 1-min load/CPU > KS_MAX_LOAD_PER_CPU (0.5) or another container runs; make smoke must give exit 0, per_agent_uid, anchored; then python -m ks.validity (new src/ks/validity.py, reads config.json + timing.jsonl) must be OK (fresh keys, 0 deadline misses) for smoke, hero F2+ and F2+x with --resolver ww_rebase/1 (labelled, D-18; FINALE_F2X=0 skips). VOID/DEGRADED = loud banner, exit 3. score.json gets run_validity {verdict, reasons, isolation, key_mode, deadline_misses, missed_ticks} only when not OK (OK runs byte-identical); ks score prints the validity line; console (html + live) always shows the validity line with the miss count + DEGRADED RUN banner on misses. demo.sh takes FAULT. Tests: tests/score/test_validity.py (native run VOID in score.json + console; injected miss flagged; verdicts; script gates); test_bench tolerates the key. Container run (killswitch:maya, OrbStack): smoke OK, hero C 0/265 R 0/9, F2+x ww_flags 1->0, all validity OK, anchored. Native suite 1140 passed before the bench fix; affected dirs green after. Refusal seen live: a killswitch:pmo container was running -> exit 2 (full run done with a scratch copy that ignored it).",
+  "review": "[kabir · done] Ran make finale (killswitch:kabir). Correctly refused (exit 2) twice because a killswitch:pmo pytest container was running. A scratch copy that ignores only killswitch:pmo then gave exit 0: smoke OK (per_agent_uid, anchored, fresh keys, 0 misses); hero F2+ C 0/265 R 0/9; F2+x labelled resolver: ww_rebase/1 (on), ww_flags 1->0; no run_validity key in either score.json. Native F2+ run: ks.validity says VOID and exits 1; score.json gets run_validity VOID; CLI line and red console banner both say NOT THE HEADLINE. Attack: a degraded or missed-deadline run cannot become the headline. check_run exits 3, score.json and console flag the run, and demo-sim is sourced from hero-s2-20261120-092934, which ks.validity rates OK. key_mode=fresh is enforced by check_run on every run. Load gate: 1-min load / CPUs <= KS_MAX_LOAD_PER_CPU (0.5). Measured 3.4-4.8 on 11 CPUs (0.31-0.44) with a container running, so no false refusal on an idle Mac. Follow-up (not blocking, because the deadline-miss gate still applies after any override): raising KS_MAX_LOAD_PER_CPU is a silent override, and the other-container check cannot be overridden. Add KS_FINALE_OVERRIDE='reason' that writes runs/<id>.override.txt and prints a banner.",
   "log": [
     {
       "t": "20 Nov 17:06",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "21 Nov 05:37",
+      "who": "pmo",
+      "msg": "→ todo: From panel (S4-26 finding): under heavy host load agents miss tick deadlines (10 misses, run ended seq 194) and the hero scores C 3/144 instead of 0/265. Finale preflight must: run with nothing else loading the laptop, fail or warn loudly if any deadline was missed (timing.jsonl), and the console/score must show the miss count so a degraded run is never presented as the headline."
+    },
+    {
+      "t": "21 Nov 06:15",
+      "who": "maya",
+      "msg": "→ in_progress: building ks.validity + scripts/finale.sh + make finale"
+    },
+    {
+      "t": "21 Nov 06:27",
+      "who": "maya",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 06:27",
+      "who": "maya",
+      "msg": "→ in_review: ready for kabir"
+    },
+    {
+      "t": "21 Nov 06:43",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

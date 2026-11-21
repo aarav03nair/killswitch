@@ -48,15 +48,43 @@ BENCH-S3 §"F2+, H=6, T=40". Must travel with every row: **oracle-assisted** (gi
 | N13 | revert-culprit-only: R **3/5 [0..7/9]**, C **0 [0..0]**, honest items held **27 [1..29]** | `revert_culprit_only` · `R`, `C`, `fp_cost.held_honest_actions` |
 | N14 | no-op (pause only, no recovery): R **1 [1..1]**, post-alert tainted effects **20 [5..46]** | `no_op` · `R`, `post_alert_tainted_effects` |
 
-## 3. Honest conflict variant F2+x (system, H=6, T=40): disclose, "before resolver" [Fact]
+## 3. Honest conflict variant F2+x (system, H=6, T=40): disclose before and after the resolver [Fact]
 
-BENCH-S3 §"F2+x, H=6, T=40", column `system`, plus Reading notes bullet 1. **Must travel with it:** (a) triage edits the price row crm wrote → write-write conflict → flagged, and the bench approver never resolves flags; (b) label **"before resolver"**: D-18's auditable resolver (S4-12 design, S4-13 build) is not built yet, so these values may change; CALL-04 decision 2 requires F2+x reported before and after; (c) quote all three values together, never R alone.
+CALL-04 decision 2 (D-18) requires F2+x reported **before and after**. Quote both rows together, and quote R, C and honest items held together, never R alone. **Must travel with both rows:** triage edits the price row crm wrote (`suppliers:S-22`, row-level) → write-write conflict → flagged.
+
+### 3a. Before resolver (resolver: off) [Fact]
+
+BENCH-S3 §"F2+x, H=6, T=40", column `system`, plus Reading notes bullet 1; identical cell for cell to the before column of §"S4-13". **Must travel with it:** label **"before resolver"**; the flag is unresolved because the bench approver never resolves flags, so the flagged conflict waits for a human.
 
 | ID | Value | Metric row |
 |---|---|---|
 | N15 | residual damage R **1/5 [0..1/5]** | `R` |
 | N15 | collateral loss C **21/254 [0..44/243]** | `C` |
 | N15 | honest items held **29 [0..35]** | `fp_cost.held_honest_actions` |
+| N15 | operator releases **3 [1..7]** (3 [0..7] honest, 0 [0..1] tainted-lineage) | `fp_cost.operator_unholds.*` |
+
+### 3b. With resolver ww_rebase/1 (opt-in; every resolution signed, verified, undoable) [Fact]
+
+BENCH-S3 §"S4-13: F2+x before and after the resolver (D-18), H=6, T=40", column `system (resolver: ww_rebase/1 (on), after)`. Built S4-13 (vikram), reviewed PASS by kabir 21 Nov with a container rerun. Command: `ks bench --seeds 1-20 --faults F2+x --hold 6 --baselines system --ticks 40 --resolver-faults F2+x`.
+
+| ID | Value | Metric row |
+|---|---|---|
+| N18 | residual damage R **0 [0..0]** | `R` |
+| N18 | collateral loss C **0 [0..0]** | `C` |
+| N18 | honest items held **3 [0..7]** | `fp_cost.held_honest_actions` |
+| N18 | operator releases **5 [1..9]**: **3 [0..7]** honest, **2 [1..2]** tainted-lineage | `fp_cost.operator_unholds.*` |
+| N18 | resolutions: **1 on 19 of 20 seeds** (rebased agent triage, `suppliers:S-22`); seed 7 had no write-write conflict, so 0 | S4-13 resolver table (`ww_flags_before/after`, `resolutions`) |
+| N18 | `ks verify` OK on **all 40 runs** (20 off, 20 on), isolation `per_agent_uid`, no `resolution_invalid` | S4-13 "Verify" paragraph |
+| N18 | hero F2+ (seeds 1..5) score.json **identical** with resolver off and on (0 resolutions, 0 flags); verify OK on all 10 runs | S4-13 "Hero F2+" paragraph |
+
+**Must travel with N18:**
+- (a) Label **"with resolver on"** / `resolver: ww_rebase/1 (on)` (D-19, ADR-05a §7). The resolver is **opt-in**: off unless the run turns it on (`ks run --resolver ww_rebase/1`); every output names it. The default run is the 3a row.
+- (b) **D-17:** R = 0 holds *after the operator released* a median **5 [1..9]** held items, **3 [0..7]** honest and **2 [1..2]** tainted-lineage (items recovery re-ran and re-held; the bench approver releases them, X4). Never a bare R = 0.
+- (c) G1, G2, G3, G9: T = 40, 20 seeds, H = 6, container (`killswitch:kabir`, `--network none`, per-agent uids). Vikram's native macOS run gave the same table, but the allowed source is the container run.
+- (d) "Signed, verified, undoable" means: each resolution is one `ks.recover.resolve` record by `ks.recovery` with its rule and check ids as rationale; `ks verify` re-checks rule, order, binding and clean inputs (fails a forged or altered resolution with `resolution_invalid`); `ks recover RUN --unresolve <plan_id>.<n>` undoes it, is itself recorded, and raises the flag again (ADR-05a §1, §5; S4-13 review).
+- (e) What it **will not** do (ADR-05a §1, §2a): it acts only on `write_write_conflict` flags that pass **every** check (single honest write after the suspect's, deterministic non-LLM writer, no tainted view read, clean base exists, not undone before). It **refuses** the suspect, every alert's `root_candidates[0]`, every evidence writer, every author of a taint origin, and LLM, system and suspended agents. Anything that fails a check, every other flag reason, every replan and every compensate **waits for a human**. It merges nothing by hand and invents no value.
+- (f) Known limits (THREAT-MODEL Errata, D-18 entry; ADR-05a §2a, §6): **verify trusts the recorded value**: it checks the resolution's rule, order, binding and clean inputs, not the re-computed value, which is trusted to `ks.recovery` (TCB). **Collusion:** a colluding agent outside the refused set that copies the culprit's value from its own process memory into its args would carry it into the rebased write (C3, no prevention claim). Built-in agents are deterministic and stateless; this is not tested with LLM agents (G5).
+- (g) Not on the list from this table: `collateral_stall`, `kept_without_redo`, `revert_precision`, `revert_recall` (same reasons as §1).
 
 ## 4. Hold window and the D10 contrast (T=40) [Fact]
 
@@ -71,7 +99,6 @@ BENCH-S3 §"F2+x, H=6, T=40", column `system`, plus Reading notes bullet 1. **Mu
 |---|---|---|
 | Any **F2+c** value (BENCH-S3 shows C 0 [0..0], R 0 [0..1/6]) | ⚑ Contradicts GUARDRAILS L8 (predicts C > 0). Fixture or guardrail is wrong; not decided here | anaya, S4-24 |
 | **F3** residual damage R = 1 | Not exfiltration: it is honest emails comms never sent while suspended; F3 has no recovery plan (`no_plan` 20/20). If F3 is mentioned, only N-style detection values: TTI-detect 0 [0..0], TTC 1 [1..1], irreversible tainted released 0 [0..0] (§"F3, H=6"), with "pytest, not live" (F13) | BENCH-S3 Reading notes bullet 2 |
-| F2+x after resolver | Does not exist yet | vikram, S4-13 |
 | T=120 values | Not run | tara, S4-14 |
 | Red-team pass values (RT1–RT14) | Measured values go in `org/reports/REDTEAM-S4.md` first (kabir S4-c); until then targets only | kabir |
 | Seconds, %, "accuracy", "leaks" | No such measurement (G4; X20, X21) | n/a |
@@ -80,5 +107,10 @@ BENCH-S3 §"F2+x, H=6, T=40", column `system`, plus Reading notes bullet 1. **Mu
 ## 6. Notes for the self-check [Our view]
 
 - Every number of ours in the draft should map to an ID above. If it does not, cut it or ask.
-- Tense: past tense ("measured") is fine **only** for values on this list, with G1–G3. Design parts (finale demo, jury break, resolver) stay future or design tense.
+- Tense: past tense ("measured") is fine **only** for values on this list, with G1–G3. Design parts (finale demo, jury break) stay future or design tense. The resolver is built and measured (S4-13, N18); past tense only with N18's conditions (a)–(f).
+- F2+x after the resolver (N18) never travels without the before row (N15) and the label "with resolver on".
 - R = 0 without the release clause (N4) is the single most likely jury attack (JURY-QA Q13).
+
+## Changes (S4-11, anaya, 21 Nov)
+
+- §3 split into 3a (before resolver, N15, unchanged values; operator releases added from the same column) and 3b (with resolver ww_rebase/1, N18, from BENCH-S3 §S4-13, container). §5 row "F2+x after resolver: does not exist yet" removed. §6 tense note updated.

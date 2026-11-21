@@ -43,9 +43,8 @@ def test_validation_usage_without_exit(tmp_path):
 
 
 def test_unbuilt_commands_say_not_yet(tmp_path, capsys):
-    for argv in (["blame", str(tmp_path)],):
-        assert main(argv) == Exit.IO
-        assert "not yet implemented" in capsys.readouterr().err
+    assert main(["blame", str(tmp_path)]) == Exit.IO  # S4-29: built; not a run dir is IO
+    assert "ks blame" in capsys.readouterr().err
     assert main(["score", str(tmp_path)]) == Exit.IO  # B3-27: built; a dir that is not a run dir is IO
     assert "ks score" in capsys.readouterr().err
     assert main(["recover", str(tmp_path / "missing"), "--dry-run"]) == Exit.IO
@@ -128,11 +127,11 @@ def test_remaining_placeholders_listed():
     """Visible punch list: every entry must be gone before the finale (CALL-02 / B3-12 review)."""
     from ks.runtime.options import SERVED, RunOptions
     unserved = sorted(f for f in RunOptions.__dataclass_fields__ if f not in SERVED)
-    commands = ["blame (B3-14)"]  # recover (B3-30), score (B3-27), bench (B3-33) landed
+    commands: list[str] = []  # recover (B3-30), score (B3-27), bench (B3-33) landed
     print("PLACEHOLDERS runtime options:", unserved, "commands:", commands)
     assert set(unserved) | set(SERVED) == set(RunOptions.__dataclass_fields__)
     assert unserved == ["with_baselines"]  # B3-27 served fault, culprit, hold, pause_on_alert; B3-35 rogue, slot
-    assert len(commands) == 1  # update when it lands; delete this test when both lists are empty
+    assert len(commands) == 0  # update when it lands; delete this test when both lists are empty
 
 
 def test_repro_banner_ok_and_diverged(tmp_path, capsys):
@@ -159,3 +158,34 @@ def test_verify_last_line_is_report_with_isolation(tmp_path, capsys):
     assert json.loads(last)["isolation"] == "degraded"
     assert main(["verify", str(out), "--json"]) == Exit.OK
     assert json.loads(capsys.readouterr().out)["isolation"] == "degraded"
+
+
+@pytest.fixture(scope="module")
+def hero_run(tmp_path_factory):
+    out = tmp_path_factory.mktemp("blame") / "hero"
+    assert main(["run", "--scenario", "world", "--fault", "F2+", "--seed", "2", "--ticks", "40", "--out", str(out)]) in (
+        Exit.OK, Exit.ISOLATION_DEGRADED if hasattr(Exit, "ISOLATION_DEGRADED") else Exit.OK)
+    return out
+
+
+def test_blame_hero_run_names_crm_first(hero_run, capsys):
+    capsys.readouterr()
+    assert main(["blame", str(hero_run)]) == Exit.OK
+    out = capsys.readouterr().out
+    assert "1. crm" in out and "suspect crm" in out and "taint:" in out
+
+
+def test_blame_refuses_tampered_copy(hero_run, tmp_path, capsys):
+    import json
+    import shutil
+    cp = tmp_path / "copy"
+    shutil.copytree(hero_run, cp)
+    lines = (cp / "record.jsonl").read_text().splitlines()
+    i = next(k for k, l in enumerate(lines) if json.loads(l).get("seq") == 45)
+    assert '"agent_id":"crm"' in lines[i]
+    lines[i] = lines[i].replace('"agent_id":"crm"', '"agent_id":"intake"', 1)
+    (cp / "record.jsonl").write_text("\n".join(lines) + "\n")
+    capsys.readouterr()
+    rc = main(["blame", str(cp)])
+    cap = capsys.readouterr()
+    assert rc != Exit.OK and "UNVERIFIED RECORD" in cap.err and "root candidates" not in cap.out

@@ -233,7 +233,8 @@ def test_additive_only():
            "window_violation", "witness_missing", "witness_sig_invalid", "witness_mismatch", "count_mismatch",
            "truncated", "head_mismatch", "keyring_mismatch", "config_mismatch", "reconcile_mismatch", "no_state",
            "frozen", "diverged", "usage"}
-    added = {"reexec_invalid", "seed_invalid", "replay_mismatch", "recovery_unbound"}  # 1.2 + 1.3 + 1.5 (+B3-30)
+    added = {"reexec_invalid", "seed_invalid", "replay_mismatch", "recovery_unbound",
+             "resolution_invalid"}  # 1.2 + 1.3 + 1.5 (+B3-30) + 1.7 (S4-13)
     assert v11 <= set(VERIFY_REASONS) and set(VERIFY_REASONS) - v11 <= added
     for name in ("TickFrame", "SubmitFrame", "NoopFrame", "ReplyFrame", "SignRequest", "SignReply", "signer_refusal",
                  "RunConfig", "VerifyReport", "decode_frame", "encode_frame"):

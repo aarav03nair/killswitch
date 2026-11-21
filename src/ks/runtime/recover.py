@@ -37,6 +37,14 @@ Gateway side, :class:`RecoveryService` (``Gateway.recovery``; ``ks.gateway.syste
      write set is the item's status change. A re-held item leaves only by an unhold (X4); the outbox's provenance
      check accepts the re-run record as its creating record (``ks.gateway.outbox.Outbox._unrecorded``).
    * ``cancel_outbox``: the item's status change to ``cancelled`` (already cancelled: executed, no write).
+   * ``resolve`` (D-18, ADR-05a §4): M8 (O's head is still ``expect``), then ``ks.recovery.resolver.rebase`` with the
+     same ``ToolRerunner``: O to value(``to``) and H's tool and args re-run in a rolled-back savepoint, the result
+     landed as **one** version (author ``ks.recovery``); a hash other than ``rebased_hash``, an unknown rule or a
+     dirty re-run is ``deny/tool_error`` and the apply halts. Read set = the re-run's tool reads with O at ``to``.
+   * ``unresolve`` (ADR-05a §5): ``unresolve_problems`` re-checked in the txn (heads, no foreign touch, no re-held
+     item released or dispatched; else ``hold/stale_plan``), each revert lands as a new version (author
+     ``ks.recovery``, read entry = the version copied), then one ``ks.control`` hold per ``reheld`` item with
+     reason ``resolution_reverted``.
    * ``compensate``: ``deny/tool_error``: no compensator is registered in ks.world (ADR-05 §6.4: ``no_compensator``
      is a flag or a cleared ``c_rerun_identical`` re-run). ``flag`` and ``replan`` create no envelope.
 
@@ -60,8 +68,9 @@ from typing import TYPE_CHECKING, Any
 
 from ks.contracts import (APPROVE_TOOL, CONTROL_TOOL, SYSTEM_CONN, ActionClass, Approval,
                           CancelOutboxStep, CompensateStep, Control, ControlOp, Decision, Envelope, OutboxStatus,
-                          ReadEntry, Reason, RecoverArgs, RecoveryPlan, RerunStep, RestoreStep, SideDomain, SideEntry,
-                          canonical, recover_tool, result_hash, sidestore_relpath)
+                          ReadEntry, Reason, RecoverArgs, RecoveryPlan, RerunStep, ResolveStep, RestoreStep,
+                          SideDomain, SideEntry, UnresolveStep, canonical, recover_tool, result_hash,
+                          sidestore_relpath)
 from ks.contracts.rundir import PLANS_DIR
 from ks.gateway.system import SystemRequest, system_envelope
 from ks.gateway.txn import writes_at
@@ -70,12 +79,15 @@ if TYPE_CHECKING:
     from ks.gateway.stub import Admission, Gateway
 
 __all__ = ["RecoveryService", "RecoveryHalted", "Halt", "ENVELOPE_OPS", "REHELD_REASON", "bench_releasable",
-           "approved_steps", "load_plan", "cli_dry_run", "cli_apply", "DryRunResult", "restored_releasable"]
+           "approved_steps", "load_plan", "cli_dry_run", "cli_apply", "DryRunResult", "restored_releasable",
+           "cli_unresolve", "UNRESOLVED_REASON"]
 
-ENVELOPE_OPS = ("restore", "rerun", "cancel_outbox", "compensate")
+ENVELOPE_OPS = ("restore", "rerun", "cancel_outbox", "compensate", "resolve", "unresolve")
 """Step ops that run as a ``ks.recover.<op>`` envelope (ADR-05 §8); ``flag`` and ``replan`` create none."""
 REHELD_REASON = "rerun_reheld"
 """Control reason of the hold record a re-run writes for each re-held outbox item (ADR-03 §7)."""
+UNRESOLVED_REASON = "resolution_reverted"
+"""Control reason of the hold an undo of a resolution writes for each re-held item (ADR-05a §5); never bench-released."""
 RECOVERY = "ks.recovery"
 OPERATOR = "ks.operator"
 
@@ -102,14 +114,16 @@ def load_plan(run: str | Path, plan_id: str) -> RecoveryPlan:
 
 
 def approved_steps(plan: RecoveryPlan, extra: Iterable[int] = ()) -> tuple[int, ...]:
-    """What ``ks recover --apply`` approves: every restore / rerun / cancel_outbox step, plus the steps a person named
-    with ``--approve`` (``compensate``, ``replan``, ``flag``; ADR-07: a flag is never applied, approving it only
-    records that a person saw it)."""
+    """What ``ks recover --apply`` approves: every restore / resolve / unresolve / rerun / cancel_outbox step (ADR-05a
+    §3: a resolve is approved with the plan, like a restore), plus the steps a person named with ``--approve``
+    (``compensate``, ``replan``, ``flag``; ADR-07: a flag is never applied, approving it only records that a person
+    saw it)."""
     extra = set(extra)
     bad = extra - set(range(len(plan.steps)))
     if bad:
         raise ValueError(f"--approve names steps the plan does not have: {sorted(bad)}")
-    return tuple(s.n for s in plan.steps if s.op in ("restore", "rerun", "cancel_outbox") or s.n in extra)
+    return tuple(s.n for s in plan.steps if s.op in ("restore", "resolve", "unresolve", "rerun", "cancel_outbox")
+                 or s.n in extra)
 
 
 def _side(run: Path, h: str) -> Any:
@@ -199,6 +213,10 @@ class RecoveryService:
             adm, detail = self._rerun(gw, env, header, ehash, plan, step)
         elif isinstance(step, CancelOutboxStep):
             adm, detail = self._cancel(gw, env, header, ehash, plan, step)
+        elif isinstance(step, ResolveStep):
+            adm, detail = self._resolve(gw, env, header, ehash, plan, step)
+        elif isinstance(step, UnresolveStep):
+            adm, detail = self._unresolve(gw, env, header, ehash, plan, step)
         elif isinstance(step, CompensateStep):
             adm, detail = deny(Reason.TOOL_ERROR), "no compensator is registered in this world"
         else:  # flag / replan carry no envelope; the tool name check above already refuses them
@@ -334,13 +352,83 @@ class RecoveryService:
                 self._hold(gw, plan, step.n, oid)
         return adm, detail
 
-    def _hold(self, gw: Gateway, plan: RecoveryPlan, n: int, oid: str) -> None:
-        """ADR-03 §7: the re-held item's hold is a recorded Control (``ks.recovery``, ``rerun_reheld``)."""
+    def _resolve(self, gw, env, header, ehash, plan, step: ResolveStep):
+        """ADR-05a §4: one signed c-0 record, one new version of O (see module doc)."""
+        from ks.recovery import recheck
+        from ks.recovery.resolver import rebase, rule_known
+
+        rec = gw._record_at(step.rebased.seq)
+        if not rule_known(step):
+            return self._txn(gw, header, ehash, lambda s, q: ("error", f"unknown rule {step.rule}/{step.rule_version}"))
+        if rec is None or rec.envelope is None or rec.decision != Decision.EXEC or (
+                rec.envelope.agent_id, rec.envelope.action_id) != (step.rebased.agent_id, step.rebased.action_id):
+            return self._txn(gw, header, ehash, lambda s, q: ("error", f"seq {step.rebased.seq} is not the rebased action"))
+        taint = frozenset((v.obj, v.ver) for v in plan.taint_set.versions)
+
+        def body(store, seq):
+            stale = recheck(store, self._view(gw, plan), step)
+            if stale is not None:
+                return ("stale", stale)
+            rb = rebase(store, step, rec, self.rerunner, seq, env.action_id, taint)
+            if not rb.ok:
+                return ("error", f"rebase refused: {rb.why}")
+            if not self._hash_ok(rb.value_hash, step):
+                return ("error", f"rebased hash {rb.value_hash[:12]} is not the plan's {step.rebased_hash[:12]}")
+            res = {"plan_id": plan.plan_id, "n": step.n, "op": "resolve", "obj": step.obj,
+                   "rule": f"{step.rule}/{step.rule_version}", "rebased": step.rebased.action_id,
+                   "rebased_hash": rb.value_hash}
+            return ("exec", res, rb.reads, writes_at(store, seq), ())
+        return self._txn(gw, header, ehash, body)
+
+    @staticmethod
+    def _hash_ok(value_hash: str | None, step: ResolveStep) -> bool:
+        """The landed rebased value must be the one the approved dry-run showed (``rebased_hash``)."""
+        return value_hash == step.rebased_hash
+
+    def _unresolve(self, gw, env, header, ehash, plan, step: UnresolveStep):
+        """ADR-05a §5: put back what the resolution (and its dependent re-runs) wrote; re-hold their items."""
+        from ks.recovery.resolver import RESOLVE_TOOL, unresolve_problems
+
+        rr = gw._record_at(step.resolution.seq)
+        if rr is None or rr.envelope is None or rr.decision != Decision.EXEC or rr.envelope.tool != RESOLVE_TOOL \
+                or rr.envelope.action_id != step.resolution.action_id:
+            return self._txn(gw, header, ehash, lambda s, q: ("error", f"seq {step.resolution.seq} is not the resolution"))
+        records = list(gw.recorder.rundir.records())
+
+        def status(oid: str):
+            try:
+                return gw.outbox.get(oid).item.status
+            except Exception:
+                return None
+
+        def body(store, seq):
+            why = unresolve_problems(records, rr, step.reverts, step.reheld, status)
+            if why is not None:
+                return ("stale", SimpleNamespace(detail=f"unresolve blocked: {why}"))
+            reads = []
+            for e in step.reverts:
+                head = store.get(e.obj)
+                if head is None or head.ver != e.expect.ver or head.hash != e.expect.hash:
+                    return ("stale", SimpleNamespace(detail=f"{e.obj}: head moved"))
+                store.put(e.obj, store.value_at(e.obj, e.to.ver), author=RECOVERY, seq=seq, action_id=env.action_id)
+                reads.append(ReadEntry(obj=e.obj, ver=e.to.ver, hash=e.to.hash))
+            res = {"plan_id": plan.plan_id, "n": step.n, "op": "unresolve", "resolution": step.resolution.action_id,
+                   "reverted": [e.obj for e in step.reverts], "reheld": list(step.reheld)}
+            return ("exec", res, tuple(reads), writes_at(store, seq), ())
+        adm, detail = self._txn(gw, header, ehash, body)
+        if adm.record.decision == Decision.EXEC:
+            for oid in step.reheld:
+                self._hold(gw, plan, step.n, oid, reason=UNRESOLVED_REASON)
+        return adm, detail
+
+    def _hold(self, gw: Gateway, plan: RecoveryPlan, n: int, oid: str, reason: str = REHELD_REASON) -> None:
+        """ADR-03 §7: the re-held item's hold is a recorded Control (``ks.recovery``, ``rerun_reheld``, or
+        ``resolution_reverted`` after an undo, ADR-05a §5)."""
         tick = gw._tick
         rtxn = gw.recorder.begin()
         store = gw.store
         ctl = Control(control_id=f"k-{rtxn.seq:06d}", op=ControlOp.HOLD, target=f"outbox:{oid}", epoch=None,
-                      alert_id=plan.alert_id, issued_by=RECOVERY, auto=False, reason=REHELD_REASON)
+                      alert_id=plan.alert_id, issued_by=RECOVERY, auto=False, reason=reason)
         aid = f"{plan.plan_id}.{n}.hold.{oid}"
         try:
             env = system_envelope(RECOVERY, CONTROL_TOOL, ctl.to_obj(), action_id=aid, tick=tick, sign=self._sign)
@@ -508,14 +596,57 @@ def cli_dry_run(run: str | Path, *, alerts: list | None = None, store: Any = Non
         raise ValueError("no suspended suspect: no seed and no plan (ADR-05 §4)")
     own = store is None
     st = open_world_store(run / STATE_DB) if own else store
+    resolver = rd.config().tcb_view().resolver  # ADR-05a: off by default; ks run --resolver ww_rebase/1
+    args_of = args_from_sidestore(run)
     try:
-        planned = plan_recovery(records, taint, alert_id=alerts[0].alert_id, state=st)
-        dr = dry_run(st, planned, rerunner=ToolRerunner(WorldDispatcher(), args_from_sidestore(run)), on_stale="halt")
+        planned = plan_recovery(records, taint, alert_id=alerts[0].alert_id, state=st, resolver=resolver,
+                                alerts=tuple(alerts), args_of=args_of)
+        dr = dry_run(st, planned, rerunner=ToolRerunner(WorldDispatcher(), args_of), on_stale="halt")
     finally:
         if own:
             st.close()
     path = write_plan(dr.plan, rd)
     return DryRunResult(dr.plan, render(dr), path, dr.stale is not None)
+
+
+def cli_unresolve(run: str | Path, ref: str, *, store: Any = None) -> DryRunResult:
+    """``ks recover RUN --unresolve <plan_id>.<n>`` (ADR-05a §5): write the undo plan ``plans/p-<as_of_seq>.json``
+    (one ``unresolve`` step, or ``flag(unresolve_blocked)``); the operator applies it with ``--apply`` like any plan,
+    so the undo is approved, recorded and verified. Raises ``ValueError`` for an unknown or already undone ref."""
+    from ks.contracts import RunDir
+    from ks.contracts.rundir import STATE_DB
+    from ks.recovery import write_plan
+    from ks.recovery.resolver import label, plan_unresolve
+    from ks.world.scenario import open_world_store
+    from ks.recovery.rerun import args_from_sidestore
+
+    run = Path(run)
+    rd = RunDir(run)
+    records = list(rd.records())
+    args_of = args_from_sidestore(run)
+    own = store is None
+    st = open_world_store(run / STATE_DB) if own else store
+    try:
+        from ks.recovery.planner import _outbox_status
+        plan, why = plan_unresolve(records, ref, plan_of=lambda pid: load_plan(run, pid), args_value=args_of,
+                                   status_of=lambda oid: _outbox_status(st, oid))
+    finally:
+        if own:
+            st.close()
+    path = write_plan(plan, rd)
+    s = plan.steps[0]
+    lines = [f"plan {plan.plan_id}  hash {plan.content_hash()[:16]}  alert {plan.alert_id}  culprit {plan.culprit}  "
+             f"as_of_seq {plan.as_of_seq}  {label(rd.config().resolver)}"]
+    if s.op == "unresolve":
+        r0 = s.reverts[0]
+        lines.append(f"unresolve    {s.resolution.action_id}: {r0.obj} back to v{r0.to.ver}, flag raised again; "
+                     f"re-held {', '.join(s.reheld) or '-'}" + "".join(f"; {e.obj} back to v{e.to.ver}"
+                                                                      for e in s.reverts[1:]))
+    else:
+        lines.append(f"flag         unresolve_blocked {s.obj} {s.action.action_id}: {why}  (a person decides)")
+    for e in plan.diff:
+        lines.append(f"diff         {e.obj}  v{e.current.ver} {e.current.hash[:12]} -> {e.planned_hash[:12]}")
+    return DryRunResult(plan, "\n".join(lines) + "\n", path, False)
 
 
 def cli_apply(run: str | Path, plan_id: str, approve: Iterable[int] = (), *,

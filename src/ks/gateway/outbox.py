@@ -129,7 +129,7 @@ class Outbox:
 
     # --- inspection ----------------------------------------------------------------------------------
     def get(self, outbox_id: str) -> Due:
-        row = self.store.get(outbox_obj(outbox_id))
+        row = self.store.get(outbox_obj(outbox_id), verify=False)
         if row is None or row.value is None:
             raise KeyError(outbox_id)
         return Due(OutboxItem.from_obj(row.value), row.ver, row.hash)
@@ -137,7 +137,7 @@ class Outbox:
     def items(self) -> list[Due]:
         out = []
         for (obj,) in self.store.conn.execute("SELECT obj FROM objects WHERE obj LIKE 'outbox:%' ORDER BY obj"):
-            row = self.store.get(obj)
+            row = self.store.get(obj, verify=False)
             if row is not None and row.value is not None:
                 out.append(Due(OutboxItem.from_obj(row.value), row.ver, row.hash))
         return out
@@ -185,7 +185,7 @@ class Outbox:
         if self._record_at is None:
             return False
         it = d.item
-        row = self.store.get(d.obj)
+        row = self.store.get(d.obj, verify=False)
         if row is None or row.value is None or value_hash(row.value) != row.hash:
             return True
         head = self.store.conn.execute("SELECT seq FROM versions WHERE obj = ? AND ver = ?",

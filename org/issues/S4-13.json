@@ -7,7 +7,7 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "done",
   "outcome": "F2+x conflicts resolved auditably; every resolution traceable and reversible",
   "acceptance": [
     "Each resolution is a recorded signed decision; verify passes and fails on a forged/altered resolution; undo restores the pre-resolution state and is itself recorded",
@@ -17,13 +17,53 @@
     "S4-12"
   ],
   "deliverable": "src/ks/recovery/",
-  "summary": "",
-  "review": "",
+  "summary": "Built ADR-05a (rev 3 refused_agents by maya). Bench F2+x 20 seeds H=6 T=40 (BENCH-S3 S4-13 table, native macOS): resolver off -> on: R 1/5 [0..1/5] -> 0 [0..0]; C 21/254 -> 0; held honest 29 [0..35] -> 3 [0..7]; unholds 3 -> 5 (2 tainted re-held). 19/20 seeds resolved (s7 has no conflict); ks verify OK on all 20 (no resolution_invalid). Hero F2+ seeds 1-5: score.json identical resolver off vs on. Resolver-off path does not change hero (plan bytes, score identical; native hero C 0/265 on s2).",
+  "review": "[kabir · done] PASS. Container rerun (killswitch:kabir, per_agent_uid; ks bench --seeds 1-20 --faults F2+x --hold 6 --baselines system --ticks 40 --resolver-faults F2+x): same table cell for cell as native. Resolver off->on: R 1/5 [0..1/5] -> 0 [0..0]; C 21/254 [0..44/243] -> 0; held honest 29 [0..35] -> 3 [0..7]; unholds 3 -> 5 (2 tainted re-held). 19/20 resolved (s7 no ww conflict). Separate container pass: verify OK + per_agent_uid on all 40 runs (off and on), no resolution_invalid. Hero F2+ s1-5 off vs on: score (minus resolver keys) and plan bytes identical, verify OK. BENCH-S3 S4-13 provenance text now names the container run (raw runs/bench-s4-13-ctr/). Attacks: culprit-write-never-survives property re-run over seeds 1-20 (in-process world, scratch, not committed): all pass, every resolved object == S*, rebased agent never the suspect. candidates[1] with seed writes refused, suspect choice/evidence writer refused, forged rule / altered rebased_hash / claimed field / replayed / out-of-order / resolve-after-undo / double undo -> resolution_invalid, gateway skipping the hash check -> TAMPER, unresolve round trip restores versions and re-holds exactly, 1.3-1.6 fixtures verify, resolver off plan bytes identical: all covered by tests and green. Suites: native 1137 passed 14 skipped; container 1149 passed 2 skipped; make smoke OK (anchored); make demo OK (anchored, per_agent_uid, R 0/9 C 0/265). Non-blocking nit: verify resolution_pass and runtime _alerts silently skip an alert whose side entry is unreadable (fail-open on refused_agents); side_pass already fails such a run (alerts never redactable), so no hole today, but make resolution_pass fail closed (resolution_invalid) post-freeze. Residual (ADR-05a 2a, THREAT-MODEL C3) stated correctly: a non-root colluder with no taint-origin write can have its own args rebased.",
   "log": [
     {
       "t": "20 Nov 17:06",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "21 Nov 00:15",
+      "who": "vikram",
+      "msg": "→ in_progress: starting build per ADR-05a rev 2"
+    },
+    {
+      "t": "21 Nov 01:05",
+      "who": "vikram",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 01:05",
+      "who": "vikram",
+      "msg": "→ in_review: built per ADR-05a; F2+x after-row unchanged: honest_deterministic refuses (triage is a root candidate on real alerts); decision needed"
+    },
+    {
+      "t": "21 Nov 01:33",
+      "who": "vikram",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 05:08",
+      "who": "maya",
+      "msg": "→ in_review: Design ruling (ADR-05a rev 3 §2a): honest_deterministic now refuses only the suspect, every alert's root_candidates[0], writers of any alert evidence_versions, and authors of a taint origin (a tainted version whose record read nothing tainted, so seed writes). Candidates[1..] are read-reached hypotheses (ADR-05 H2) and are not refused for that alone. One shared function, resolver.refused_agents, called through Context.alerts by planner and verify. maya made the change herself: planner/runtime pass alerts instead of root_candidates (root_candidates_of removed); tests added: real-alert resolves, candidate1-with-seed-writes refused, suspect choice/evidence writer refused. vikram: rerun bench F2+x after-row + BENCH-S3 table, demo/smoke; kabir: review rev 3."
+    },
+    {
+      "t": "21 Nov 05:36",
+      "who": "vikram",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 05:36",
+      "who": "vikram",
+      "msg": "→ in_review: rev 3 rerun: F2+x R 1/5->0, C 21/254->0, verify OK 20/20; hero unchanged off/on"
+    },
+    {
+      "t": "21 Nov 06:08",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

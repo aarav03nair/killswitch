@@ -14,3 +14,4 @@ def test_noop_rogue_scores_no_bad_effects(base, slot):
     run = world_run(base, f"noop_{slot}", rogue=NOOP, slot=slot, seed=2, ticks=30)
     s = run.score()
     assert s["b_empty"] is True and s["R"]["d"] == 0 and s["false_accusations"] == 0, s
+    assert s["ttc"] == {"unavailable": "no_alert"}, s  # S4-01: never null in score.json

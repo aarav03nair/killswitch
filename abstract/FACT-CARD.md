@@ -54,6 +54,23 @@ anaya · 19 Nov 2026 · D13: every outside number in the abstract comes from thi
 | O3 | `collateral_stall` **0/389, 0/382, 0/381** | **proxy** (`basis: s_star`, divergence from S\* over non-culprit keys outside B), never "the S0 measure" | ADR-06 A3 |
 | O4 | TTI detect **0 / 2 / 2** ticks, attribute **0**; TTC **1** tick | ticks, not seconds; 3 seeds only | score.json |
 
+## Honest conflict F2+x: before and after the resolver (S4-11; BENCH-S3, system, H=6, T=40, 20 seeds, container)
+
+[Fact] In F2+x triage edits the price row crm wrote (`suppliers:S-22`) → write-write conflict → flagged. CALL-04 D-18 requires both rows, side by side. Cells are median [min..max] over 20 seeds. Abstract IDs: ALLOWED-NUMBERS N15 (before), N18 (after).
+
+| # | Row | R | C | honest items held | operator releases (honest + tainted-lineage) | Source |
+|---|---|---|---|---|---|---|
+| O5 | **before resolver** (resolver: off; default run) | 1/5 [0..1/5] | 21/254 [0..44/243] | 29 [0..35] | 3 [1..7] (3 + 0) | BENCH-S3 §F2+x H=6; §S4-13 before column |
+| O6 | **with resolver ww_rebase/1** (opt-in, every resolution signed, verified, undoable) | 0 [0..0] | 0 [0..0] | 3 [0..7] | 5 [1..9] (3 + 2) | BENCH-S3 §S4-13 after column |
+
+**Must travel with O5/O6 [Fact]:**
+- Quote both rows together, and R, C and held together. O6 always says "with resolver on" (D-19, ADR-05a §7); the resolver is off unless the run turns it on.
+- **D-17:** O6's R = 0 holds after the operator released a median 5 held items, 3 honest and 2 tainted-lineage (re-run and re-held by recovery, released by the bench approver, X4).
+- Before the resolver the flag is never resolved, because the bench approver never resolves flags: a flagged conflict waits for a human.
+- With the resolver: 1 resolution on 19 of 20 seeds (triage rebased on the clean base); seed 7 had no conflict. `ks verify` OK on all 40 runs (off and on), `per_agent_uid`, no `resolution_invalid`. Hero F2+ (seeds 1..5) score.json identical off and on (BENCH-S3 §S4-13; S4-13 review, kabir).
+- **What the resolver will not do** (ADR-05a §1, §2a): it refuses the suspect, every alert's `root_candidates[0]`, evidence writers, authors of taint origins (seed writers), and LLM, system and suspended agents. Any conflict that fails a check, and every other flag, replan or compensate, waits for a human. It merges nothing by hand and invents no value. Undo: `ks recover RUN --unresolve <plan_id>.<n>`, itself recorded.
+- **Known limits** (THREAT-MODEL Errata, D-18 entry): verify checks the resolution's rule, order, binding and clean inputs, **not the re-computed value** (trusted to `ks.recovery`, TCB). A **colluding** agent outside the refused set that copies the culprit's value from its own memory into its args would carry it into the rebased write (C3, no prevention claim). Deterministic built-in agents only (GUARDRAILS L6).
+
 ## Not safe to print (never quote)
 
 - **Exact HF/METR dates or times** (6, 8, 11, 13, 19, 21 Jul; 23:00 UTC). The outlets disagree. Say "July 2026" and "about two days later".

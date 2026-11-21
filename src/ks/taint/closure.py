@@ -24,6 +24,9 @@ SEED_SEQ = 1
 """D-SEQ1: record seq 1 is the seed record."""
 _REPAIR_PRINCIPAL = "ks.recovery"
 """Records by ks.recovery are repairs (a restore re-writes an untainted value, ADR-05 §2b): they do not propagate."""
+_UNRESOLVE_TOOL = "ks.recover.unresolve"
+"""Except an undo of a resolution (ADR-05a §5): it copies the pre-resolution (tainted) versions back, and its read set
+lists them, so taint flows through it exactly as before the resolution."""
 
 Ver = tuple[str, int]
 
@@ -275,7 +278,7 @@ def closure(records: RecordIndex | Iterable[Record], seed: Iterable[ObjVer], *, 
     """Forward taint (ADR-05 §4): one pass in seq order (a version written at seq s is visible only to seq > s,
     M2, so one pass is exact). An exec record whose ``read_set`` hits a tainted ``(obj, ver)`` is tainted; its
     after-versions and ``outbox_ids`` join (D8). Seed writers are tainted actions. Never tainted: the seed record
-    (D-SEQ1), records by ks.recovery (repairs), non-exec records (no effects). ``sticky_agents`` (LLM agents,
+    (D-SEQ1), records by ks.recovery (repairs; not ``ks.recover.unresolve``, ADR-05a §5), non-exec records (no effects). ``sticky_agents`` (LLM agents,
     conservative default per ADR-05): once tainted, every later exec action of that agent is tainted."""
     ix = RecordIndex.of(records)
     seed = tuple(sorted(set(seed), key=lambda v: (v.obj, v.ver)))
@@ -296,7 +299,9 @@ def closure(records: RecordIndex | Iterable[Record], seed: Iterable[ObjVer], *, 
     for r in ix.records:
         if r.seq < start or r.seq > end:
             continue
-        if r.decision != Decision.EXEC or r is ix.seed or r.attributed_agent == _REPAIR_PRINCIPAL:
+        if r.decision != Decision.EXEC or r is ix.seed or (
+                r.attributed_agent == _REPAIR_PRINCIPAL
+                and (r.envelope is None or r.envelope.tool != _UNRESOLVE_TOOL)):
             continue
         hits = tuple(ObjVer(obj=e.obj, ver=e.ver) for e in r.read_set if _ver(e) in tainted)
         agent = r.attributed_agent

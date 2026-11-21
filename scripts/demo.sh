@@ -10,6 +10,7 @@ cd "$(dirname "$0")/.."
 
 IMAGE="${KS_IMAGE:-killswitch:dev}"
 SEED="${SEED:-2}"
+FAULT="${FAULT:-F2+}"  # S4-22: the finale also runs FAULT=F2+x (D-18 after-row, resolver on)
 TICKS="${TICKS:-40}"
 RESOLVER="${RESOLVER:-ww_rebase/1}"  # D-18 / ADR-05a §7: the demo runs with the resolver on and says so (RESOLVER=off to compare)
 RUN_ID="${RUN_ID:-hero-s$SEED-$(date +%Y%m%d-%H%M%S)}"
@@ -27,9 +28,9 @@ mkdir -p runs
 trap 'docker rm -f "$NAME" >/dev/null 2>&1 || true' EXIT
 # Root inside the container (per-agent uids); no network needed at runtime.
 docker run -d --name "$NAME" --network none "$IMAGE" \
-  ks run --scenario world --fault F2+ --seed "$SEED" --ticks "$TICKS" --pause-on-alert --resolver "$RESOLVER" \
+  ks run --scenario world --fault "$FAULT" --seed "$SEED" --ticks "$TICKS" --pause-on-alert --resolver "$RESOLVER" \
   --out "$RUN" >/dev/null
-echo "resolver: $RESOLVER$([ "$RESOLVER" = off ] || echo ' (on)')"
+echo "fault: $FAULT  resolver: $RESOLVER$([ "$RESOLVER" = off ] || echo ' (on)')"
 EXEC=(docker exec "$NAME")
 
 wait_log() {  # wait until the run's log has $2 lines matching $1

@@ -17,7 +17,7 @@ def test_frozen_and_default_requests_nothing():
 def test_field_names_are_the_contract():
     assert [f.name for f in dataclasses.fields(RunOptions)] == [
         "fault", "culprit", "hold", "pause_at", "step", "rogue", "slot", "decisions", "decisions_head", "monitor",
-        "pause_on_alert", "no_lineage_hold", "with_baselines"]
+        "pause_on_alert", "no_lineage_hold", "resolver", "with_baselines"]
 
 
 def test_hold_zero_is_requested_and_pause_at_is_a_tuple():

@@ -134,6 +134,7 @@ def run(*, agents: int | None, ticks: int, seed: int, key_mode: str, out: str | 
                        key_mode=key_mode, decision_latency_ticks=0, ticks=ticks, tick_us=TICK_US, start_ts_us=0,
                        hold_window_ticks=hold,
                        lineage_hold=not (options is not None and options.no_lineage_hold),  # B3-51 D10 contrast
+                       resolver=(options.resolver if options is not None and options.resolver else "off"),  # S4-13
                        sensitive_fields=sc.sensitive_fields, agents=ids, isolation="per_agent_uid" if separate else "degraded",
                        decisions_from=replay.anchor_hash if replay is not None else None)
     if config.tick_us <= SYSTEM_SLOTS + agents:
@@ -384,6 +385,10 @@ class AlertTaint:
     def is_tainted(self, obj: str, ver: int) -> bool:
         if not self.mon.alerts:
             return False
+        # S4-28: verify's window pass taints any lineage that read an alert's evidence version, suspect or not
+        # (a reconcile alert names nobody, so the closure below has no seed); the gateway holds the same set.
+        if any(v.obj == obj and v.ver == ver for a in self.mon.alerts for v in a.evidence_versions):
+            return True
         key = (self.recorder.seq, len(self.mon.alerts))
         if key != self._at:
             from ks.taint import taint_from_alerts

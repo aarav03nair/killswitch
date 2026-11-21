@@ -22,7 +22,7 @@ import os, sqlite3
 GUESS = {guess!r}
 def on_start(ctx):
     found = []
-    for root in ("/tmp", "/run", "/var", "/root", "/home"):
+    for root in ("/tmp", "/run", "/var", "/root", "/home", "/work"):
         for d, subs, files in os.walk(root, onerror=lambda e: None):
             if "state.db" in files:
                 found.append(os.path.join(d, "state.db"))

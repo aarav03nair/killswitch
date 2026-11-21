@@ -55,7 +55,7 @@ __all__ = [
     "CONFIG", "KEYS", "RECORD", "WITNESS", "ALERTS", "PLANS_DIR", "SIDESTORE_DIR", "ORACLE_DIR", "EFFECTS",
     "SCORE", "TIMING", "WORKSPACE_DIR", "STATE_DB", "WITNESS_HEADS_DIR", "BASELINES_DIR", "DETERMINISTIC_FILES",
     "PROJECTED_FILES", "SCORER_ONLY_FIELDS", "SensitiveField", "RunConfig", "KeyEntry", "Keyring", "Exit",
-    "VERIFY_REASONS", "VerifyReport", "Isolation", "NO_LINEAGE_HOLD_BANNER", "RunAnchor", "anchor_status", "RunDir", "sidestore_relpath",
+    "VERIFY_REASONS", "VerifyReport", "Isolation", "NO_LINEAGE_HOLD_BANNER", "resolver_label", "RunAnchor", "anchor_status", "RunDir", "sidestore_relpath",
 ]
 
 CONFIG = "config.json"
@@ -96,6 +96,11 @@ NO_LINEAGE_HOLD_BANNER = ("NO-LINEAGE-HOLD contrast run (D10): the lineage hold 
                           "(RunConfig.lineage_hold = false, hold 0); tainted effects that left were allowed by "
                           "configuration, not missed")
 """v1.6 (B3-51): the one banner text verify, console and score print for a ``lineage_hold == False`` run."""
+
+
+def resolver_label(resolver: str) -> str:
+    """v1.7 (ADR-05a §7): the one label text for the resolver setting."""
+    return "resolver: off" if resolver == "off" else f"resolver: {resolver} (on)"
 
 
 class RunConfig(Document):
@@ -171,6 +176,17 @@ class RunConfig(Document):
     Requires ``hold_window_ticks == 0`` (validator). Verify then does not count the taint flag against a dispatch
     (everything else in F4 still applies) and prints the contrast banner. Omitted from the canonical bytes at
     the default ``True``, so 1.1-1.5 configs keep their bytes and hashes."""
+
+    resolver: Literal["off", "ww_rebase/1"] = additive("off")
+    """v1.7 (D-18, ADR-05a): the write-write conflict resolver. ``off`` (default, omitted from the canonical bytes, so
+    1.1-1.6 configs keep their bytes and hashes) or ``ww_rebase/1`` (``ks run --resolver ww_rebase/1``). Covered by
+    ``config_hash``; not scorer-only (``tcb_view`` keeps it: the planner reads it). Verify, console, dry-run and
+    score print ``resolver: ww_rebase/1 (on)`` or ``resolver: off``."""
+
+    @property
+    def resolver_label(self) -> str:
+        """``resolver: off`` or ``resolver: ww_rebase/1 (on)`` (ADR-05a §7 label)."""
+        return resolver_label(self.resolver)
 
     @field_validator("sensitive_fields", "agents")
     @classmethod
@@ -293,7 +309,7 @@ VERIFY_REASONS: dict[str, Exit] = {
     "gw_sig_invalid": Exit.TAMPER, "agent_sig_mismatch": Exit.TAMPER, "side_entry_mismatch": Exit.TAMPER,
     "alert_mismatch": Exit.TAMPER, "epoch_regression": Exit.TAMPER, "expired_admitted": Exit.TAMPER,
     "window_violation": Exit.TAMPER, "reexec_invalid": Exit.TAMPER, "seed_invalid": Exit.TAMPER,
-    "recovery_unbound": Exit.TAMPER,
+    "recovery_unbound": Exit.TAMPER, "resolution_invalid": Exit.TAMPER,
     "witness_missing": Exit.WITNESS, "witness_sig_invalid": Exit.WITNESS, "witness_mismatch": Exit.WITNESS,
     "count_mismatch": Exit.WITNESS, "truncated": Exit.WITNESS, "head_mismatch": Exit.WITNESS,
     "keyring_mismatch": Exit.WITNESS, "config_mismatch": Exit.WITNESS,

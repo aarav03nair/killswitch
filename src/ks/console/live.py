@@ -16,6 +16,8 @@ __all__ = ["frame", "beat_frame", "run_live", "beat_ticks"]
 def _banners(m: dict) -> list[str]:
     v = m["verify"]
     out = ["!! " + b["text"] for b in m["banners"]]
+    if m.get("validity_line"):  # S4-22: always shown, with the deadline-miss count
+        out.append(("" if m["validity"]["headline"] else "!! ") + m["validity_line"])
     out.append(f"verify: {'OK' if v['ok'] else 'FAILED ' + v['reason']}; tamper-evident up to the last witnessed head "
                f"(seq {v['last_witnessed_seq']}); {'anchored' if v['anchored'] else 'not anchored'}")
     return out
@@ -24,7 +26,8 @@ def _banners(m: dict) -> list[str]:
 def frame(run) -> str:
     m = build_model(run)
     recs = m["records"]
-    L = _banners(m) + [f"run {m['run_id']}  records {len(recs)}  ticks {len(m['ticks'])}  (read-only)", "agents:"]
+    L = _banners(m) + [f"run {m['run_id']}  records {len(recs)}  ticks {len(m['ticks'])}  (read-only)  "
+                       f"{m.get('resolver_label', 'resolver: off')}", "agents:"]
     suspended = {r["control"]["target"].split(":", 1)[1] for r in m["controls"] if r["control"]["op"] == "suspend"}
     last: dict = {}
     for r in recs:

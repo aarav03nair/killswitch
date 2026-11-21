@@ -30,6 +30,8 @@ from .agg import render_table
 __all__ = ["BASELINES", "run_cell", "bench", "DEFAULT_FAULTS"]
 
 BASELINES = ("system", "snapshot", "revert_culprit_only", "no_op")
+RESOLVER_COL = "system+resolver"
+"""S4-13: bench.json column of the system baseline run with ``--resolver ww_rebase/1`` (the F2+x after-row)."""
 DEFAULT_FAULTS = ("F1", "F2", "F2+", "F2+c", "F2+x", "F3", "F4", "F7")
 WORLD_FAULTS = DEFAULT_FAULTS  # F5 (forged envelope) and F6 (tamper) are scored by ks verify, not this table
 
@@ -73,11 +75,13 @@ def _baseline_plan(run: Path, spec, baseline: str) -> str:
 
 def run_cell(fault: str, seed: int, hold: int, baseline: str, ticks: int, out: Path, *,
              star_cache: dict | None = None, timeout: float = 900, notes_out: list[str] | None = None,
-             no_lineage_hold: bool = False) -> dict[str, Any]:
+             no_lineage_hold: bool = False, resolver: str = "off") -> dict[str, Any]:
     """Run and score one cell in ``out`` (must not exist). Returns score.json's dict plus nothing else.
     ``notes_out`` receives labels for anything that ran differently from the plan (``no_plan``: the system cell got no
     recovery plan, so it is scored as the pause-only run). ``no_lineage_hold`` (B3-53) runs the D10 contrast cell
-    (needs hold 0); its score.json carries ``lineage_hold: false`` and is never aggregated with system cells."""
+    (needs hold 0); its score.json carries ``lineage_hold: false`` and is never aggregated with system cells.
+    ``resolver`` (S4-13, D-18): ``ww_rebase/1`` runs ``ks run --resolver ww_rebase/1`` (recorded in config.json; the
+    score.json carries the ``resolver`` keys); only for the system baseline."""
     from ks.contracts import RunDir
     from ks.runtime.operator import operator_request
     from ks.score import score_run, suspend_tick_of, write_score
@@ -86,7 +90,8 @@ def run_cell(fault: str, seed: int, hold: int, baseline: str, ticks: int, out: P
     spec = make_spec(world_fault(fault), seed, ticks=ticks)
     p = subprocess.Popen([sys.executable, "-m", "ks", "run", "--scenario", "world", "--fault", fault, "--seed", str(seed),
                           "--ticks", str(ticks), "--hold", str(hold), "--pause-on-alert", "--out", str(out),
-                          *(["--no-lineage-hold"] if no_lineage_hold else [])],
+                          *(["--no-lineage-hold"] if no_lineage_hold else []),
+                          *(["--resolver", resolver] if resolver != "off" else [])],
                          stdout=subprocess.PIPE, stderr=subprocess.PIPE, stdin=subprocess.DEVNULL, text=True)
     try:
         lines: list[str] = []
@@ -146,6 +151,8 @@ def run_cell(fault: str, seed: int, hold: int, baseline: str, ticks: int, out: P
     cfg = RunDir(out).config()
     if cfg.lineage_hold == no_lineage_hold:  # B3-53: contrast cells only on request, system cells never contrast
         raise RuntimeError(f"lineage_hold={cfg.lineage_hold} but no_lineage_hold={no_lineage_hold}")
+    if cfg.resolver != resolver:  # S4-13: the label comes from config.json, never from the request
+        raise RuntimeError(f"config resolver={cfg.resolver} but requested {resolver}")
     stick = suspend_tick_of(out, spec.culprit)
     key = (fault, seed, hold, ticks, stick)
     if star_cache is not None and key in star_cache:
@@ -166,11 +173,14 @@ def _star(spec, out: Path, stick, hold):
 
 def bench(seeds: list[int], faults: list[str], holds: list[int], baselines: list[str], ticks: int, out: Path, *,
           keep_runs: bool = False, log=print, contrast_faults: list[str] | tuple[str, ...] = (),
-          contrast_baselines: tuple[str, ...] = ("system", "no_op")) -> dict[str, Any]:
+          contrast_baselines: tuple[str, ...] = ("system", "no_op"),
+          resolver_faults: list[str] | tuple[str, ...] = ()) -> dict[str, Any]:
     """Run the whole matrix; per-seed ``score.json`` under ``out/<fault>/h<H>/<baseline>/s<seed>/``, ``bench.json``
     (deterministic summary), ``bench.md`` (tables), ``timings.json`` (wall clock per seed, ms).
     ``contrast_faults``: per fault, one extra ``system`` column at H=0 with ``--no-lineage-hold`` (D10), reported in its
-    own ``CONTRAST`` table and under ``contrast_cells`` in bench.json; never mixed into ``cells``."""
+    own ``CONTRAST`` table and under ``contrast_cells`` in bench.json; never mixed into ``cells``.
+    ``resolver_faults`` (S4-13, D-18): per fault and H, one extra column ``system (resolver: ww_rebase/1 (on))`` next to
+    the resolver-off ``system`` column (the before-row), in the same table; bench.json key ``system+resolver``."""
     from .agg import aggregate
     out.mkdir(parents=True, exist_ok=True)
     scratch = out / "_runs"
@@ -207,13 +217,17 @@ def bench(seeds: list[int], faults: list[str], holds: list[int], baselines: list
     for f in faults:
         for h in holds:
             for seed in seeds:
-                for b in baselines:
+                for b in [*baselines, *([RESOLVER_COL] if f in resolver_faults else [])]:
                     name = f"{f}/h{h}/{b}/s{seed}"
                     t = time.monotonic()
                     d = scratch / f"{world_fault(f)}-h{h}-{b}-s{seed}"
                     cn = []
                     try:
-                        s = run_cell(f, seed, h, b, ticks, d, star_cache=cache, notes_out=cn)
+                        if b == RESOLVER_COL:
+                            s = run_cell(f, seed, h, "system", ticks, d, star_cache=cache, notes_out=cn,
+                                         resolver="ww_rebase/1")
+                        else:
+                            s = run_cell(f, seed, h, b, ticks, d, star_cache=cache, notes_out=cn)
                     except Exception as e:  # noqa: BLE001 - listed in the summary, never dropped silently
                         if "baseline_failed:ValueError:" in str(e) and "wrote nothing" in str(e):
                             na.append(f"{name}: n/a: culprit wrote nothing landed")  # S4-15: not a failure
@@ -247,11 +261,15 @@ def bench(seeds: list[int], faults: list[str], holds: list[int], baselines: list
           "first alert naming the culprit, measured from the bad action.\n"]
     for f in faults:
         for h in holds:
-            cells = {b: [results[(f, h, b)][s] for s in sorted(results.get((f, h, b), {}))] for b in baselines
-                     if (f, h, b) in results}
+            cells = {b: [results[(f, h, b)][s] for s in sorted(results.get((f, h, b), {}))]
+                     for b in [*baselines, RESOLVER_COL] if (f, h, b) in results}
             if not cells:
                 continue
             summary["cells"][f"{f}/h{h}"] = {b: aggregate(v) for b, v in cells.items()}
+            if RESOLVER_COL in cells:  # S4-13: label both columns so the before/after rows cannot be confused
+                cells = {("system (resolver: off, before)" if b == "system" else
+                          "system (resolver: ww_rebase/1 (on), after)" if b == RESOLVER_COL else b): v
+                         for b, v in cells.items()}
             if f == "F3" and "system" in cells:  # S4-15: no recovery plan on F3, so say so in the table itself
                 cells = {("system (pause-only)" if b == "system" else b): v for b, v in cells.items()}
             md.append(render_table(f"{f}, H={h}, T={ticks}", cells))

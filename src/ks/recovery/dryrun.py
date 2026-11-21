@@ -38,6 +38,12 @@ and ``t0_delta`` (C5 1.4). Taint follows the suspect's self-reads through ``tool
 a non-zero delta is the residual it does not follow: suspect writes reached only through **view** self-reads,
 left out of the seed. The console names them so a person can widen the seed.
 
+Resolver (D-18, ADR-05a §3, §8). After the restores and before the re-runs, each ``resolve`` step is simulated with
+:func:`ks.recovery.resolver.rebase` (``sim_clean``): O set to value(``to``), H's tool and args re-run, one version
+landed. Its hash becomes ``rebased_hash``; ``rationale`` becomes the full check list and ``unblocked`` the items of
+the final plan's dependent re-runs. If ``sim_clean`` fails for any resolve (or there is no rerunner), the dry-run
+re-plans with ``no_resolve`` = those objects, which keeps them as flags (the flag line names ``sim_clean``).
+
 Plan file: :func:`write_plan` writes ``<run>/plans/<plan_id>.json`` through ``RunDir.write_plan`` (ADR-05 §7,
 CALL-02 C4). A dry-run changes nothing else in the run dir (test).
 """
@@ -52,7 +58,7 @@ from typing import Any, Literal, Protocol
 from ks.contracts import OutboxStatus, VersionRef, WriteEntry
 from ks.contracts.record import Record
 from ks.contracts.recovery import (ActionRef, CancelOutboxStep, DiffEntry, FlagStep, RecoveryPlan, RerunStep,
-                                   RestoreStep)
+                                   ResolveStep, RestoreStep)
 
 from ks.state import StaleExpect
 
@@ -127,6 +133,8 @@ class DryRun:
     """Verdicts on the planner's class-C candidates by seq: cleared (now ``rerun(c_rerun_identical)``) or flag kept."""
     held_extra: tuple[Held, ...] = ()
     """Queued/held items of re-runs the simulation dropped (rider, redacted args): no step, stay held (B3-48)."""
+    resolve_failed: dict[str, str] = field(default_factory=dict)
+    """obj -> why ``sim_clean`` failed in the first pass (those objects were re-planned as flags, ADR-05a §8)."""
 
     @property
     def held(self) -> tuple[Held, ...]:
@@ -203,7 +211,7 @@ def _try_class_c(store: Any, rerunner: Rerunner, step: RerunStep, rec: Record, s
 
 
 def dry_run(store: Any, planned: Planned, *, rerunner: Rerunner | None = None,
-            on_stale: Literal["raise", "halt"] = "raise") -> DryRun:
+            on_stale: Literal["raise", "halt"] = "raise", _failed: dict[str, str] | None = None) -> DryRun:
     """Simulate ``planned`` on ``store`` (a :class:`~ks.state.Store`) and return the plan with its diff.
     Restores run first (step order), then re-runs in seq order. See the module doc for stale steps."""
     if on_stale not in ("raise", "halt"):
@@ -222,6 +230,8 @@ def dry_run(store: Any, planned: Planned, *, rerunner: Rerunner | None = None,
     riders: list[Rider] = []
     class_c: dict[int, ClassC] = {}
     stale: Stale | None = None
+    failed: dict[str, str] = {}
+    rebased_hash: dict[int, str] = {}
 
     def halt(n: int, op: str, obj: str, detail: str, exc: Exception | None = None) -> None:
         nonlocal stale
@@ -240,7 +250,30 @@ def dry_run(store: Any, planned: Planned, *, rerunner: Rerunner | None = None,
                     halt(s.n, "restore", s.obj, str(e), e)
                     break
                 seq += 1
-        if rerunner is not None and stale is None:
+        if stale is None:
+            from .resolver import rebase
+            tv = frozenset((v.obj, v.ver) for v in plan.taint_set.versions)
+            for s in plan.steps:
+                if not isinstance(s, ResolveStep):
+                    continue
+                head = store.get(s.obj)
+                if head is None or head.ver != s.expect.ver or head.hash != s.expect.hash:
+                    halt(s.n, "resolve", s.obj, f"{s.obj}: head is {None if head is None else head.ver}, plan "
+                                                f"expected v{s.expect.ver}")
+                    break
+                if rerunner is None:
+                    failed[s.obj] = "no rerunner: cannot simulate"
+                    continue
+                rb = rebase(store, s, planned.resolve_records[s.rebased.seq], rerunner, seq,
+                            f"{plan.plan_id}.{s.n}", tv)
+                if not rb.ok:
+                    failed[s.obj] = rb.why
+                    continue
+                rebased_hash[s.n] = rb.value_hash
+                seq += 1
+        if failed:
+            pass  # re-planned below, outside the simulation
+        elif rerunner is not None and stale is None:
             work: list[tuple[int, RerunStep, bool]] = [(s.action.seq, s, False) for s in plan.steps
                                                        if isinstance(s, RerunStep)]
             work += [(q, RerunStep(n=0, reason=C_IDENTICAL, action=action_ref(r)), True)
@@ -290,6 +323,11 @@ def dry_run(store: Any, planned: Planned, *, rerunner: Rerunner | None = None,
     after_digest = store.state_digest()
     if after_digest != before_digest:
         raise StatePerturbed(f"dry-run changed the state digest {before_digest} -> {after_digest}")
+    if failed:  # ADR-05a §8: re-plan with those objects kept as flags (monotone: terminates)
+        if planned.replan is None:
+            raise RuntimeError(f"resolve sim_clean failed and the plan cannot be rebuilt: {failed}")
+        return dry_run(store, planned.replan(frozenset(failed)), rerunner=rerunner, on_stale=on_stale,
+                       _failed={**(_failed or {}), **failed})
     diff = [DiffEntry(obj=o, current=before.get(o), planned_hash=ref.hash)
             for o, ref in sorted(after.items()) if before.get(o) != ref]
     cleared = {q: v for q, v in class_c.items() if v.cleared}
@@ -307,10 +345,34 @@ def dry_run(store: Any, planned: Planned, *, rerunner: Rerunner | None = None,
             elif st in (OutboxStatus.QUEUED, OutboxStatus.HELD):
                 held_extra.append(Held(outbox_id=oid, status=st, action=action_ref(rec), blocked_by=why[q]))
     refined = _refine(plan, outcomes, redacted, {r.action.seq for r in riders}, cleared, cancels)
+    refined = _finalize_resolves(refined, planned, rebased_hash)
     return DryRun(plan=with_diff(refined, diff), planned=planned, digest_before=before_digest,
                   digest_after=after_digest, simulated_reruns=rerunner is not None, rerun_writes=rerun_writes,
                   outcomes=outcomes, stale=stale, riders=tuple(riders), class_c=class_c,
-                  held_extra=tuple(held_extra))
+                  held_extra=tuple(held_extra), resolve_failed=dict(_failed or {}))
+
+
+def _finalize_resolves(plan: RecoveryPlan, planned: Planned, rebased_hash: dict[int, str]) -> RecoveryPlan:
+    """ADR-05a §3: fill each resolve's ``rebased_hash`` (from ``sim_clean``), ``rationale`` (every check) and
+    ``unblocked`` (items of the final plan's dependent re-runs). Steps keep their numbers."""
+    if not any(isinstance(s, ResolveStep) for s in plan.steps):
+        return plan
+    from .resolver import CHECKS, unblocked_for
+    # map the (possibly renumbered) resolve steps back to the simulated ones by obj
+    by_obj = {s.obj: rebased_hash.get(s.n) for s in planned.plan.steps if isinstance(s, ResolveStep)}
+    recs = {**planned.rerun_records, **planned.c_candidates}
+    reruns = [recs[s.action.seq] for s in plan.steps if isinstance(s, RerunStep) and s.action.seq in recs]
+    steps = []
+    for s in plan.steps:
+        if isinstance(s, ResolveStep):
+            h = by_obj.get(s.obj)
+            if h is None:  # not simulated (halted before it): leave the planner's placeholder, never applied
+                steps.append(s)
+                continue
+            s = s.model_copy(update={"rebased_hash": h, "rationale": CHECKS,
+                                     "unblocked": unblocked_for(s.obj, s.culprit_ver.ver, s.expect.ver, reruns, plan)})
+        steps.append(s)
+    return RecoveryPlan.model_validate({**plan.to_obj(), "steps": [s.to_obj() for s in steps]})
 
 
 def _refine(plan: RecoveryPlan, outcomes: dict[int, RerunOutcome], redacted: list[RerunStep],
@@ -337,8 +399,8 @@ def _refine(plan: RecoveryPlan, outcomes: dict[int, RerunOutcome], redacted: lis
                     key=lambda s: s.action.seq)
     rest = [s for s in keep if not isinstance(s, (FlagStep, RerunStep))]
     co = sorted([s for s in rest if s.op == "cancel_outbox"] + new_cancels, key=lambda s: s.outbox_id)
-    before = co + [s for s in rest if s.op == "restore"]
-    after = [s for s in rest if s.op not in ("cancel_outbox", "restore")]
+    before = co + [s for s in rest if s.op == "restore"] + [s for s in rest if s.op == "resolve"]
+    after = [s for s in rest if s.op not in ("cancel_outbox", "restore", "resolve")]
     ordered = before + reruns + after + flags
     steps = tuple(s.model_copy(update={"n": i}) for i, s in enumerate(ordered))
     return RecoveryPlan.model_validate({**plan.to_obj(), "steps": [s.to_obj() for s in steps]})
@@ -352,8 +414,9 @@ def render(d: DryRun) -> str:
     """Console text of the dry-run, one line per entry, grouped by lane. Hashes only."""
     p, pl = d.plan, d.planned
     diff = {e.obj: e for e in p.diff}
+    from .resolver import label
     out = [f"plan {p.plan_id}  hash {d.plan_hash[:16]}  alert {p.alert_id}  culprit {p.culprit}  "
-           f"as_of_seq {p.as_of_seq}"]
+           f"as_of_seq {p.as_of_seq}  {label(pl.resolver)}"]
     lit = p.t0_seq_est_literal
     out.append(f"t0_seq_est {p.t0_seq_est}  literal walk {lit if lit is not None else '-'}  "
                f"t0_delta {p.t0_delta if p.t0_delta is not None else '-'}"
@@ -365,6 +428,17 @@ def render(d: DryRun) -> str:
             out.append(f"restore      {s.obj}  expect {_v(s.expect)} -> "
                        f"{'absent (tombstone)' if s.to is None or s.reason == 'tainted_create' else _v(s.to)}"
                        f"  planned {e.planned_hash[:12] if e else '-'}")
+    for s in p.steps:
+        if s.op == "resolve":
+            out.append(f"resolve      {s.obj} ({s.rule}/{s.rule_version}): {p.culprit} v{s.culprit_ver.ver} reverted, "
+                       f"{s.rebased.agent_id} edit rebased on v{s.to.ver} -> {s.rebased_hash[:8]}; unblocked "
+                       f"{', '.join(s.unblocked) or '-'}; checks {','.join(s.rationale)}; undo: ks recover RUN "
+                       f"--unresolve {p.plan_id}.{s.n}")
+        elif s.op == "unresolve":
+            r0 = s.reverts[0]
+            out.append(f"unresolve    {s.resolution.action_id}: {r0.obj} back to v{r0.to.ver}, flag raised again; "
+                       f"re-held {', '.join(s.reheld) or '-'}"
+                       + "".join(f"; {e.obj} back to v{e.to.ver}" for e in s.reverts[1:]))
     for s in p.steps:
         if s.op == "rerun":
             ws = d.rerun_writes.get(s.action.seq)
@@ -388,7 +462,11 @@ def render(d: DryRun) -> str:
             out.append(f"{s.op:<12} {s.action.agent_id} seq {s.action.seq}")
         elif s.op == "flag":
             who = f" {s.action.agent_id} seq {s.action.seq}" if s.action else ""
-            out.append(f"flag         {s.reason} {s.obj or '-'}{who}")
+            why = ""
+            if s.reason == "write_write_conflict" and pl.resolver != "off" and s.obj in pl.refused:
+                why = f" (resolver: {pl.refused[s.obj]} failed"
+                why += f": {d.resolve_failed[s.obj]})" if s.obj in d.resolve_failed else ")"
+            out.append(f"flag         {s.reason} {s.obj or '-'}{who}{why}")
     for q in sorted(d.class_c):
         v = d.class_c[q]
         out.append(f"class C      {v.action.action_id} seq {q} {v.tool}: "
@@ -411,6 +489,10 @@ def render(d: DryRun) -> str:
     if d.simulated_reruns:
         out.append(f"reheld {len(d.reheld)}  reemitted {d.reemitted}")
     out.append(f"flags {sum(1 for s in p.steps if s.op == 'flag')}  state digest unchanged {d.digest_after[:16]}")
+    if pl.resolver != "off":
+        ww = sum(1 for s in p.steps if s.op == "flag" and s.reason == "write_write_conflict")
+        out.append(f"{label(pl.resolver)}  ww_flags_before {ww + sum(1 for s in p.steps if s.op == 'resolve')}  "
+                   f"ww_flags_after {ww}")
     out.extend(f"note         {n}" for n in pl.notes)
     return "\n".join(out) + "\n"
 

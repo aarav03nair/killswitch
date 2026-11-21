@@ -13,7 +13,8 @@ __all__ = ["RunOptions", "SERVED"]
 
 # Fields ks.runtime.run implements today. Grow this as features land; the CLI placeholder test reads it.
 SERVED: frozenset[str] = frozenset({"pause_at", "step", "monitor", "decisions", "decisions_head", "fault", "culprit",
-                                    "hold", "pause_on_alert", "rogue", "slot", "no_lineage_hold"})
+                                    "hold", "pause_on_alert", "rogue", "slot", "no_lineage_hold",
+                                    "resolver"})
 # B3-13 pacing (ADR-07 L1); B3-19 monitor; B3-30 anchored decisions replay (R3, B3-20); B3-27 fault/culprit/hold
 
 
@@ -31,9 +32,14 @@ class RunOptions:
     monitor: bool = False                     # B3-19: scan records after every tick; hard alert -> suspend (world only)
     pause_on_alert: bool = False              # B3-27 pacing: pause after the first monitor suspend and after a recovery apply
     no_lineage_hold: bool = False             # B3-51 D10 contrast: with hold 0, also drop the taint (lineage) hold
+    resolver: str | None = None               # S4-13 (D-18, ADR-05a): "ww_rebase/1" turns the resolver on; None/"off" = off
     with_baselines: bool = False              # also run the baseline recoveries for scoring
 
     def __post_init__(self) -> None:
+        if self.resolver == "off":
+            object.__setattr__(self, "resolver", None)  # off is the default: a plain run stays byte-identical
+        if self.resolver not in (None, "ww_rebase/1"):
+            raise ValueError(f"unknown resolver {self.resolver!r} (off | ww_rebase/1)")
         if self.no_lineage_hold and self.hold != 0:
             raise ValueError("no_lineage_hold is the D10 contrast and needs hold 0")
         if self.pause_at is not None:
