@@ -446,41 +446,6 @@
   ],
   "activity": [
     {
-      "t": "20 Nov 09:07",
-      "who": "arjun",
-      "msg": "moved B3-49 to in_review"
-    },
-    {
-      "t": "20 Nov 09:08",
-      "who": "ishaan",
-      "msg": "moved B3-34 to in_review"
-    },
-    {
-      "t": "20 Nov 09:13",
-      "who": "kabir",
-      "msg": "reviewed B3-49: done"
-    },
-    {
-      "t": "20 Nov 09:13",
-      "who": "pmo",
-      "msg": "moved B3-35 to todo"
-    },
-    {
-      "t": "20 Nov 09:27",
-      "who": "maya",
-      "msg": "moved B3-27 to in_review"
-    },
-    {
-      "t": "20 Nov 09:28",
-      "who": "maya",
-      "msg": "reviewed B3-34: changes"
-    },
-    {
-      "t": "20 Nov 09:29",
-      "who": "nisha",
-      "msg": "reviewed B3-27: done"
-    },
-    {
       "t": "20 Nov 09:29",
       "who": "ishaan",
       "msg": "moved B3-34 to in_review"
@@ -1444,6 +1409,41 @@
       "t": "21 Nov 12:22",
       "who": "pmo",
       "msg": "moved S4-09 to done"
+    },
+    {
+      "t": "21 Nov 12:22",
+      "who": "tara",
+      "msg": "moved S4-14 to in_progress"
+    },
+    {
+      "t": "21 Nov 15:02",
+      "who": "tara",
+      "msg": "moved S4-14 to in_review"
+    },
+    {
+      "t": "21 Nov 15:09",
+      "who": "maya",
+      "msg": "reviewed S4-14: changes"
+    },
+    {
+      "t": "21 Nov 15:10",
+      "who": "pmo",
+      "msg": "opened S4-35 — T=120 late-inject seeds end with R=1/6 on F2+ (seeds 2,8,13,14,16)"
+    },
+    {
+      "t": "21 Nov 15:10",
+      "who": "vikram",
+      "msg": "moved S4-35 to in_progress"
+    },
+    {
+      "t": "21 Nov 15:12",
+      "who": "tara",
+      "msg": "moved S4-14 to in_review"
+    },
+    {
+      "t": "21 Nov 15:24",
+      "who": "maya",
+      "msg": "reviewed S4-14: done"
     }
   ]
 }

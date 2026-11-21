@@ -65,3 +65,18 @@ def test_contrast_cell_is_labelled_and_separate(tmp_path):
     """B3-53 / D10: run_cell(no_lineage_hold=True) at H=0 writes lineage_hold=false; bench keeps it out of ``cells``."""
     s = run_cell("F2+", 2, 0, "system", 40, tmp_path / "c", star_cache={}, no_lineage_hold=True)
     assert s["lineage_hold"] is False and s["hold"] == 0
+
+
+@pytest.mark.parametrize("ticks,other", [(40, 120), (120, 40)])
+def test_header_names_the_runs_real_tick_count(tmp_path, monkeypatch, ticks, other):
+    """S4-14: the header line used a hard-coded T=120; it must say this run's T and warn against the other one."""
+    import ks.bench.runner as r
+    def fake(f, seed, h, b, t, d, **k):
+        d.mkdir(parents=True, exist_ok=True)
+        (d / "score.json").write_text("{}")
+        return {"seed": seed, "R": {"n": 0, "d": 1}}
+    monkeypatch.setattr(r, "run_cell", fake)
+    r.bench([1], ["F2+"], [6], ["system"], ticks, tmp_path / "o")
+    md = (tmp_path / "o" / "bench.md").read_text()
+    assert f"at **T={ticks}**; do not compare ratio metrics with T={other}." in md
+    assert md.startswith(f"# ks bench: T={ticks} ")

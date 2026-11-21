@@ -1,0 +1,31 @@
+{
+  "id": "S4-35",
+  "title": "T=120 late-inject seeds end with R=1/6 on F2+ (seeds 2,8,13,14,16)",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "vikram",
+  "reviewer": "kabir",
+  "model": "opus",
+  "created_by": "pmo",
+  "status": "in_progress",
+  "outcome": "Root cause of residual R=1/6 for F2+ seeds injected at ticks 53..58 at T=120 is known and either fixed or documented as a scoring/horizon artefact; collateral_stall non-zero at T=120 explained",
+  "acceptance": [
+    "Repro on seed 2 T=120; cause named with record evidence; fix + test, or written finding in org/reports with ADR-06 reference; T=40 numbers unchanged"
+  ],
+  "depends": [],
+  "deliverable": "org/reports/S4-35-late-inject.md",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "21 Nov 15:10",
+      "who": "pmo",
+      "msg": "opened"
+    },
+    {
+      "t": "21 Nov 15:10",
+      "who": "vikram",
+      "msg": "→ in_progress: Reproducing F2+ seed 2 at T=120"
+    }
+  ]
+}

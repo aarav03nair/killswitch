@@ -249,7 +249,7 @@ def bench(seeds: list[int], faults: list[str], holds: list[int], baselines: list
     summary: dict[str, Any] = {"contract": "ks.bench/1", "ticks": ticks, "seeds": seeds, "failures": failures,
                                "not_applicable": na, "notes": notes, "cells": {}, "contrast_cells": {}}
     md = [f"# ks bench: T={ticks} (ADR-06-metrics A4), seeds {seeds[0]}..{seeds[-1]} (n={len(seeds)})\n",
-          f"Every number here is at **T={ticks}**; do not compare ratio metrics with T=120. Cells are `median [min..max] k/n` "
+          f"Every number here is at **T={ticks}**; do not compare ratio metrics with T={40 if ticks == 120 else 120}. Cells are `median [min..max] k/n` "
           "(k = seeds with a non-null value), next to a p95 column (nearest-rank, 19th of 20; null = never = +inf).\n",
           "- `system`: the product path; its recovery is not told the culprit or t_inject.",
           "- `snapshot` and `revert_culprit_only` are **oracle-assisted**: they are given t_inject and the culprit from the "
