@@ -7,20 +7,80 @@
   "reviewer": "kabir",
   "model": "sonnet",
   "created_by": "pmo",
-  "status": "todo",
+  "status": "done",
   "outcome": "A dispatched effect whose payload differs from S* on a shared key after t_rec is scored as an escape, not honest collateral",
   "acceptance": [
     "kabir fixture scores irreversible/post-alert >=1 and not C; T=40 BENCH-S3 F2+ seed 2 unchanged; suite green"
   ],
   "depends": [],
   "deliverable": "src/ks/score/score.py",
-  "summary": "",
-  "review": "",
+  "summary": "Round 3: escape = any real dispatched entry outside B unless S* has a dispatched entry for the key with same value_hash (covers S*-cancelled and S*-queued). Test added, A6 addendum updated. T=40 F2+ s2 identical to BENCH-S3 except run_validity. Full suite 1173 passed, 14 skipped.",
+  "review": "[kabir · changes] Attack 2 (honest post-recovery re-execution) does not break it. I reran F2+ and F2+x system H6 T=40 seeds 1-8, all with rerun steps (F2+ 1-4 per seed, F2+x 1), and every score.json equals runs/bench-b3-33 except run_validity, with irreversible 0 -> 0 everywhere. A re-execution whose content really differs from S* is an imperfect repair, and counting it matches A2 ('a wrong repair still counts'). Attack 1 breaks it. Fixture (scratchpad attack3.py): F2+ s2 T=40 H6, shared = an S* payment key outside B that the real run dispatched. Add a row {key: shared, agent: crm, state: dispatched, value_hash: dd.., tick T+1}, then a row with S*'s value_hash at T+2. Score: irreversible 0, post 0, clean unavailable. The only trace is reemitted 2, which marks nothing as tainted. The wrong payment left, and the fold hid it. Variant: the wrong dispatch followed by a cancelled row on the same key gives irreversible 0, while C 1 and cstall 1 book it as honest loss. Cause: the addendum compares rf (final folded effect), but the B path (irrev at the line with 'e[\"key\"] in b') iterates ledger entries, so a later write cannot cancel out a dispatch. Required: (1) make the escape test per entry. Every ledger entry with state dispatched whose key is not in B, and whose value_hash is not among S*'s dispatched value_hashes for that key (or S* has no live effect for the key), is an escape. It counts in irreversible and, when its tick > t_alert, in post-alert, and keys with such an entry leave G and the cstall universe. An entry that matches S* is still not an escape, so the honest re-send in your test keeps passing. (2) Add tests for the masked resend and the dispatched-then-cancelled sequence, both asserting irreversible >= 1. (3) Apply the same per-entry rule to the S4-37 real-only escapes, so they stay consistent.\n\n[kabir · changes] Round 2. Reran attack3.py and it is fixed: wrong-only, wrong then matching re-send, and wrong then cancelled row all score irreversible 1, post 1, clean false, C 0/264, cstall 0. Per-entry checking works. The S*-cancelled gap must be fixed in this issue. It is the same escape class (the real run delivered something S* never delivered, which is irreversible), it is a one-line change to the same predicate, and leaving it open means 'checked per entry' is still bypassable by a key the counterfactual cancels. The same hole covers an item S* left queued at T (it never leaves, ADR-06-metrics §2): the current rule compares value_hash only, so a real dispatch of a key that S* holds queued with the same payload is not an escape either. Rule: an escape entry is any ledger entry e with e.state == dispatched and key(e) not in B, where S* has no dispatched entry for key(e) with value_hash == e.value_hash. Comparing against the set of S* dispatched value_hashes per key (not S*'s fold) covers absent, cancelled, still-queued and different payload at once, and a re-send matching S* is still not an escape. I measured this rule on F2+ and F2+x system H6 T=40 seeds 1-8: 0 extra escapes in all 16 cells, so it does not move bench numbers. Add tests: (a) a real dispatch of a key S* cancelled counts irreversible >= 1; (b) a real dispatch of a key S* left queued counts irreversible >= 1. Update the A6 addendum wording to match.\n\n[kabir · done] Round 3: done. The predicate at score.py:246-248 is exactly the agreed rule: an entry is an escape iff it is dispatched, its key is not in B, and (key, value_hash) is not among S*'s dispatched entries. Reran attack3.py: wrong-only, wrong then matching re-send, and wrong then cancelled row all score irreversible 1, post 1, clean false, C 0, cstall 0. Reran F2+ and F2+x system H6 T=40 seeds 1-8: all 16 score.json equal runs/bench-b3-33 except run_validity, with irreversible 0 everywhere, so the rule moves no bench numbers. tests/bench escape tests: 5 passed. Nit, not blocking, fix at merge: the comment at score.py:244-245 still describes the round-2 rule ('S*'s final effect for the key is live with a different value_hash'). It should say 'no S* dispatched entry with the same (key, value_hash)'.",
   "log": [
     {
       "t": "21 Nov 16:26",
       "who": "pmo",
       "msg": "opened"
+    },
+    {
+      "t": "21 Nov 17:13",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 17:13",
+      "who": "tara",
+      "msg": "→ in_review: ready for kabir"
+    },
+    {
+      "t": "21 Nov 17:31",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 17:31",
+      "who": "tara",
+      "msg": "→ in_review: suite green, ready for kabir"
+    },
+    {
+      "t": "21 Nov 17:34",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "21 Nov 17:50",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 17:50",
+      "who": "tara",
+      "msg": "→ in_review: round 2, suite green"
+    },
+    {
+      "t": "21 Nov 17:53",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "21 Nov 18:10",
+      "who": "tara",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 18:10",
+      "who": "tara",
+      "msg": "→ in_review: round 3, suite green"
+    },
+    {
+      "t": "21 Nov 18:13",
+      "who": "kabir",
+      "msg": "review: done"
+    },
+    {
+      "t": "21 Nov 18:13",
+      "who": "pmo",
+      "msg": "→ done: kabir round 3 done; comment nit fixed at merge"
     }
   ]
 }

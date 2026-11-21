@@ -146,3 +146,101 @@ def test_real_only_dispatched_purge_is_an_irreversible_escape(tmp_path):
     s2 = score_run(d, spec, star, hold=6, run_ledger=led + [esc])
     assert s2["irreversible_tainted_released"] >= 1 and s2["post_alert_tainted_effects"] >= 1 and s2["clean"] is False
     assert s2["C"] == base["C"] and s2["collateral_stall"] == base["collateral_stall"] and list(s2) == list(base)
+
+
+def test_late_wrong_payload_on_s_star_key_is_an_escape_but_matching_resend_is_not(tmp_path):
+    """S4-38 / A6 addendum (kabir): a dispatched effect after t_rec on a key S* also has, outside B, with a payload that
+    differs from S*, is an escape (irreversible, post_alert; not C / collateral_stall). The same re-send with S*'s
+    payload (honest re-execution after recovery) is not."""
+    from ks.bench.runner import _star
+    from ks.inject import make_spec
+    from ks.oracle.ledger import fold
+    from ks.oracle.realrun import real_ledger
+    from ks.score import score_run, suspend_tick_of
+    d = tmp_path / "c"
+    s = run_cell("F2+", 2, 6, "system", 40, d, star_cache={})
+    spec = make_spec("f2plus", 2, ticks=40)
+    star = _star(spec, tmp_path / "x", suspend_tick_of(d, spec.culprit), 6)
+    led = real_ledger(d)
+    base = score_run(d, spec, star, hold=6)
+    sf = fold(star)
+    from ks.oracle.ledger import b_set
+    b = b_set(led, star, s["t_rec"] - 1)
+    rf = fold(led)
+    shared = next(k for k, e in sf.items() if e["kind"] == "payment" and e["state"] == "dispatched" and k not in b
+                  and rf.get(k, {}).get("state") == "dispatched")
+    mk = lambda vh: {**sf[shared], "key": shared, "tick": max(e["tick"] for e in led) + 1, "seq": None,  # noqa: E731
+                     "state": "dispatched",
+                     "agent": "crm", "value_hash": vh}
+    ok = score_run(d, spec, star, hold=6, run_ledger=led + [mk(sf[shared]["value_hash"])])
+    assert ok["irreversible_tainted_released"] == base["irreversible_tainted_released"] and ok["clean"] == base["clean"]
+    bad = score_run(d, spec, star, hold=6, run_ledger=led + [mk("dd" * 32)])
+    assert bad["irreversible_tainted_released"] >= 1 and bad["post_alert_tainted_effects"] >= 1 and bad["clean"] is False
+    assert bad["C"]["n"] == base["C"]["n"] == 0 and bad["C"]["d"] == base["C"]["d"] - 1  # leaves G, not honest loss
+    assert bad["collateral_stall"]["n"] == base["collateral_stall"]["n"] == 0 and list(bad) == list(base)
+    assert bad["collateral_stall"]["d"] == base["collateral_stall"]["d"] - 1
+
+
+def test_wrong_dispatch_is_not_hidden_by_later_matching_resend_or_cancel(tmp_path):
+    """S4-38 (kabir attack3): a wrong dispatch on an S* key stays an escape when a later matching re-send or a cancelled
+    row follows it; the later row cannot undo the dispatch. A matching re-send alone stays clean."""
+    from ks.bench.runner import _star
+    from ks.inject import make_spec
+    from ks.oracle.ledger import b_set, fold
+    from ks.oracle.realrun import real_ledger
+    from ks.score import score_run, suspend_tick_of
+    d = tmp_path / "c"
+    s = run_cell("F2+", 2, 6, "system", 40, d, star_cache={})
+    spec = make_spec("f2plus", 2, ticks=40)
+    star = _star(spec, tmp_path / "x", suspend_tick_of(d, spec.culprit), 6)
+    led = real_ledger(d)
+    base = score_run(d, spec, star, hold=6)
+    sf, rf, b = fold(star), fold(led), b_set(led, star, s["t_rec"] - 1)
+    k = next(k for k, e in sf.items() if e["kind"] == "payment" and e["state"] == "dispatched" and k not in b
+             and rf.get(k, {}).get("state") == "dispatched")
+    T = max(e["tick"] for e in led)
+    mk = lambda vh, t, st="dispatched": {**sf[k], "key": k, "tick": t, "seq": None, "state": st,  # noqa: E731
+                                         "agent": "crm", "value_hash": vh}
+    good = sf[k]["value_hash"]
+    ok = score_run(d, spec, star, hold=6, run_ledger=led + [mk(good, T + 1)])
+    assert ok["irreversible_tainted_released"] == base["irreversible_tainted_released"]
+    assert ok["post_alert_tainted_effects"] == base["post_alert_tainted_effects"]
+    for extra in ([mk("dd" * 32, T + 1), mk(good, T + 2)], [mk("dd" * 32, T + 1), mk("dd" * 32, T + 2, "cancelled")]):
+        r = score_run(d, spec, star, hold=6, run_ledger=led + extra)
+        assert r["irreversible_tainted_released"] >= base["irreversible_tainted_released"] + 1
+        assert r["post_alert_tainted_effects"] >= 1 and r["clean"] is False
+        assert r["C"]["n"] == 0 and r["collateral_stall"]["n"] == 0
+
+
+def _escape_fixture(tmp_path):
+    from ks.bench.runner import _star
+    from ks.inject import make_spec
+    from ks.oracle.realrun import real_ledger
+    from ks.score import score_run, suspend_tick_of
+    d = tmp_path / "c"
+    run_cell("F2+", 2, 6, "system", 40, d, star_cache={})
+    spec = make_spec("f2plus", 2, ticks=40)
+    star = _star(spec, tmp_path / "x", suspend_tick_of(d, spec.culprit), 6)
+    led = real_ledger(d)
+    return d, spec, star, led, score_run(d, spec, star, hold=6)
+
+
+def test_dispatch_on_key_s_star_cancelled_or_queued_is_an_escape(tmp_path):
+    """S4-38 round 3 (kabir): a real dispatch whose key S* cancelled, or left queued (never dispatched), is an escape
+    unless S* has a dispatched entry with the same value_hash; scored irreversible/post_alert, not C / collateral_stall."""
+    from ks.oracle.ledger import fold
+    from ks.score import score_run
+    d, spec, star, led, base = _escape_fixture(tmp_path)
+    sf = fold(star)
+    T = max(e["tick"] for e in led)
+    proto = next(e for e in led if e["kind"] == "payment")
+    for i, st in enumerate(("cancelled", "queued")):
+        k = f"outbox:s-star-{st}"
+        star2 = star + [{**proto, "key": k, "tick": 1, "seq": None, "state": st, "value_hash": "aa" * 32}]
+        assert k not in sf
+        esc = {**proto, "key": k, "tick": T + 1, "seq": None, "state": "dispatched", "agent": "crm",
+               "value_hash": "aa" * 32}
+        r = score_run(d, spec, star2, hold=6, run_ledger=led + [esc])
+        assert r["irreversible_tainted_released"] == base["irreversible_tainted_released"] + 1, st
+        assert r["post_alert_tainted_effects"] == base["post_alert_tainted_effects"] + 1 and r["clean"] is False, st
+        assert r["C"]["n"] == 0 and r["collateral_stall"]["n"] == 0, st

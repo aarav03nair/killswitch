@@ -240,7 +240,13 @@ def score_run(run_dir: str | Path, spec: InjectSpec, star: list[dict[str, Any]],
     rf, sf = fold(led), fold(star)
     # A6 (S4-37): escapes = dispatched outbox effects that exist only in the real run (key not in S*; not in B, which
     # the existing A2 counters already cover). Any tick, any author. Scored as irreversible/post_alert, never as honest loss.
-    esc = {k for k, e in rf.items() if k not in sf and k not in b and e["state"] == "dispatched"}
+    # S4-38: checked per dispatched ENTRY, not on the folded final: a dispatch cannot be undone by a later row (a
+    # matching re-send or a cancelled row after a wrong send does not hide it). Escape entry = ever dispatched, key not
+    # in B, and S* has no dispatched entry for that key with the same value_hash (covers keys S* cancelled or left queued).
+    s_disp = {(e["key"], e["value_hash"]) for e in star if e["state"] == "dispatched"}
+    esc_ents = [e for e in led if e["state"] == "dispatched" and e["key"] not in b
+                and (e["key"], e["value_hash"]) not in s_disp]
+    esc = {e["key"] for e in esc_ents}
     g = g_set(led, b, t_inj) - esc
     lost = lambda k: not equal(rf.get(k), sf.get(k))  # noqa: E731
     b_prod = {e["seq"] for e in led if e["key"] in b and e["seq"] is not None and e["tick"] >= t_inj}
@@ -297,12 +303,12 @@ def score_run(run_dir: str | Path, spec: InjectSpec, star: list[dict[str, Any]],
     else:
         post = sum(1 for e in led if e["key"] in b and e["tick"] > t_alert and e["state"] in ("present", "dispatched")
                    and not equal(e, sf.get(e["key"])))  # A2 only: a wrong repair still counts
-        post += sum(1 for k in esc if rf[k]["tick"] > t_alert)  # A6
+        post += sum(1 for e in esc_ents if e["tick"] > t_alert)  # A6 (per entry)
     # B3-27: an effect identical to S*'s (same payload, same delivery) is not tainted even if its key is in B: G3 holds
     # put honest items that S* dispatched before t_rec into B by timing alone; they leave later with S*'s payload
     irrev = sum(1 for e in led if e["kind"] in ("payment", "email") and e["state"] == "dispatched" and e["key"] in b
                 and not equal(e, sf.get(e["key"])))
-    irrev += len(esc)  # A6: real-only escape, any author or tick
+    irrev += len(esc_ents)  # A6 (per entry): real-only escape, any author or tick
 
     r_n = sum(1 for k in b if lost(k))
     c_lost = {k for k in g if lost(k)}
@@ -392,7 +398,7 @@ def score_run(run_dir: str | Path, spec: InjectSpec, star: list[dict[str, Any]],
     if s0 is None:
         # A3: no unmirrored S0 on a real run; proxy = end-state divergence from S* over non-culprit keys outside B
         # (B is R's; everything else an honest agent produced should equal S*). Basis is named in the value.
-        keys = {k for k, e in sf.items() if e["agent"] != culprit and k not in b}
+        keys = {k for k, e in sf.items() if e["agent"] != culprit and k not in b and k not in esc}
         cstall: Any = {**_ratio(sum(1 for k in keys if not equal(rf.get(k), sf[k])), len(keys)), "basis": "s_star"}
     else:
         s0f = fold(s0)
