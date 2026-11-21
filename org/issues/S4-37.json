@@ -1,0 +1,26 @@
+{
+  "id": "S4-37",
+  "title": "Oracle S* applies p.i2_approval itself; real-only dispatched effects count as escapes (ADR-06-metrics A6)",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "tara",
+  "reviewer": "kabir",
+  "model": "sonnet",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "S* never executes I2 actions when the bench config has no approver (from CATALOGUE + config, never from the run record); any dispatched effect present only in the real run counts as an escape; A6 amendment drafted in ADR-06-metrics for maya sign-off",
+  "acceptance": [
+    "Test: late t_rec F2+ seed 2 T=120 gives R=0 and cstall=0; test: a bypassed/dispatched-after-hold I2 scores non-zero; T=40 BENCH-S3 numbers byte-identical for F2+ seed 2; footnote T=120 R/cstall in BENCH-S4-T120.md until rerun; full suite green"
+  ],
+  "depends": [],
+  "deliverable": "src/ks/oracle",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "21 Nov 15:35",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}

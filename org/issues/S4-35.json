@@ -7,15 +7,15 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "pmo",
-  "status": "in_progress",
+  "status": "done",
   "outcome": "Root cause of residual R=1/6 for F2+ seeds injected at ticks 53..58 at T=120 is known and either fixed or documented as a scoring/horizon artefact; collateral_stall non-zero at T=120 explained",
   "acceptance": [
     "Repro on seed 2 T=120; cause named with record evidence; fix + test, or written finding in org/reports with ADR-06 reference; T=40 numbers unchanged"
   ],
   "depends": [],
   "deliverable": "org/reports/S4-35-late-inject.md",
-  "summary": "",
-  "review": "",
+  "summary": "Scoring artefact, not a recovery bug. The lost B key is an honest docs.purge (agents.py _docs, ticks 49 and 99). The real run holds it as I2 needs_approval (rec seq 255/536, never approved). S* (oracle run_pure) has no policy step and dispatches it at 55/105. t_rec>=56 puts the tick-55 purge in B (R 1/6, seeds 2,8,13,14,16); otherwise it is in collateral_stall. R_n+cstall_n=2 on all 20 seeds. Counterfactual: S* minus purges gives seed 2 R 0/5, cstall 0. T=40 is unaffected (49>T); seed 2 T=40 R 0/9 C 0/265 rechecked. No code changed. Fix options for maya/pmo are in org/reports/S4-35-late-inject.md. Side bug: bench --keep-runs still deletes the runs (runner.py:291).",
+  "review": "[kabir · done] Verified hostile. (1) Reran F2+ s2 H6 system T=120 natively: R 1/6, C 0/623, cstall 1/1123, t_rec 56, same as runs/bench-s4-14 score.json. Record: seq 255 t49 and seq 536 t99 docs.purge, decision hold, reason needs_approval, rule p.i2_approval, empty write_set and outbox; no later approve or unhold for them (only ks.approve at seq 295 is the plan). oracle/run.py run_pure has no policy step, so S* dispatches the purges (seq 213 at t55, seq 422 at t105). (2) score.json, F2+ system, 20/20 seeds: R_n + cstall_n = 2, held_honest_policy_actions = 2. R 1/6 exactly when t_rec >= 56 (s2,8,13,14,16); s5 and s7 (t_rec 55) give R 0/5, cstall 2. (3) No hidden miss: on reruns of s2,5,8,13,14,16, the full end-state diff real vs S* over ALL keys (culprit included, either side) is exactly the two docs/purge outbox keys. irreversible_tainted_released 0, post_alert 0, false_accusations 0 on all 20. T=40 cannot see it (purge at t%50==49 > 39). Not covered: F2+x system at T=120 still has real residue (R 1-2/6, C 39-77) beyond the 1 R + 2 cstall artefact, which is F2+c/D-20, not this issue. (4) Do not take option 1 as written. If S* drops actions because the run's record says hold, the oracle depends on the system's own testimony. A record that says hold while the item is actually dispatched (gateway bug or bypass) makes S* drop it too. After t_rec the dispatched key is real-only: not in B, frozen at t_rec-1 (A1), and not in cstall, whose universe is S* keys only (score.py:390). It lands only in C as 'honest work lost', with R 0 and irreversible_tainted_released 0 (that needs key in B). So an escape scores R=0. Option 2 needs an oracle-assisted judgement of which holds are honest, risks approving a tainted I2, and changes product fp_cost. Recommended: S* applies p.i2_approval statically from ks.world.tools.CATALOGUE class I2 + bench config (no I2 approver means never execute), never from the run record. Also make any real-only dispatched effect a counted escape (add real-only keys to the cstall/escape universe, or add an unexpected_dispatch counter). ADR-06-metrics amendment + tests: late t_rec T>49 gives R 0, and a bypass-dispatched I2 after t_rec scores non-zero. Until then, use option 3 (footnote T=120 R/cstall, all three baselines). Side bug confirmed in code: runner.py:291 rmtree ignores keep_runs.",
   "log": [
     {
       "t": "21 Nov 15:10",
@@ -26,6 +26,26 @@
       "t": "21 Nov 15:10",
       "who": "vikram",
       "msg": "→ in_progress: Reproducing F2+ seed 2 at T=120"
+    },
+    {
+      "t": "21 Nov 15:26",
+      "who": "vikram",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 15:26",
+      "who": "vikram",
+      "msg": "→ in_review: Report org/reports/S4-35-late-inject.md; artefact documented, no code change"
+    },
+    {
+      "t": "21 Nov 15:34",
+      "who": "kabir",
+      "msg": "review: done"
+    },
+    {
+      "t": "21 Nov 15:35",
+      "who": "pmo",
+      "msg": "→ done: kabir verdict done; oracle fix split to S4-37"
     }
   ]
 }

@@ -446,31 +446,6 @@
   ],
   "activity": [
     {
-      "t": "20 Nov 09:29",
-      "who": "ishaan",
-      "msg": "moved B3-34 to in_review"
-    },
-    {
-      "t": "20 Nov 09:31",
-      "who": "anaya",
-      "msg": "moved B3-27 to in_review"
-    },
-    {
-      "t": "20 Nov 09:31",
-      "who": "maya",
-      "msg": "reviewed B3-34: done"
-    },
-    {
-      "t": "20 Nov 09:32",
-      "who": "ishaan",
-      "msg": "moved B3-34 to done"
-    },
-    {
-      "t": "20 Nov 09:35",
-      "who": "vikram",
-      "msg": "moved B3-27 to in_review"
-    },
-    {
       "t": "20 Nov 09:40",
       "who": "tara",
       "msg": "moved B3-27 to in_review"
@@ -1444,6 +1419,31 @@
       "t": "21 Nov 15:24",
       "who": "maya",
       "msg": "reviewed S4-14: done"
+    },
+    {
+      "t": "21 Nov 15:26",
+      "who": "vikram",
+      "msg": "moved S4-35 to in_review"
+    },
+    {
+      "t": "21 Nov 15:27",
+      "who": "pmo",
+      "msg": "opened S4-36 — ks bench --keep-runs still deletes runs"
+    },
+    {
+      "t": "21 Nov 15:34",
+      "who": "kabir",
+      "msg": "reviewed S4-35: done"
+    },
+    {
+      "t": "21 Nov 15:35",
+      "who": "pmo",
+      "msg": "opened S4-37 — Oracle S* applies p.i2_approval itself; real-only dispatched effects count as escapes (ADR-06-metrics A6)"
+    },
+    {
+      "t": "21 Nov 15:35",
+      "who": "pmo",
+      "msg": "moved S4-35 to done"
     }
   ]
 }

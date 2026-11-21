@@ -1,0 +1,26 @@
+{
+  "id": "S4-36",
+  "title": "ks bench --keep-runs still deletes runs",
+  "sprint": 4,
+  "track": "eng",
+  "owner": "tara",
+  "reviewer": "maya",
+  "model": "sonnet",
+  "created_by": "pmo",
+  "status": "todo",
+  "outcome": "--keep-runs keeps per-cell run dirs",
+  "acceptance": [
+    "Test: bench with --keep-runs leaves run dirs; without it they are removed; bench suite green"
+  ],
+  "depends": [],
+  "deliverable": "src/ks/bench/runner.py",
+  "summary": "",
+  "review": "",
+  "log": [
+    {
+      "t": "21 Nov 15:27",
+      "who": "pmo",
+      "msg": "opened"
+    }
+  ]
+}
