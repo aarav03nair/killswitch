@@ -347,8 +347,9 @@ class VerifyReport(Value):
     anchored: bool
     """True iff verify ran with ``--head <RunAnchor>``, the anchor matched, and the run used fresh keys.
     The C1 claim (an insider cannot rewrite history undetected) holds **only when anchored** (F1)."""
-    unanchored_reason: Literal["no_anchor", "repro_keys"] | None
-    """Why not anchored: no ``--head`` given, or ``key_mode == repro`` (X7/R4). ``None`` iff ``anchored``."""
+    unanchored_reason: Literal["no_anchor", "repro_keys", "verify_failed"] | None
+    """Why not anchored: no ``--head`` given, or ``key_mode == repro`` (X7/R4), or (S4-32) ``verify_failed``: the run
+    did not verify, so no anchoring claim is made at all. ``None`` iff ``anchored``."""
     isolation: Isolation | None = None
     """v1.2: echo of ``RunConfig.isolation``; ``None`` only when config.json could not be read. When
     ``degraded``, verify prints "per-agent attribution VOID" (SKEL-01 finding 4)."""

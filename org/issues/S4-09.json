@@ -7,7 +7,7 @@
   "reviewer": "maya",
   "model": "opus",
   "created_by": "pmo",
-  "status": "in_review",
+  "status": "done",
   "outcome": "Every dry-run #1 Must is closed or a stated known limit",
   "acceptance": [
     "Every #1 Must re-tried and closed or written as a known limitation"
@@ -33,6 +33,11 @@
       "t": "21 Nov 07:08",
       "who": "panel",
       "msg": "→ in_review: Must list: S4-31 (blame VOID), S4-32 (verify wording), S4-33 (score via state.db history), S4-34 (resolver undo live). #1 M1-M4 closed."
+    },
+    {
+      "t": "21 Nov 12:22",
+      "who": "pmo",
+      "msg": "→ done: Report delivered (PANEL-JURY-02.md); all new Musts S4-31..34 fixed and reviewed done."
     }
   ]
 }

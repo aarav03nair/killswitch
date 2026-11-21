@@ -168,7 +168,16 @@ def hero_run(tmp_path_factory):
     return out
 
 
-def test_blame_hero_run_names_crm_first(hero_run, capsys):
+def _as_per_agent_uid(monkeypatch):
+    """The sandbox runs non-root, so the hero run is degraded here; present its VerifyReport as the container's."""
+    import ks.verify as kv
+    real = kv.verify
+    monkeypatch.setattr(kv, "verify", lambda *a, **k: (lambda r: r.model_copy(update={"isolation": "per_agent_uid"}))(
+        real(*a, **k)))
+
+
+def test_blame_hero_run_names_crm_first(hero_run, capsys, monkeypatch):
+    _as_per_agent_uid(monkeypatch)
     capsys.readouterr()
     assert main(["blame", str(hero_run)]) == Exit.OK
     out = capsys.readouterr().out
@@ -189,3 +198,50 @@ def test_blame_refuses_tampered_copy(hero_run, tmp_path, capsys):
     rc = main(["blame", str(cp)])
     cap = capsys.readouterr()
     assert rc != Exit.OK and "UNVERIFIED RECORD" in cap.err and "root candidates" not in cap.out
+
+
+def test_blame_unanchored_says_so_and_hero_crm_first(hero_run, capsys, monkeypatch):
+    _as_per_agent_uid(monkeypatch)
+    capsys.readouterr()
+    assert main(["blame", str(hero_run)]) == Exit.OK
+    out = capsys.readouterr().out
+    assert out.startswith("verify: OK") and "not anchored" in out and "1. crm" in out
+    assert "VOID" not in out
+
+
+def test_blame_head_anchored(tmp_path, capsys, monkeypatch):
+    out = tmp_path / "h"
+    capsys.readouterr()
+    main(["run", "--scenario", "world", "--fault", "F2+", "--seed", "2", "--ticks", "40", "--out", str(out)])
+    anchor = next((l for l in capsys.readouterr().out.splitlines() if l.startswith("{") and '"config_hash"' in l), None)
+    if anchor is None:
+        pytest.skip("run printed no RunAnchor line")
+    _as_per_agent_uid(monkeypatch)
+    assert main(["blame", str(out), "--head", anchor]) == Exit.OK
+    o = capsys.readouterr().out
+    assert "; anchored;" in o and "1. crm" in o
+
+
+def test_blame_void_run_does_not_attribute(tmp_path, capsys):
+    out = tmp_path / "void"
+    assert main(["run", "--scenario", "world", "--fault", "F2+", "--seed", "2", "--ticks", "40", "--shared-uid",
+                 "--out", str(out)]) == Exit.OK
+    capsys.readouterr()
+    main(["blame", str(out)])
+    o = capsys.readouterr().out
+    assert "attribution VOID" in o and "not anchored" in o
+    assert "unattributed: isolation degraded" in o
+    assert "root candidates (ranked)" not in o
+
+
+def test_blame_void_every_agent_line_is_labelled(tmp_path, capsys):
+    out = tmp_path / "void2"
+    assert main(["run", "--scenario", "world", "--fault", "F2+", "--seed", "2", "--ticks", "40", "--shared-uid",
+                 "--out", str(out)]) == Exit.OK
+    capsys.readouterr()
+    main(["blame", str(out)])
+    lines = capsys.readouterr().out.splitlines()
+    named = [l for l in lines if l.startswith(("  1.", "  2.", "suspect ", "taint:"))
+             and not l.startswith("taint: none")]
+    assert any(l.startswith("taint:") for l in named) and any(l.startswith("suspect ") for l in named)
+    assert all("unattributed: isolation degraded" in l for l in named)

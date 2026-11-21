@@ -28,7 +28,7 @@ from pydantic import Field, StringConstraints, field_validator, model_validator
 from .ids import RECOVER_TOOL_PREFIX
 
 from ._base import Document, Value, additive
-from .hashing import Domain
+from .hashing import TOMBSTONE_HASH, Domain
 from .ids import ActionId, AgentId, Hash, PrincipalId, Seq, Token
 from .state import ObjId, ObjVer, VersionRef, _sorted_unique
 
@@ -192,20 +192,27 @@ class ResolveStep(_Step):
 
 class RevertEntry(Value):
     """v1.7 (ADR-05a §5): one object an ``unresolve`` puts back: ``expect`` must be the head, ``to`` is the version
-    whose value is re-written (as a new version)."""
+    whose value is re-written (as a new version). v1.8 (S4-34): ``to`` may be ``None``: a dependent **created** the
+    object after the resolution, so the undo writes a tombstone (value ``null``, ``TOMBSTONE_HASH``), as
+    ``RestoreStep.to = None`` does (v1.4)."""
 
     obj: ObjId
     """Object reverted."""
     expect: VersionRef
-    """Head the revert replaces (the resolution's or a dependent re-run's version)."""
-    to: VersionRef
-    """Version whose value is written back."""
+    """Head the revert replaces (the resolution's or a dependent's version)."""
+    to: VersionRef | None
+    """Version whose value is written back; ``None`` = delete (the object did not exist before its dependent)."""
+
+    @property
+    def to_hash(self) -> str:
+        """Value hash the revert lands: ``to.hash``, or ``TOMBSTONE_HASH`` for a delete."""
+        return TOMBSTONE_HASH if self.to is None else self.to.hash
 
 
 class UnresolveStep(_Step):
     """v1.7 (D-18, ADR-05a §5): undo one executed ``ks.recover.resolve`` (``resolution``): ``reverts[0]`` puts the
-    resolved object back to the honest head the resolution replaced; the other entries put back what the plan's
-    dependent re-runs wrote. ``reheld`` items get a ``ks.control`` hold with reason ``resolution_reverted``. The
+    resolved object back to the honest head the resolution replaced; the other entries put back what the
+    dependents wrote (v1.8, S4-34: the plan's re-runs and any later action that read the rebased version). ``reheld`` items get a ``ks.control`` hold with reason ``resolution_reverted``. The
     flag is back afterwards and the rule never resolves that (obj, action) again; undoing an undo is a person's job."""
 
     op: Literal["unresolve"] = "unresolve"
@@ -217,7 +224,7 @@ class UnresolveStep(_Step):
     reverts: tuple[RevertEntry, ...]
     """What is put back; the first entry is the resolved object, the rest are sorted by obj."""
     reheld: tuple[_OB, ...]
-    """Items of the reverted re-runs, re-held with reason ``resolution_reverted``, sorted."""
+    """Items of the dependents, re-held with reason ``resolution_reverted``, sorted."""
     rationale: tuple[Token, ...]
     """Check ids that passed (e.g. ``resolution_executed``, ``no_foreign_touch``, ``reheld_not_released``)."""
 

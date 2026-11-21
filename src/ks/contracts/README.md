@@ -1,4 +1,4 @@
-# ks.contracts: C1–C6 reference (CON-01 → CON-02 → B3-01 → B3-43 → B3-46 → B3-47 → B3-51 → S4-13, contracts **1.7.0**, frozen 22 Nov)
+# ks.contracts: C1–C6 reference (CON-01 → CON-02 → B3-01 → B3-43 → B3-46 → B3-47 → B3-51 → S4-13 → S4-34, contracts **1.8.0**, frozen 22 Nov)
 
 Import from `ks.contracts`, never from submodules. Every type is a frozen pydantic model that rejects unknown
 fields. Each one has `to_canonical()` / `from_canonical()` (strict: the bytes must already be canonical) and
@@ -120,6 +120,20 @@ Each is a recorded envelope on `c-0`. Every outbox status change carries a `writ
 Metric and score keys and the `effects.jsonl` schema (tara, ADR-06); policy rule ids (nisha, ADR-03); the store implementation (vikram, ADR-05); side-store and verify internals (arjun, ADR-02).
 
 ## Changelog
+
+### 1.8.0 (S4-34, 21 Nov; ADR-05a §5 amended, Panel jury #2 M8) — additive only
+Nothing renamed or removed. Tests: `tests/contracts/test_contracts_18.py`, `tests/recovery/test_resolver.py`.
+
+- **C5:** `RevertEntry.to` may be `None` (was required): the undo **deletes** an object that a dependent created after
+  the resolution (tombstone, value `null`, `TOMBSTONE_HASH`), as `RestoreStep.to = None` does since 1.4.
+  `RevertEntry.to_hash` gives the landed value hash. An `unresolve` now reverts every dependent (any executed record
+  after the resolution that read the rebased version or a dependent's write, honest agents included), not only the
+  plan's re-runs. 1.7 plans parse and hash as before (every 1.7 `to` is a version).
+- **C6 (S4-32):** `VerifyReport.unanchored_reason` gains `verify_failed`: a run that does not verify makes no anchoring
+  claim, with or without `--head`. `last_witnessed_seq` on a failure is the highest validly signed checkpoint seq (0 = none).
+- **Schemas:** regenerated (version string; `RevertEntry.to` nullable; `verify_failed`).
+
+**Golden hashes.** Only `doc:run_config` moved (`contracts_version` = 1.8.0).
 
 ### 1.7.0 (S4-13, 21 Nov; D-18, ADR-05a, CALL-02 amendment B5-a approved by Aarav 21 Nov) — additive only
 Nothing renamed or removed; no field changed. Tests: `tests/contracts/test_contracts_17.py`,

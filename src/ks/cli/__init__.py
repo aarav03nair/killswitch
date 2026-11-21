@@ -68,6 +68,7 @@ def _parser() -> argparse.ArgumentParser:
     b = sub.add_parser("blame", help="alias: root candidates of a run")
     b.add_argument("run")
     b.add_argument("--alert")
+    b.add_argument("--head", help="the RunAnchor line printed at the end of ks run (else: not anchored)")
     c = sub.add_parser("contain", help="suspend|release|revoke|hold|unhold a target on a live run")
     c.add_argument("action", choices=("suspend", "release", "revoke", "hold", "unhold"))
     c.add_argument("target", help="agent:ID, conn:ID, action:r-NNNNNN (unhold) or outbox:ob-NNNNNN")
@@ -224,9 +225,16 @@ def _verify(args) -> int:
     rep = verify(args.run, anchor)
     if not args.json:
         where = f" at seq {rep.first_bad}" if rep.first_bad is not None else ""
-        scope = "anchored" if rep.anchored else f"consistent, not anchored ({rep.unanchored_reason})"
-        verdict = "OK" if rep.ok else f"{Exit(rep.exit).name} {rep.reason}{where}"
-        print(f"verify: {verdict}; last witnessed seq {rep.last_witnessed_seq}; {scope}")
+        if rep.ok:
+            scope = "anchored" if rep.anchored else f"consistent, not anchored ({rep.unanchored_reason})"
+            print(f"verify: OK; last witnessed seq {rep.last_witnessed_seq}; {scope}")
+        else:  # S4-32: a failure is never "consistent", and says whether a --head was given
+            if rep.last_witnessed_seq:
+                wit = f"last witnessed seq {rep.last_witnessed_seq} (signed checkpoints)"
+            else:
+                wit = f"witness not checked (verify stopped{' at seq ' + str(rep.first_bad) if rep.first_bad else ''})"
+            given = "--head given, run still fails" if args.head is not None else "no --head"
+            print(f"verify: {Exit(rep.exit).name} {rep.reason}{where}; NOT VERIFIED ({given}); {wit}")
         try:  # ADR-05a §7 label (config.json; verify itself checked it above when readable)
             print(resolver_label(RunDir(args.run).config().resolver))
         except Exception:  # noqa: BLE001 - unreadable config: the verdict line already says so
@@ -284,12 +292,28 @@ def _blame(args) -> int:
     from ks.runtime.recover import _alerts
     from ks.taint import RecordIndex, root_candidates, taint_from_alerts
     from ks.verify import verify
-    rep = verify(args.run, log=lambda s: None)  # blame recomputes from the record: refuse on an unverified one
+    anchor = None
+    if args.head is not None:
+        try:
+            anchor = RunAnchor.from_canonical(args.head.strip().encode())
+        except CanonicalError as e:
+            print(f"ks blame: --head is not a RunAnchor line: {e}", file=sys.stderr)
+            return Exit.USAGE
+    rep = verify(args.run, anchor, log=lambda s: None)  # blame recomputes from the record: refuse on an unverified one
     if not rep.ok:
         where = f" at seq {rep.first_bad}" if rep.first_bad is not None else ""
         print(f"ks blame: UNVERIFIED RECORD: verify {rep.reason}{where}. Refusing to name a culprit from a record "
               f"that does not verify (run `ks verify {args.run}`).", file=sys.stderr)
         return rep.exit if rep.exit else Exit.IO
+    void = rep.isolation == "degraded"
+    scope = "anchored" if rep.anchored else f"consistent, not anchored ({rep.unanchored_reason})"
+    print(f"verify: OK; isolation {rep.isolation or 'unknown'}; {scope}; last witnessed seq {rep.last_witnessed_seq}")
+    if void:
+        print("!! per-agent attribution VOID for this run (isolation degraded): nothing below is attributed to an "
+              "agent. Candidates are listed only as 'unattributed: isolation degraded'.")
+    elif not rep.anchored:
+        print("note: not anchored: tamper-evident up to the last witnessed head only; pass --head ANCHOR for the "
+              "full claim.")
     try:
         records = list(RunDir(args.run).records())
         alerts = _alerts(Path(args.run), records)
@@ -306,18 +330,20 @@ def _blame(args) -> int:
     for a in alerts:
         print(f"alert {a.alert_id}: {a.detector}")
         rc = root_candidates(ix, a.evidence_versions)
-        print("root candidates (ranked):")
+        print("root candidates (unattributed: isolation degraded):" if void else "root candidates (ranked):")
         for i, c in enumerate(rc, 1):
-            print(f"  {i}. {c}")
+            print(f"  {i}. {c}" + ("  [unattributed: isolation degraded]" if void else ""))
         if not rc:
             print("  (none)")
     t = taint_from_alerts(ix, alerts)
     if t is None:
         print("taint: none (no suspended suspect, so no seed)")
     else:
-        print(f"suspect {t.suspect}: t0 seq {t.t0_seq_est}, suspended at seq {t.suspend_seq}")
+        print(f"suspect {t.suspect}: t0 seq {t.t0_seq_est}, suspended at seq {t.suspend_seq}"
+              + (" [unattributed: isolation degraded]" if void else ""))
         print(f"taint: {len(t.versions)} versions, {len(t.actions)} actions, {len(t.outbox_ids)} outbox items; "
-              f"agents with tainted actions: {', '.join(t.agents) or 'none'}")
+              f"agents with tainted actions: {', '.join(t.agents) or 'none'}"
+              + (" [unattributed: isolation degraded]" if void and t.agents else ""))
     return Exit.OK
 
 
@@ -455,6 +481,13 @@ def _score(args) -> int:
     except Exception as e:  # noqa: BLE001 - unreadable or malformed run dir
         print(f"ks score: {e}", file=sys.stderr)
         return Exit.IO
+    from ks.verify import verify
+    rep = verify(run, log=lambda s: None)  # S4-33: score reads state.db history; refuse a run that does not verify
+    if not rep.ok:
+        where = f" at seq {rep.first_bad}" if rep.first_bad is not None else ""
+        print(f"ks score: UNVERIFIED RUN: verify {rep.reason}{where}. No headline fields are emitted for a run that "
+              f"does not verify (run `ks verify {args.run}`).", file=sys.stderr)
+        return rep.exit if rep.exit else Exit.IO
     if cfg.fault is None:
         return _usage("score", "score needs a fault or rogue run (ks run --scenario world --fault F | --rogue FILE)")
     hold = cfg.hold_window_ticks

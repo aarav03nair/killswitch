@@ -11,10 +11,12 @@ and the side store): :func:`eligible`. The planner calls it (``resolver="ww_reba
 the same function on the landed record to re-derive the checks (reason ``resolution_invalid``). It never reads
 ``fault``/``culprit``/``fault_tick`` of the config (A3; the culprit is the plan's ``Taint.suspect``).
 
-Undo (ADR-05a §5): :func:`plan_unresolve` builds a one-step plan, either ``unresolve`` (the resolved object back to
-the honest head, plus what this plan's dependent re-runs wrote, each back to the version it replaced; their items
-re-held ``resolution_reverted``) or ``flag(unresolve_blocked)`` when anything outside the resolving plan has touched
-those objects since, or an item has been released or dispatched. Undoing an undo is a person's job: the rule never
+Undo (ADR-05a §5, S4-34): :func:`plan_unresolve` builds a one-step plan, either ``unresolve`` (the resolved object
+back to the honest head, plus what every **dependent** wrote, each back to the version it replaced or deleted if the
+dependent created it; their items re-held ``resolution_reverted``) or ``flag(unresolve_blocked)``. A dependent is any
+executed record after the resolution that read the rebased version or a dependent's write: this plan's re-runs and
+later honest actions alike (live, billing reads the rebased row in the apply tick). Blocked only when a dependent's
+item was released, dispatched or cancelled, a non-dependent wrote a revert object, or a dependent is a system record. Undoing an undo is a person's job: the rule never
 resolves that (O, H) again (``not_undone``).
 
 Definitions used by both planner and verify (so they agree by construction):
@@ -43,7 +45,7 @@ from ks.taint.closure import suspend_seq_of
 __all__ = ["RULE_ID", "RULE_VERSION", "RULE", "RULES", "RESOLVER_OFF", "RESOLVER_ON", "RESOLVERS", "CHECKS",
            "RECORD_CHECKS", "RESOLVE_TOOL", "UNRESOLVE_TOOL", "UNRESOLVE_REASON", "UNRESOLVE_CHECKS", "Context",
            "Eligibility", "eligible", "refused_agents", "undone_pairs", "unblocked_for", "Rebased", "rebase", "rule_known",
-           "plan_unresolve", "unresolve_problems", "dependents", "resolving_plan_id", "label",
+           "plan_unresolve", "unresolve_problems", "dependents", "revert_text", "resolving_plan_id", "label",
            "expected_reverts"]
 
 RULE_ID = "ww_rebase"
@@ -345,24 +347,46 @@ def resolving_plan_id(action_id: str) -> str:
     return action_id.rsplit(".", 1)[0]
 
 
+def _carrier(r: Record, plan_id: str) -> bool:
+    """Records that only carry an item's state, never a decision on the data: the gateway's ``ks.dispatch`` (its item
+    is a dependent's item; a dispatched one blocks the undo by status) and this plan's own ``ks.recovery`` holds."""
+    env = r.envelope
+    return env.tool == "ks.dispatch" or (env.agent_id == RECOVERY and env.tool == "ks.control"
+                                          and env.action_id.startswith(plan_id + "."))
+
+
 def dependents(records: Iterable[Record], resolve_rec: Record, plan_id: str, *,
                before: int | None = None) -> list[Record]:
-    """Executed ``ks.recover.rerun`` records of ``plan_id`` after the resolution (and before ``before``) whose read
-    set hits the rebased version or a version written by an earlier such re-run (seq order)."""
+    """S4-34 (ADR-05a §5): every executed record after the resolution (and before ``before``) whose read set hits the
+    rebased version or a version written by an earlier dependent (seq order): this plan's ``ks.recovery`` re-runs **and**
+    any later action, honest agents included (the live case: billing drafts an invoice from the rebased row in the
+    apply tick). Item carriers (:func:`_carrier`) are not dependents."""
     w = resolve_rec.write_set[0]
     dirty = {(w.obj, w.after.ver)}
     out = []
-    mine = plan_id + "."
     for r in sorted(records, key=lambda r: r.seq):
         env = r.envelope
         if r.seq <= resolve_rec.seq or (before is not None and r.seq >= before) or env is None \
-                or r.decision != Decision.EXEC or env.tool != "ks.recover.rerun" or env.agent_id != RECOVERY \
-                or not env.action_id.startswith(mine):
+                or r.decision != Decision.EXEC or _carrier(r, plan_id):
             continue
         if any((e.obj, e.ver) in dirty for e in r.read_set):
             dirty.update((x.obj, x.after.ver) for x in r.write_set)
             out.append(r)
     return out
+
+
+def revert_text(e: RevertEntry) -> str:
+    """One revert for the operator: ``obj back to vN`` or ``obj deleted (created by a dependent)``."""
+    return f"{e.obj} deleted (created by a dependent)" if e.to is None else f"{e.obj} back to v{e.to.ver}"
+
+
+def _foreign_system(r: Record, plan_id: str) -> bool:
+    """A dependent the undo may not put back: a system principal other than this plan's ``ks.recovery`` re-runs
+    (another plan's step, an operator or monitor record). A person decides."""
+    env = r.envelope
+    if env.agent_id not in SYSTEM_PRINCIPALS:
+        return False
+    return not (env.agent_id == RECOVERY and env.tool == "ks.recover.rerun" and env.action_id.startswith(plan_id + "."))
 
 
 def _heads(records: Iterable[Record], before: int | None = None) -> dict[str, VersionRef]:
@@ -377,6 +401,9 @@ def _heads(records: Iterable[Record], before: int | None = None) -> dict[str, Ve
 
 def _reverts(records: list[Record], resolve_rec: Record, step: ResolveStep, plan_id: str,
              before: int | None) -> tuple[list[RevertEntry], list[str], str | None]:
+    """The resolved object back to ``vH``; every object a dependent wrote back to the version the first dependent
+    write replaced, or to absent (``to=None``, a tombstone, contracts 1.8.0) when a dependent created it; every
+    dependent's items re-held. ``why`` is set when a dependent is a system record (:func:`_foreign_system`)."""
     heads = _heads(records, before)
     deps = dependents(records, resolve_rec, plan_id, before=before)
     out = [RevertEntry(obj=step.obj, expect=heads[step.obj], to=step.expect)]
@@ -384,13 +411,12 @@ def _reverts(records: list[Record], resolve_rec: Record, step: ResolveStep, plan
     extra: list[RevertEntry] = []
     why = None
     for d in deps:
+        if _foreign_system(d, plan_id):
+            why = why or f"seq {d.seq} ({d.attributed_agent}, {d.envelope.tool}) read the resolved data"
         for w in d.write_set:
             if w.obj.startswith("outbox:") or w.obj in seen:
                 continue
             seen.add(w.obj)
-            if w.before is None:
-                why = why or f"{w.obj} was created by re-run seq {d.seq}: nothing to put back"
-                continue
             extra.append(RevertEntry(obj=w.obj, expect=heads[w.obj], to=w.before))
     reheld = sorted({o for d in deps for o in d.outbox_ids})
     return out + sorted(extra, key=lambda e: e.obj), reheld, why
@@ -398,30 +424,37 @@ def _reverts(records: list[Record], resolve_rec: Record, step: ResolveStep, plan
 
 def unresolve_problems(records: Iterable[Record], resolve_rec: Record, reverts: Iterable[RevertEntry], reheld: Iterable[str],
                        status_of: Callable[[str], OutboxStatus | None], *, before: int | None = None) -> str | None:
-    """Why an undo is blocked (ADR-05a §5), or ``None``: a record that is not a step of the resolving plan has read
-    or written a revert object since the resolution; a revert's ``expect`` is not the head; or a re-held item is
-    released or dispatched."""
+    """Why an undo is blocked (ADR-05a §5 as amended by S4-34), or ``None``: a record that is neither a step of the
+    resolving plan nor a dependent (:func:`dependents`) has **written** a revert object since the resolution (the undo
+    would discard it); a dependent is a system record; a revert's ``expect`` is not the head; or a re-held item is
+    released, dispatched or cancelled (its effect may have left, or a person already decided). Reads by
+    non-dependents are fine: by definition they read no version the undo removes."""
     recs = list(records)
     plan_id = resolving_plan_id(resolve_rec.envelope.action_id)
     objs = {e.obj for e in reverts}
     mine = plan_id + "."
+    deps = dependents(recs, resolve_rec, plan_id, before=before)
+    dep_seqs = {d.seq for d in deps}
+    for d in deps:
+        if _foreign_system(d, plan_id):
+            return f"seq {d.seq} ({d.attributed_agent}, {d.envelope.tool}) read the resolved data"
     for r in sorted(recs, key=lambda r: r.seq):
         env = r.envelope
         if r.seq <= resolve_rec.seq or (before is not None and r.seq >= before) or r.decision != Decision.EXEC:
             continue
-        if env is not None and env.agent_id == RECOVERY and env.action_id.startswith(mine):
+        if r.seq in dep_seqs or (env is not None and env.agent_id == RECOVERY and env.action_id.startswith(mine)):
             continue
-        touched = {e.obj for e in r.read_set} | {w.obj for w in r.write_set}
-        if touched & objs:
-            return f"seq {r.seq} ({r.attributed_agent}) touched {sorted(touched & objs)[0]} after the resolution"
+        hit = {w.obj for w in r.write_set} & objs
+        if hit:
+            return f"seq {r.seq} ({r.attributed_agent}) wrote {sorted(hit)[0]} after the resolution"
     heads = _heads(recs, before)
     for e in reverts:
         if heads.get(e.obj) != e.expect:
             return f"{e.obj}: head is not v{e.expect.ver}"
     for oid in reheld:
         st = status_of(oid)
-        if st in (OutboxStatus.RELEASED, OutboxStatus.DISPATCHED):
-            return f"outbox:{oid} is {st.value}: its effect may have left"
+        if st in (OutboxStatus.RELEASED, OutboxStatus.DISPATCHED, OutboxStatus.CANCELLED):
+            return f"outbox:{oid} is {st.value}: its effect may have left or a person decided"
     return None
 
 
@@ -459,7 +492,7 @@ def plan_unresolve(records: Iterable[Record], ref: str, *, plan_of: Callable[[st
     else:
         s = UnresolveStep(n=0, reason=UNRESOLVE_REASON, resolution=ref_act, resolution_plan_hash=a.plan_hash,
                           reverts=tuple(reverts), reheld=tuple(reheld), rationale=UNRESOLVE_CHECKS)
-        diff = sorted((DiffEntry(obj=e.obj, current=e.expect, planned_hash=e.to.hash) for e in reverts),
+        diff = sorted((DiffEntry(obj=e.obj, current=e.expect, planned_hash=e.to_hash) for e in reverts),
                       key=lambda d: d.obj)
     from .planner import default_plan_id
     return RecoveryPlan(plan_id=plan_id or default_plan_id(as_of), alert_id=p.alert_id, culprit=p.culprit,

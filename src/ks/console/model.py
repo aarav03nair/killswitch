@@ -456,7 +456,7 @@ def _beats(m: dict, suspends: list[dict], held: list[dict]) -> list[dict]:
         head = (f"verify FAILED: {v['reason']}" + (f" at first bad seq {fb}" if fb is not None else "")
                 + "; verify stopped there, later records were not checked (no witnessed-head claim is made)")
     lines = [head,
-             "anchored: yes" if v["anchored"] else f"not anchored ({v['unanchored_reason']}); live proof: ks verify RUN --head ANCHOR",
+             "anchored: yes" if v["anchored"] else f"not anchored ({v['unanchored_reason']}); live check: ks verify RUN --head ANCHOR",
              "build-time result: stale until the page is rebuilt"]
     n_unw = sum(1 for r in recs if r.get("unwitnessed"))
     if v["ok"] and n_unw:

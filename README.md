@@ -82,7 +82,7 @@ OrbStack install and the base image pull (network speed dependent; not measured 
 
 ## What each demo beat means
 
-`make demo` runs `scripts/demo.sh` (fault F2+, seed 2, 40 ticks, 10 agents, per-agent uids):
+`make demo` runs `scripts/demo.sh` (fault F2+, seed 2, 40 ticks, 10 agents, per-agent uids, `--resolver ww_rebase/1`). The resolver is opt-in and always labelled (`resolver: ww_rebase/1 (on)` in config, verify and console); `RESOLVER=off make demo` compares. Hero F2+ results are identical off and on (BENCH-S3, S4-13):
 
 | Beat (script heading) | What happened |
 |---|---|
@@ -91,13 +91,13 @@ OrbStack install and the base image pull (network speed dependent; not measured 
 | recover: operator approves and applies | `ks recover --apply PLAN` records the approval and the steps. Outbound payments built from tainted reads are re-held. |
 | release the items the apply listed | The operator releases the held items with `ks contain unhold`, after review. Here: 2 re-held with clean payloads plus 7 held for a changed bank field now restored. |
 | audit | `ks verify --head ANCHOR` must be exit 0, `isolation=per_agent_uid`, `anchored=true`. |
-| score.json | Oracle-scored: `R` (residual damage) n=0, `C` (collateral) n=0, `reemitted` 0. |
+| score.json | Oracle-scored: `R` (residual damage) n=0, `C` (collateral) n=0, `reemitted` 0 (after the 9 releases above; D-17). |
 
-Numbers in the benchmark report (`org/reports/BENCH-S3.md`, T=40, 20 seeds, H=6, fault F2+): R=0
+Numbers in the benchmark report (`org/reports/BENCH-S3.md`, T=40, 20 seeds, H=6, fault F2+, container): R=0
 **after the operator released a median 5 held items (3 honest, 2 tainted; max 9)**, C=0,
 reemitted 0, time-to-identify 2 ticks, time-to-contain 1 tick. The R=0 claim holds only with those
 operator releases (D-17). With fault F2+x (the variant where the plan flags a conflict and the approver never
-resolves flags), R is 1/5 and 29 honest items stay held (median 27 in the revert-culprit-only baseline). Do not
+resolves flags), medians over 20 seeds (T=40, H=6, container, BENCH-S3): **before resolver**, R is 1/5, C is 21/254 and 29 honest items stay held (median 27 in the revert-culprit-only baseline); **after** (resolver ww_rebase/1, opt-in), R 0, C 0 and 3 held, after 5 operator releases. Do not
 compare these T=40 figures with T=120 runs.
 
 ## Other commands

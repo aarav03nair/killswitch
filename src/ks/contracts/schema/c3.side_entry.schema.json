@@ -13,7 +13,7 @@
       "type": "string"
     }
   },
-  "$id": "https://killswitch.local/schema/1.7.0/c3.side_entry.schema.json",
+  "$id": "https://killswitch.local/schema/1.8.0/c3.side_entry.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "A side-store entry: the raw value behind a hash in a record. Redactable (erasure keeps the hash).",

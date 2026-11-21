@@ -31,14 +31,15 @@ from .transport import (MAX_FRAME_BYTES, MAX_SIGN_PER_TICK, MAX_VIEW_ENTRIES, SI
                         TickFrame, WitnessClose, WitnessFiles, WitnessHead, WitnessInit, WitnessPub, WitnessReady,
                         decode_frame, decode_witness_frame, encode_frame, signer_refusal)
 
-CONTRACTS_VERSION = "1.7.0"
+CONTRACTS_VERSION = "1.8.0"
 """Contract version. 1.1.0 = CON-02 design freeze (CALL-02); 1.2.0 = B3-01, additive (witness link frames,
 SignRefusal, RunConfig.isolation/decisions_from, VerifyReport.isolation, reexec_invalid); 1.3.0 = B3-43, additive
 (``ks.seed`` system tool per D-15, deny reason ``tool_error``, verify reason ``seed_invalid``); 1.4.0 = B3-46,
 additive (``ReadEntry.source`` view|tool, read_set keyed by (obj, ver), ``RestoreStep.to`` may be ``None``,
 ``RecoveryPlan.t0_seq_est_literal``); 1.5.0 = B3-47, additive (verify reason ``replay_mismatch``); 1.6.0 = B3-51,
 additive (``RunConfig.lineage_hold``, ``VerifyReport.lineage_hold``: the D10 no-lineage-hold contrast run); 1.7.0 = S4-13
-(D-18, ADR-05a), additive (``resolve``/``unresolve`` steps, ``RunConfig.resolver``, verify reason ``resolution_invalid``); see README
+(D-18, ADR-05a), additive (``resolve``/``unresolve`` steps, ``RunConfig.resolver``, verify reason ``resolution_invalid``); 1.8.0 =
+S4-34, additive (``RevertEntry.to`` may be ``None``: an undo deletes what a dependent created); see README
 changelog. Any change to fields, patterns, canonical rules or domain tags bumps it, regenerates ``schema/``
 and re-pins golden hashes."""
 

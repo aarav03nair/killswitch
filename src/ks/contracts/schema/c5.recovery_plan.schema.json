@@ -466,11 +466,11 @@
     },
     "RevertEntry": {
       "additionalProperties": false,
-      "description": "v1.7 (ADR-05a §5): one object an ``unresolve`` puts back: ``expect`` must be the head, ``to`` is the version\nwhose value is re-written (as a new version).",
+      "description": "v1.7 (ADR-05a §5): one object an ``unresolve`` puts back: ``expect`` must be the head, ``to`` is the version\nwhose value is re-written (as a new version). v1.8 (S4-34): ``to`` may be ``None``: a dependent **created** the\nobject after the resolution, so the undo writes a tombstone (value ``null``, ``TOMBSTONE_HASH``), as\n``RestoreStep.to = None`` does (v1.4).",
       "properties": {
         "expect": {
           "$ref": "#/$defs/VersionRef",
-          "description": "Head the revert replaces (the resolution's or a dependent re-run's version)."
+          "description": "Head the revert replaces (the resolution's or a dependent's version)."
         },
         "obj": {
           "description": "Object reverted.",
@@ -479,8 +479,15 @@
           "type": "string"
         },
         "to": {
-          "$ref": "#/$defs/VersionRef",
-          "description": "Version whose value is written back."
+          "anyOf": [
+            {
+              "$ref": "#/$defs/VersionRef"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Version whose value is written back; ``None`` = delete (the object did not exist before its dependent)."
         }
       },
       "required": [
@@ -531,7 +538,7 @@
     },
     "UnresolveStep": {
       "additionalProperties": false,
-      "description": "v1.7 (D-18, ADR-05a §5): undo one executed ``ks.recover.resolve`` (``resolution``): ``reverts[0]`` puts the\nresolved object back to the honest head the resolution replaced; the other entries put back what the plan's\ndependent re-runs wrote. ``reheld`` items get a ``ks.control`` hold with reason ``resolution_reverted``. The\nflag is back afterwards and the rule never resolves that (obj, action) again; undoing an undo is a person's job.",
+      "description": "v1.7 (D-18, ADR-05a §5): undo one executed ``ks.recover.resolve`` (``resolution``): ``reverts[0]`` puts the\nresolved object back to the honest head the resolution replaced; the other entries put back what the\ndependents wrote (v1.8, S4-34: the plan's re-runs and any later action that read the rebased version). ``reheld`` items get a ``ks.control`` hold with reason ``resolution_reverted``. The\nflag is back afterwards and the rule never resolves that (obj, action) again; undoing an undo is a person's job.",
       "properties": {
         "n": {
           "description": "Position in ``steps`` (0-based); steps run in this order.",
@@ -562,7 +569,7 @@
           "type": "string"
         },
         "reheld": {
-          "description": "Items of the reverted re-runs, re-held with reason ``resolution_reverted``, sorted.",
+          "description": "Items of the dependents, re-held with reason ``resolution_reverted``, sorted.",
           "items": {
             "pattern": "^ob-[0-9]{6,16}$",
             "type": "string"
@@ -628,7 +635,7 @@
       "type": "object"
     }
   },
-  "$id": "https://killswitch.local/schema/1.7.0/c5.recovery_plan.schema.json",
+  "$id": "https://killswitch.local/schema/1.8.0/c5.recovery_plan.schema.json",
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "additionalProperties": false,
   "description": "C5 plan, written to ``plans/<plan_id>.json``; approved by content hash.",

@@ -35,6 +35,7 @@ function E(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!==un
 const root=document.getElementById('root');
 root.append(E('h1','','Incident console: '+M.run_id));
 if(M.resolver_label)root.append(E('div','banner '+(M.resolver_label==='resolver: off'?'ok':'warn'),M.resolver_label));
+{const c=M.config||{};root.append(E('div','cfgline','fault: '+c.fault+' | seed: '+c.seed+' | T='+c.ticks+' ticks | H='+c.hold_window_ticks+' | '+(M.resolver_label||'resolver: off')+' | isolation: '+c.isolation))}
 M.banners.forEach(b=>root.append(E('div','banner '+b.kind,b.text)));
 if(M.validity_line)root.append(E('div','banner '+(M.validity.headline?'ok':''),M.validity_line));
 const v=M.verify;

@@ -125,7 +125,7 @@ def verify_replay(run: str | Path, src: SourceDecisions, anchor: RunAnchor | Non
 
     def bad(first: int | None, reason: str = "replay_mismatch") -> VerifyReport:
         return base.model_copy(update=dict(ok=False, exit=int(VERIFY_REASONS[reason]), reason=reason, first_bad=first,
-                                           anchored=False, unanchored_reason="no_anchor"))
+                                           anchored=False, unanchored_reason="verify_failed"))
 
     cfg = RunConfig.from_canonical((run / CONFIG).read_bytes())
     if cfg.decisions_from != src.anchor_hash:

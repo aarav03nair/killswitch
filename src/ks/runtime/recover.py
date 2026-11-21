@@ -386,7 +386,7 @@ class RecoveryService:
         return value_hash == step.rebased_hash
 
     def _unresolve(self, gw, env, header, ehash, plan, step: UnresolveStep):
-        """ADR-05a §5: put back what the resolution (and its dependent re-runs) wrote; re-hold their items."""
+        """ADR-05a §5 (S4-34): put back what the resolution and its dependents wrote; re-hold their items."""
         from ks.recovery.resolver import RESOLVE_TOOL, unresolve_problems
 
         rr = gw._record_at(step.resolution.seq)
@@ -410,6 +410,9 @@ class RecoveryService:
                 head = store.get(e.obj)
                 if head is None or head.ver != e.expect.ver or head.hash != e.expect.hash:
                     return ("stale", SimpleNamespace(detail=f"{e.obj}: head moved"))
+                if e.to is None:  # S4-34: a dependent created it; the undo deletes it (tombstone, contracts 1.8.0)
+                    store.put(e.obj, None, author=RECOVERY, seq=seq, action_id=env.action_id)
+                    continue
                 store.put(e.obj, store.value_at(e.obj, e.to.ver), author=RECOVERY, seq=seq, action_id=env.action_id)
                 reads.append(ReadEntry(obj=e.obj, ver=e.to.ver, hash=e.to.hash))
             res = {"plan_id": plan.plan_id, "n": step.n, "op": "unresolve", "resolution": step.resolution.action_id,
@@ -616,7 +619,7 @@ def cli_unresolve(run: str | Path, ref: str, *, store: Any = None) -> DryRunResu
     from ks.contracts import RunDir
     from ks.contracts.rundir import STATE_DB
     from ks.recovery import write_plan
-    from ks.recovery.resolver import label, plan_unresolve
+    from ks.recovery.resolver import label, plan_unresolve, revert_text
     from ks.world.scenario import open_world_store
     from ks.recovery.rerun import args_from_sidestore
 
@@ -640,8 +643,7 @@ def cli_unresolve(run: str | Path, ref: str, *, store: Any = None) -> DryRunResu
     if s.op == "unresolve":
         r0 = s.reverts[0]
         lines.append(f"unresolve    {s.resolution.action_id}: {r0.obj} back to v{r0.to.ver}, flag raised again; "
-                     f"re-held {', '.join(s.reheld) or '-'}" + "".join(f"; {e.obj} back to v{e.to.ver}"
-                                                                      for e in s.reverts[1:]))
+                     f"re-held {', '.join(s.reheld) or '-'}" + "".join(f"; {revert_text(e)}" for e in s.reverts[1:]))
     else:
         lines.append(f"flag         unresolve_blocked {s.obj} {s.action.action_id}: {why}  (a person decides)")
     for e in plan.diff:

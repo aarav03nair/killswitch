@@ -435,10 +435,11 @@ def render(d: DryRun) -> str:
                        f"{', '.join(s.unblocked) or '-'}; checks {','.join(s.rationale)}; undo: ks recover RUN "
                        f"--unresolve {p.plan_id}.{s.n}")
         elif s.op == "unresolve":
+            from .resolver import revert_text
             r0 = s.reverts[0]
             out.append(f"unresolve    {s.resolution.action_id}: {r0.obj} back to v{r0.to.ver}, flag raised again; "
                        f"re-held {', '.join(s.reheld) or '-'}"
-                       + "".join(f"; {e.obj} back to v{e.to.ver}" for e in s.reverts[1:]))
+                       + "".join(f"; {revert_text(e)}" for e in s.reverts[1:]))
     for s in p.steps:
         if s.op == "rerun":
             ws = d.rerun_writes.get(s.action.seq)

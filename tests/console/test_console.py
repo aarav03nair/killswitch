@@ -443,3 +443,12 @@ def test_real_hero_and_contrast_console_matches_score_json(real_runs):
         assert not (s["hold"] == 0 and sc["hold_note"] is None)
         if sc["hold_note"]:
             assert ("no lineage hold" in sc["hold_note"]) is (not lineage)
+
+
+def test_config_line_and_live_check_wording(run):
+    h = render_html(run)
+    assert "'fault: '" in h and "' | T='+c.ticks" in h and "H='+c.hold_window_ticks" in h and "isolation: '+c.isolation" in h
+    m = build_model(run)
+    c = m["config"]
+    assert c["ticks"] == 40 and "hold_window_ticks" in c and "isolation" in c and "seed" in c and "fault" in c
+    assert "live proof" not in h

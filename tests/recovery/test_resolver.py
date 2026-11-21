@@ -287,6 +287,44 @@ def test_apply_one_record_and_verify(applied, tmp_path):
     assert verify(w.rundir.path, log=_q).ok
 
 
+def test_rerun_rows_cannot_be_reassigned_s4_33(applied):
+    """kabir: reassigning the honest repairs (ks.recover.rerun rows) to crm must not verify. Self-contained: the
+    in-process F2+x run with the resolver plan applied (no runs/ dir needed)."""
+    import sqlite3
+    w, _ = applied
+    reruns = {r.seq for r in w.records if r.envelope and r.envelope.tool == "ks.recover.rerun"}
+    assert reruns, "the applied plan re-ran no honest action"
+    assert verify(w.rundir.path, log=_q).ok
+    state = w.rundir.path / "workspace" / "state.db"
+    import shutil
+    shutil.copy(state, state.with_name("good.db"))
+    db = sqlite3.connect(state, isolation_level=None)
+    marks = ",".join(str(q) for q in sorted(reruns))
+    trig = db.execute("SELECT name, sql FROM sqlite_master WHERE type='trigger'").fetchall()
+    for n, _s in trig:
+        db.execute(f"DROP TRIGGER {n}")
+    n = db.execute(f"UPDATE versions SET author='crm' WHERE seq IN ({marks}) AND author != 'ks.recovery'").rowcount
+    for _n, sql in trig:
+        db.execute(sql)
+    db.close()
+    assert n > 0
+    rep = verify(w.rundir.path, log=_q)
+    assert (rep.ok, rep.reason) == (False, "reconcile_mismatch"), rep
+    # kabir's relabel: author ks.recovery (the record's own envelope agent) with that record's action_id
+    shutil.copy(state.with_name("good.db"), state)
+    aid = {r.seq: r.envelope.action_id for r in w.records if r.seq in reruns}
+    db = sqlite3.connect(state, isolation_level=None)
+    for n, _s in trig:
+        db.execute(f"DROP TRIGGER {n}")
+    for q, a in aid.items():
+        db.execute("UPDATE versions SET author='ks.recovery', action_id=? WHERE seq=?", (a, q))
+    for _n, sql in trig:
+        db.execute(sql)
+    db.close()
+    rep = verify(w.rundir.path, log=_q)
+    assert (rep.ok, rep.reason) == (False, "reconcile_mismatch"), rep
+
+
 # --- undo ------------------------------------------------------------------------------------------------------------
 def test_unresolve_roundtrip(applied):
     """Undo restores the pre-resolution state (S-22 back to triage's value, the dependent re-runs' objects back),
@@ -341,15 +379,98 @@ def test_no_reresolve_after_undo(applied):
 
 
 def test_unresolve_blocked(applied):
-    """A record outside the resolving plan touched the object since the resolution: flag(unresolve_blocked)."""
+    """S4-34: a record that is not a dependent (it read no version the undo removes) but **wrote** a revert object
+    since the resolution: the undo would discard its write, so flag(unresolve_blocked). A read alone does not block."""
     w, dr = applied
     step = ops(dr.plan, "resolve")[0]
     rr = next(r for r in w.records if r.envelope and r.envelope.tool == "ks.recover.resolve")
-    foreign = _triage(w).model_copy(update={"seq": w.records[-1].seq + 1, "read_set": (
-        ReadEntry(obj=W.S22, ver=rr.write_set[0].after.ver, hash=rr.write_set[0].after.hash, source="view"),)})
-    why = RS.unresolve_problems([*w.records, foreign], rr, [RS.RevertEntry(obj=W.S22, expect=rr.write_set[0].after,
-                                                                          to=step.expect)], (), _status(w))
-    assert why is not None and "touched suppliers:S-22" in why
+    old = ReadEntry(obj=W.S22, ver=step.expect.ver, hash=step.expect.hash, source="tool")
+    rv = [RS.RevertEntry(obj=W.S22, expect=rr.write_set[0].after, to=step.expect)]
+    reader = _triage(w).model_copy(update={"seq": w.records[-1].seq + 1, "read_set": (old,), "write_set": ()})
+    assert RS.unresolve_problems([*w.records, reader], rr, rv, (), _status(w)) is None
+    writer = _triage(w).model_copy(update={"seq": w.records[-1].seq + 1, "read_set": (old,)})
+    why = RS.unresolve_problems([*w.records, writer], rr, rv, (), _status(w))
+    assert why is not None and "wrote suppliers:S-22" in why
+
+
+def _live_dependents(w):
+    """The live F2+x shape (Panel jury #2 M8): right after the apply, honest billing drafts an invoice from the
+    rebased S-22 (creates invoices:INV-9001), then payments queues a payment on it (an outbox item)."""
+    inv = W.extra_tick(w, "billing", "billing.draft_invoice", {"id": "INV-9001", "supplier": "S-22", "qty": 2})
+    pay = W.extra_tick(w, "payments", "payments.send", {"id": "PAY-9001", "invoice": "INV-9001"})
+    assert inv.decision.value == pay.decision.value == "exec" and pay.outbox_ids
+    return inv, pay
+
+
+def test_unresolve_live_after_honest_reads(applied):
+    """S4-34 option (a): the undo works after later honest actions read the rebased version. Every dependent is put
+    back (the invoice billing created from the rebased row is deleted, a tombstone), its item is re-held
+    ``resolution_reverted`` (a person decides), the undo is one approved c-0 record, and verify re-derives it."""
+    w, dr = applied
+    step = ops(dr.plan, "resolve")[0]
+    ref = f"{dr.plan.plan_id}.{step.n}"
+    inv, pay = _live_dependents(w)
+    rr = next(r for r in w.records if r.envelope and r.envelope.tool == "ks.recover.resolve")
+    deps = RS.dependents(w.records, rr, dr.plan.plan_id)
+    assert inv in deps and pay in deps
+    up, why = _undo_plan(w, ref)
+    assert why is None, why
+    u = up.steps[0]
+    created = next(e for e in u.reverts if e.obj == "invoices:INV-9001")
+    assert created.to is None and created.to_hash == canonical_tombstone()
+    assert set(pay.outbox_ids) <= set(u.reheld)
+    out = _apply(w, up)
+    ur = out[0].record
+    assert ur.decision.value == "exec" and ur.envelope.tool == "ks.recover.unresolve"
+    assert w.store.get(W.S22).hash == step.expect.hash
+    assert w.store.get("invoices:INV-9001").hash == canonical_tombstone()
+    holds = {c.control.target[len("outbox:"):] for c in w.records
+             if c.control is not None and c.control.reason == UNRESOLVED_REASON and c.seq > ur.seq}
+    assert holds == set(u.reheld) and set(pay.outbox_ids) <= holds
+    assert not set(bench_releasable(w.records, _status(w))) & set(u.reheld)
+    assert verify(w.rundir.path, log=_q).ok
+
+
+def test_unresolve_blocked_once_a_dependent_item_left(applied):
+    """S4-34: the boundary. Once a dependent's item is released (or dispatched) the undo is flag(unresolve_blocked):
+    its effect may have left, so a person decides."""
+    w, dr = applied
+    step = ops(dr.plan, "resolve")[0]
+    _, pay = _live_dependents(w)
+    oid = pay.outbox_ids[0]
+    up0, why0 = _undo_plan(w, f"{dr.plan.plan_id}.{step.n}")
+    assert why0 is None and oid in up0.steps[0].reheld  # queued: still undoable
+    for _ in range(3 * W.HOLD):  # idle ticks: the hold window passes and the release phase lets the payment go
+        if _status(w)(oid) in (OutboxStatus.RELEASED, OutboxStatus.DISPATCHED):
+            break
+        T.tick(w)
+    assert _status(w)(oid) in (OutboxStatus.RELEASED, OutboxStatus.DISPATCHED)
+    up, why = _undo_plan(w, f"{dr.plan.plan_id}.{step.n}")
+    assert why is not None and f"outbox:{oid}" in why and up.steps[0].op == "flag"
+
+
+def test_verify_rejects_undo_that_skips_a_dependent(applied, monkeypatch):
+    """verify re-derives the dependents: an undo that leaves out the honest dependent's revert is resolution_invalid."""
+    w, dr = applied
+    step = ops(dr.plan, "resolve")[0]
+    _live_dependents(w)
+    real = RS._reverts
+
+    def skip(records, resolve_rec, st, plan_id, before):
+        rv, reheld, why = real(records, resolve_rec, st, plan_id, before)
+        return [e for e in rv if e.obj != "invoices:INV-9001"], reheld, why
+    monkeypatch.setattr(RS, "_reverts", skip)
+    up, why = _undo_plan(w, f"{dr.plan.plan_id}.{step.n}")
+    assert why is None
+    _apply(w, up)
+    monkeypatch.setattr(RS, "_reverts", real)
+    rep = verify(w.rundir.path, log=_q)
+    assert not rep.ok
+
+
+def canonical_tombstone():
+    from ks.contracts import TOMBSTONE_HASH
+    return TOMBSTONE_HASH
 
 
 def test_unresolve_blocked_after_bench_release(applied):

@@ -7,15 +7,15 @@
   "reviewer": "kabir",
   "model": "opus",
   "created_by": "panel",
-  "status": "in_review",
+  "status": "done",
   "outcome": "a run that verifies anchored cannot be re-scored by editing state.db",
   "acceptance": [
     "verify reconciles every versions row (obj, ver, hash, author, seq, action_id) against record write sets, or score refuses a mismatch; RT test re-attributing crm versions to payments gives verify non-OK or score refusal; THREAT-MODEL row updated"
   ],
   "depends": [],
   "deliverable": "src/ks/verify/core.py",
-  "summary": "verify now reconciles every state.db versions row (obj,ver,hash,seq,author,action_id) with record write sets (extra/missing/re-attributed -> RECONCILE); ks score refuses unverified runs (UNVERIFIED RUN, exit = verify exit, no score.json). Tests tests/recovery/test_history_reconcile.py reproduce Panel edit; THREAT-MODEL row added; hero/F2+x finale runs still verify OK. Limit: ks.recover.* writes may carry any author. Full suite: 5 failures in tests/recorder+panel seen once while two pytest runs overlapped; all pass in isolation.",
-  "review": "",
+  "summary": "Round 3: ks.recover.rerun rows must be authored by exactly the plan step's ActionRef (agent_id, action_id) from the record's RecoverArgs; reassign-to-crm edit now RECONCILE. Test (skips if no runs/finale-f2x dir) + THREAT-MODEL updated.",
+  "review": "[kabir · changes] CHANGES (Must). Re-ran Panel attack on a fresh container hero (seed 2, killswitch:kabir, verify OK anchored seq 223, R 0/9): author crm->payments now RECONCILE exit 4 and ks score refuses (UNVERIFIED RUN, exit 4, no score.json). Good. BYPASS: UPDATE versions SET author='ks.gateway' WHERE author='crm' (4 rows) -> ks verify --head: OK, anchored; ks score: R 0/9 -> 2/11, exactly Panel's number. Cause verify/core.py _history_problems: 'if recover or author == \"ks.gateway\" or env is None: continue' skips the author check for any row claiming ks.gateway. Fix: compare author to the record's expected author always (seed/system records: env.agent_id, or the system principal the record names; env None: author must equal the record's attributed principal); for ks.recover.* rows restrict author to {ks.recovery, original agent of the re-run action}, not any author. Add RT tests for author='ks.gateway' and for a recover-row re-attribution; update THREAT-MODEL row limit text. Rest verified: native 1160 passed 14 skipped; container (killswitch:kabir) 1171 passed 3 skipped; arjun's 5 recorder/panel flakes not reproduced (both suites ran alongside 3 other agents' pytest runs, so overlap/load is the likely cause, not this change). make demo: verify anchored, score R 0/9 C 0/265, demo OK. ks bench F2+ s2 H6 system: scores (bench calls score_run directly, so the refusal neither breaks nor protects it: Should, bench cells should verify before aggregating). Contracts: verify_failed ships in 1.8.0 with S4-34 (approved, see S4-32).\n\n[kabir · changes] CHANGES (small, Must). Fixed: author crm->payments and crm->ks.gateway (also with action_id changed) -> RECONCILE exit 4, score refuses. Extra attack: edit hash of a row the record wrote: non-head suppliers:S-17.iban v2 -> caught by the after-hash binding ('(hash, seq) ... record says ...'); head customers:C-04 v2 with hash + head_value + head_hash all consistent -> caught (state digest). REMAINING BYPASS: ks.recover.rerun rows accept ANY earlier (agent, action) pair, not the re-run action's own. UPDATE versions SET author='crm', action_id='crm-t3' WHERE seq IN (70,71,72,74) (honest billing/comms/payments repairs re-attributed to the culprit) -> verify --head OK anchored, score writes. Also payments/payments-t3 on billing rows -> OK. Score happens to be unchanged on the hero (R 0/9), but verify certifies a false author on a repair row, which the acceptance ('reconciles every versions row ... author') excludes. Fix: the recover record's action_id p-X.n names plan p-X step n; that step's action {agent_id, action_id} is the only allowed (author, action_id) for a rerun row (restore/hold rows: ks.recovery + the record's action_id). Add an RT test for rerun re-attribution to the culprit. Suites green: native 1162/14 skipped, container 1173/3 skipped; make demo OK; make finale OK.\n\n[kabir · changes] CHANGES (one line, Must). Fixed: reassign-to-crm (author only, and author+action crm-t3) -> RECONCILE exit 4, score refuses; payments/payments-t3 on billing rows -> RECONCILE. Variant (honest agent that also wrote the same object earlier): no such object exists in any finale/hero run or the in-process F2+x fixture (checked every rerun row), so tested nearest: ob-000011 v2 comms->payments/payments-t13 (real pair, same tick), INV-0012 v2 action_id billing-t12->billing-t13 (another step of the same plan), L-0013 v2 -> billing-t12: all RECONCILE exit 4, score refuses. REMAINING BYPASS: UPDATE versions SET author='ks.recovery', action_id='p-000066.4' WHERE seq=72 (finale-f2x-s2-20261121-111444) -> verify --head OK anchored, score writes (score unchanged). Cause: verify/core.py _history_problems runs the RecoverArgs check only 'if ... author != env.agent_id'; rerun envelopes are signed by ks.recovery, so author=ks.recovery + the record's action_id falls through to the generic check and passes. Matters: recovery/conflict.py:95-96 treats (ks.recovery, p-X.*) rows as the plan's own writes, so a later plan misreads an honest repair; ks blame shows the wrong author. Fix: for env.tool == 'ks.recover.rerun' always require (author, action) == _rerun_action(...) (drop 'and author != env.agent_id'); add the ks.recovery relabel to test_rerun_rows_cannot_be_reassigned_s4_33. Rest verified: test runs natively and in container (1 passed, no skip); native 1163 passed 14 skipped; container killswitch:kabir 1174 passed 3 skipped; make demo OK (anchored, per_agent_uid); make finale OK (preflight OK, headline true, 0 deadline misses).\n\n[kabir · done] Re-ran relabel (rerun rows -> ks.recovery + record action_id, 22 rows) and reassign variants (other real agent/action pair, right agent wrong action, swap between reruns, resolve row -> crm): all verify reconcile_mismatch; untampered control verifies ok. Container suite killswitch:kabir (rebuilt from working tree): 1174 passed, 3 skipped. make finale: preflight OK, exit 0, hero and F2+x validity OK, anchored, per_agent_uid. Not committed.",
   "log": [
     {
       "t": "21 Nov 07:08",
@@ -36,6 +36,56 @@
       "t": "21 Nov 10:19",
       "who": "arjun",
       "msg": "→ in_review: ready"
+    },
+    {
+      "t": "21 Nov 10:41",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "21 Nov 10:49",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 10:49",
+      "who": "arjun",
+      "msg": "→ in_review: r2"
+    },
+    {
+      "t": "21 Nov 11:15",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "21 Nov 11:16",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 11:16",
+      "who": "arjun",
+      "msg": "→ in_review: r3"
+    },
+    {
+      "t": "21 Nov 11:21",
+      "who": "arjun",
+      "msg": "→ in_review: r4: self-contained rerun-reassign test in tests/recovery/test_resolver.py"
+    },
+    {
+      "t": "21 Nov 11:44",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "21 Nov 11:51",
+      "who": "arjun",
+      "msg": "→ in_review: r5: rerun rows bind to plan step agent always; relabel to ks.recovery refused; test extended"
+    },
+    {
+      "t": "21 Nov 12:10",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

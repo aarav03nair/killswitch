@@ -22,8 +22,9 @@ and reads (O, ``to``) and nothing tainted (``sim_clean`` proven on the record); 
 executed resolve per (``plan_id``, ``n``), no resolve of (O, H) after an executed undo of (O, H), the restores the
 check depends on ran before r and the re-runs that read ``vH`` did not run before r. Per executed
 ``ks.recover.unresolve`` u: (5) it names an executed resolve (earlier, same plan hash) that no earlier undo named; its
-reverts and re-held items are the ones the record implies (the resolved object back to ``vH``; each dependent re-run's
-object back to the version it replaced); it wrote exactly those values; every re-held item gets a ``ks.control``
+reverts and re-held items are the ones the record implies (the resolved object back to ``vH``; each object a dependent
+wrote back to the version it replaced, or deleted if a dependent created it; S4-34: dependents include later honest
+actions, ``ks.recovery.resolver.dependents``); it wrote exactly those values; every re-held item gets a ``ks.control``
 hold by ``ks.recovery`` with reason ``resolution_reverted`` after u.
 
 Not checked (TCB residual, ADR-05a §6): verify does not re-run H's tool; the rebased value is trusted to ``ks.recovery``.
@@ -216,7 +217,7 @@ def resolution_pass(run: Path, records: list[Record]) -> None:
         want, reheld = expected_reverts(recs, rr, ra.step, ra.plan_id, r.seq)
         if list(step.reverts) != want or list(step.reheld) != reheld:
             bad(r, "reverts or re-held items are not what the record implies")
-        if sorted((w.obj, w.after.hash) for w in r.write_set) != sorted((e.obj, e.to.hash) for e in step.reverts):
+        if sorted((w.obj, w.after.hash) for w in r.write_set) != sorted((e.obj, e.to_hash) for e in step.reverts):
             bad(r, "the landed writes are not the reverts")
         for oid in step.reheld:
             if not any(x.seq > r.seq and x.control is not None and x.decision == Decision.EXEC

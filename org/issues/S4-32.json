@@ -7,15 +7,15 @@
   "reviewer": "panel",
   "model": "sonnet",
   "created_by": "panel",
-  "status": "in_review",
+  "status": "done",
   "outcome": "the Audit beat's verify line matches C1 wording on failure",
   "acceptance": [
     "With --head on a failing run: no 'consistent', unanchored_reason is not no_anchor, last_witnessed_seq real or omitted; demo-sim Audit TAMPER line equals real output; tests for TAMPER, WITNESS, RECONCILE with and without --head"
   ],
   "depends": [],
   "deliverable": "src/ks/verify/core.py",
-  "summary": "Failing verify now prints 'X reason at seq N; NOT VERIFIED (...)' with witnessed seq only if real; JSON unanchored_reason=verify_failed (new additive literal in C6 VerifyReport, schema regenerated, CONTRACTS_VERSION not bumped: kabir to decide); demo-sim line updated; test in tests/skeleton/test_tamper.py (TAMPER, WITNESS, +/- head). RECONCILE covered in S4-33 tests.",
-  "review": "",
+  "summary": "Round 2: failure line now 'last witnessed seq N (signed checkpoints)' or 'witness not checked (verify stopped at seq N)'; JSON last_witnessed_seq is the highest validly signed checkpoint (223 on TAMPER seq 100); README 1.8.0 has own C6 bullet; demo-sim updated; test asserts 20.",
+  "review": "[kabir · changes] Reviewed by kabir for panel (listed reviewer busy). CHANGES (small). Checked on a fresh container hero copy, every exit code, with/without --head, text + JSON: TAMPER(2) seq 100, WITNESS(3) truncation, RECONCILE(4) history edit, IO(1) missing config. All: no 'consistent', no 'no_anchor', unanchored_reason=verify_failed, '--head given' vs 'no --head' correct, exits correct; WITNESS/RECONCILE show real witnessed seq (218, 223). Blocking: (1) TAMPER at seq 100 prints 'no witnessed head reached' and JSON last_witnessed_seq 0, but the run has witnessed heads to seq 223; verify just stopped before the witness pass. Acceptance says 'real or omitted': 0 is neither, and the human text is a false statement on the finale Audit beat. Change the text to 'witness not checked (verify stopped at seq N)' (and IO: 'witness not checked'), and either make last_witnessed_seq nullable in 1.8.0 (null when not reached; same unreleased version, additive) or document 0 = not reached in rundir.py + README; fix demo-sim Audit line to match. (2) README 1.8.0 changelog: list verify_failed as its own C6 bullet (S4-32), not as a schema-regeneration footnote. VERSION DECISION: 1.8.0 carrying both S4-34 RevertEntry.to and verify_failed is acceptable: both additive, both unreleased; VerifyReport is verify output, never stored in a run dir, so 1.3-1.7 fixtures are unaffected (test_additive_13_run etc. pass in both suites). No 1.8.1 needed. Suites: native 1160 passed, container 1171 passed.\n\n[kabir · done] DONE (reviewed by kabir for panel). Fresh container hero (killswitch:kabir, seed 2), every exit, with/without --head, text+JSON: TAMPER seq 100 -> exit 2, 'last witnessed seq 223 (signed checkpoints)', JSON last_witnessed_seq 223, unanchored_reason verify_failed; WITNESS truncation -> exit 3, 140; RECONCILE -> exit 4, 223; IO missing config -> exit 1, 'witness not checked (verify stopped)'. No 'consistent', no 'no_anchor' anywhere on failure. demo-sim Audit line matches real output. README 1.8.0 has its own C6 bullet. Nit (non-blocking): IO JSON gives last_witnessed_seq 0 while docs say '0 = none'; on IO it means 'not checked'. Make the doc say '0 = none or not reached' when next touched. Contracts 1.8.0 (S4-34 + verify_failed): 1.3-1.6 fixtures verify OK; this morning's 1.7.0 finale hero and F2+x verify OK anchored under the new code; test_contracts_13..18 + additive pass. Native 1162 passed 14 skipped; container 1173 passed 3 skipped; make demo OK; make finale preflight OK (hero + F2+x validity OK, anchored, R 0/9 C 0/265).",
   "log": [
     {
       "t": "21 Nov 07:08",
@@ -36,6 +36,26 @@
       "t": "21 Nov 10:19",
       "who": "arjun",
       "msg": "→ in_review: ready"
+    },
+    {
+      "t": "21 Nov 10:42",
+      "who": "kabir",
+      "msg": "review: changes"
+    },
+    {
+      "t": "21 Nov 10:49",
+      "who": "arjun",
+      "msg": "posted result summary"
+    },
+    {
+      "t": "21 Nov 10:49",
+      "who": "arjun",
+      "msg": "→ in_review: r2"
+    },
+    {
+      "t": "21 Nov 11:15",
+      "who": "kabir",
+      "msg": "review: done"
     }
   ]
 }

@@ -81,3 +81,35 @@ def test_keyring_swap_caught_only_with_head(run_copy, clean_run):
     assert code == Exit.OK and not rep.anchored  # "consistent, not anchored": outside the C1 claim
     code, rep = ks_verify(run_copy, clean_run[1])
     assert (code, rep.reason, rep.anchored) == (Exit.WITNESS, "keyring_mismatch", False)
+
+
+def test_failure_output_never_says_consistent_or_no_anchor_s4_32(run_copy, clean_run, tmp_path):
+    """S4-32: TAMPER and WITNESS, with and without --head: human line and JSON state NOT VERIFIED, never
+    'consistent' or no_anchor; the exit code matches."""
+    from .conftest import ks
+    anchor = clean_run[1]
+    _edit_line(run_copy, 5, b'"conn_id":"c-1"', b'"conn_id":"c-2"')
+    for head in (None, anchor):
+        args = ("verify", run_copy) + (("--head", head) if head else ())
+        p = ks(*args)
+        line = p.stdout.splitlines()[0]
+        assert p.returncode == Exit.TAMPER
+        assert line.startswith("verify: TAMPER hash_mismatch at seq 5; NOT VERIFIED")
+        assert "consistent" not in line and "no_anchor" not in line and "last witnessed seq 0" not in line
+        assert ("--head given" in line) == (head is not None)
+        code, rep = ks_verify(run_copy, head)
+        assert rep.anchored is False and rep.unanchored_reason == "verify_failed" and rep.first_bad == 5
+        assert rep.last_witnessed_seq == 20 and "last witnessed seq 20" in line  # real figure, not 0 / "not reached"
+    # WITNESS (truncation): a real witnessed seq is reported
+    run2 = tmp_path / "r2"
+    import shutil
+    shutil.copytree(clean_run[0], run2)
+    p = run2 / "record.jsonl"
+    lines = p.read_bytes().splitlines(keepends=True)
+    p.write_bytes(b"".join(lines[:-3]))
+    for head in (None, anchor):
+        out = ks("verify", run2, *(("--head", head) if head else ()))
+        line = out.stdout.splitlines()[0]
+        assert out.returncode == Exit.WITNESS and "truncated at seq" in line and "NOT VERIFIED" in line
+        assert "consistent" not in line
+        assert "last witnessed seq 16" in line
